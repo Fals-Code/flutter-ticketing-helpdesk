@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
@@ -55,80 +54,78 @@ class _HistoryPageState extends State<HistoryPage> {
           }
 
           return ListView.separated(
-            padding: const EdgeInsets.all(AppDimensions.spaceLG),
+            padding: const EdgeInsets.all(24),
             itemCount: state.activities.length,
-            separatorBuilder: (_, __) => const Divider(height: 32),
+            separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final activity = state.activities[index];
-              return Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Container(
-                    margin: const EdgeInsets.only(top: 4),
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: _getActivityColor(activity.activityType),
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                      boxShadow: [
-                        BoxShadow(
-                          color: _getActivityColor(activity.activityType).withValues(alpha: 0.3),
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        )
-                      ],
-                    ),
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark ? AppColors.surfaceDark : Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
                   ),
-                  const SizedBox(width: AppDimensions.spaceLG),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              activity.userName,
-                              style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 14),
-                            ),
-                            Text(
-                              DateFormat('dd MMM, HH:mm').format(activity.createdAt),
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 4),
-                        RichText(
-                          text: TextSpan(
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? AppColors.white : AppColors.textPrimaryLight,
-                              height: 1.4,
-                            ),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: _getActivityColor(activity.activityType).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        _getActivityIcon(activity.activityType),
+                        size: 16,
+                        color: _getActivityColor(activity.activityType),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              TextSpan(
-                                text: '${activity.description} ',
-                                style: const TextStyle(fontWeight: FontWeight.w400),
+                              Text(
+                                activity.userName,
+                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
-                              TextSpan(
-                                text: '(#${activity.ticketId.substring(0, 8).toUpperCase()})',
-                                style: const TextStyle(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 11,
-                                ),
+                              Text(
+                                DateFormat('dd MMM, HH:mm').format(activity.createdAt),
+                                style: const TextStyle(fontSize: 11, color: Colors.grey),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 6),
+                          Text(
+                            activity.description,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                              height: 1.4,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '#${activity.ticketId.substring(0, 8).toUpperCase()}',
+                            style: const TextStyle(
+                              color: AppColors.primary,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 10,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               );
             },
           );
@@ -144,11 +141,26 @@ class _HistoryPageState extends State<HistoryPage> {
       case 'status_updated':
         return AppColors.statusInProgress;
       case 'assigned':
-        return AppColors.secondary;
+        return AppColors.primary;
       case 'comment_added':
         return AppColors.primary;
       default:
         return AppColors.textSecondaryLight;
+    }
+  }
+
+  IconData _getActivityIcon(String type) {
+    switch (type) {
+      case 'created':
+        return Icons.add_circle_outline;
+      case 'status_updated':
+        return Icons.sync;
+      case 'assigned':
+        return Icons.person_add_alt_1_outlined;
+      case 'comment_added':
+        return Icons.chat_bubble_outline;
+      default:
+        return Icons.history;
     }
   }
 }

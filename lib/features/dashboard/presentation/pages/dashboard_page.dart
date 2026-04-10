@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/core/constants/app_strings.dart';
@@ -52,8 +53,6 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return Scaffold(
       body: BlocBuilder<AuthBloc, AuthState>(
         builder: (context, state) {
@@ -71,102 +70,29 @@ class _DashboardPageState extends State<DashboardPage> {
           );
         },
       ),
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.white,
-          border: Border(
-            top: BorderSide(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              width: 1,
-            ),
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 16,
-              offset: const Offset(0, -4),
-            ),
-          ],
-        ),
-        child: SafeArea(
-          child: SizedBox(
-            height: AppDimensions.bottomNavHeight,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: List.generate(_navItems.length, (i) {
-                final item = _navItems[i];
-                final isActive = _currentIndex == i;
-                return GestureDetector(
-                  onTap: () => setState(() => _currentIndex = i),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppDimensions.spaceLG,
-                      vertical: AppDimensions.spaceSM,
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        AnimatedSwitcher(
-                          duration: const Duration(milliseconds: 200),
-                          child: Icon(
-                            isActive
-                                ? item['activeIcon'] as IconData
-                                : item['icon'] as IconData,
-                            key: ValueKey(isActive),
-                            size: 24,
-                            color: isActive
-                                ? AppColors.primary
-                                : (isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight),
-                          ),
-                        ),
-                        const SizedBox(height: 3),
-                        Text(
-                          item['label'] as String,
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: isActive
-                                ? FontWeight.w600
-                                : FontWeight.w400,
-                            color: isActive
-                                ? AppColors.primary
-                                : (isDark
-                                    ? AppColors.textSecondaryDark
-                                    : AppColors.textSecondaryLight),
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          width: isActive ? 16 : 0,
-                          height: 3,
-                          decoration: BoxDecoration(
-                            color: AppColors.primary,
-                            borderRadius: BorderRadius.circular(99),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-        ),
+      bottomNavigationBar: NavigationBar(
+        selectedIndex: _currentIndex,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
+        destinations: _navItems.map((item) {
+          return NavigationDestination(
+            icon: Icon(item['icon'] as IconData),
+            selectedIcon: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
+            label: item['label'] as String,
+          );
+        }).toList(),
       ),
       floatingActionButton: _currentIndex == 1
-          ? FloatingActionButton.extended(
+          ? FloatingActionButton(
               onPressed: () => context.push(AppRoutes.createTicket),
-              icon: const Icon(Icons.add),
-              label: const Text(AppStrings.createTicket),
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              child: const Icon(Icons.add),
             )
           : null,
     );
   }
 }
+
 
 // ── Dashboard Home Tab ─────────────────────────────────────────────────────────
 
@@ -237,13 +163,16 @@ class _DashboardHomeTab extends StatelessWidget {
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
-              padding: const EdgeInsets.all(AppDimensions.spaceLG),
+              padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _GreetingBanner(isDark: isDark),
-                  const SizedBox(height: AppDimensions.spaceXXL),
-                  Text('Ringkasan Tiket', style: Theme.of(context).textTheme.titleLarge),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Ringkasan Tiket',
+                    style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: AppDimensions.spaceMD),
                   GridView.builder(
                     shrinkWrap: true,
@@ -308,74 +237,34 @@ class _GreetingBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.spaceXXL),
-      decoration: BoxDecoration(
-        gradient: AppColors.primaryGradient,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, state) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${AppStrings.dashboardGreeting},',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.8),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${state.user.fullName ?? 'Pengguna'} 👋',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      AppStrings.dashboardSubtitle,
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.7),
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                );
-              },
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Good morning, ${state.user.fullName ?? 'Name'} 👋',
+              style: const TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
             ),
-          ),
-          Container(
-            width: 60,
-            height: 60,
-            decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.15),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+            const SizedBox(height: 4),
+            Text(
+              "Here's your helpdesk overview",
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
             ),
-            child: const Icon(
-              Icons.support_agent,
-              color: Colors.white,
-              size: 32,
-            ),
-          ),
-        ],
-      ),
+          ],
+        );
+      },
     );
   }
 }
+
 
 class _StatCard extends StatelessWidget {
   final String label;
@@ -395,34 +284,27 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.cardPadding),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: color.withValues(alpha: 0.2),
+          color: color.withValues(alpha: 0.15),
           width: 1,
         ),
-        boxShadow: [
-          BoxShadow(
-            color: color.withValues(alpha: 0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Container(
-            width: 36,
-            height: 36,
+            width: 32,
+            height: 32,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
+              color: color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(6),
             ),
-            child: Icon(icon, size: 20, color: color),
+            child: Icon(icon, size: 16, color: color),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -431,17 +313,19 @@ class _StatCard extends StatelessWidget {
                 value,
                 style: TextStyle(
                   fontSize: 28,
-                  fontWeight: FontWeight.w700,
-                  color: color,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
                 ),
               ),
+              const SizedBox(height: 2),
               Text(
-                label,
-                style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
+                label.toUpperCase(),
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w500,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  letterSpacing: 0.5,
+                ),
               ),
             ],
           ),
@@ -451,6 +335,7 @@ class _StatCard extends StatelessWidget {
   }
 }
 
+
 class _RecentTicketCard extends StatelessWidget {
   final TicketEntity ticket;
   final bool isDark;
@@ -459,74 +344,64 @@ class _RecentTicketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final statusColor = ticket.status.color;
-    final priorityColor = ticket.priority.color;
-
     return GestureDetector(
       onTap: () => context.push(AppRoutes.ticketDetail.replaceAll(':id', ticket.id)),
       child: Container(
-        margin: const EdgeInsets.only(bottom: AppDimensions.spaceMD),
-        padding: const EdgeInsets.all(AppDimensions.cardPadding),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.cardDark : AppColors.cardLight,
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
             color: isDark ? AppColors.borderDark : AppColors.borderLight,
             width: 1,
           ),
         ),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              width: 4,
-              height: 56,
-              decoration: BoxDecoration(
-                color: statusColor,
-                borderRadius: BorderRadius.circular(99),
-              ),
+            Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: ticket.status.color,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '#${ticket.id.substring(0, 8).toUpperCase()}',
+                  style: GoogleFonts.firaCode(
+                    fontSize: 11,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+                const Spacer(),
+                Text(
+                  DateFormat('dd MMM').format(ticket.createdAt),
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: AppDimensions.spaceMD),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(
-                        '#${ticket.id.substring(0, 8).toUpperCase()}',
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const Spacer(),
-                      Text(
-                        DateFormat('dd MMM HH:mm').format(ticket.createdAt),
-                        style: TextStyle(
-                          fontSize: 11,
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    ticket.title,
-                    style: Theme.of(context).textTheme.titleSmall,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    children: [
-                      _Badge(label: ticket.status.label, color: statusColor),
-                      const SizedBox(width: AppDimensions.spaceSM),
-                      _Badge(label: ticket.priority.label, color: priorityColor),
-                    ],
-                  ),
-                ],
-              ),
+            const SizedBox(height: 12),
+            Text(
+              ticket.title,
+              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _Badge(label: ticket.category, color: AppColors.primary.withValues(alpha: 0.1), textColor: AppColors.primary),
+                const SizedBox(width: 8),
+                _Badge(label: ticket.priority.label, color: ticket.priority.color.withValues(alpha: 0.1), textColor: ticket.priority.color),
+              ],
             ),
           ],
         ),
@@ -534,6 +409,30 @@ class _RecentTicketCard extends StatelessWidget {
     );
   }
 }
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+
+  const _Badge({required this.label, required this.color, required this.textColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: textColor),
+      ),
+    );
+  }
+}
+
 
 // ── Profile Tab ────────────────────────────────────────────────────────────
 
@@ -543,7 +442,6 @@ class _ProfileTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final user = state.user;
@@ -561,7 +459,7 @@ class _ProfileTab extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(AppDimensions.spaceXXL),
                   decoration: BoxDecoration(
-                    color: isDark ? AppColors.cardDark : AppColors.cardLight,
+                    color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
                     borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
                     border: Border.all(
                       color: isDark ? AppColors.borderDark : AppColors.borderLight,
@@ -589,7 +487,7 @@ class _ProfileTab extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      _Badge(label: user.role.name.toUpperCase(), color: AppColors.secondary),
+                      _Badge(label: user.role.name.toUpperCase(), color: AppColors.primary.withValues(alpha: 0.1), textColor: AppColors.primary),
                     ],
                   ),
                 ),
@@ -635,8 +533,8 @@ class _ProfileTab extends StatelessWidget {
 
                 AppButton(
                   label: AppStrings.logout,
-                  backgroundColor: AppColors.statusCritical.withValues(alpha: 0.08),
-                  textColor: AppColors.statusCritical,
+                  backgroundColor: AppColors.priorityHigh.withValues(alpha: 0.08),
+                  textColor: AppColors.priorityHigh,
                   icon: Icons.logout_rounded,
                   onPressed: () {
                     context.read<AuthBloc>().add(LogoutRequested());
@@ -664,15 +562,23 @@ class _ProfileSection extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 8, bottom: 8),
-          child: Text(title,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: AppColors.primary)),
+          padding: const EdgeInsets.only(left: 4, bottom: 12, top: 24),
+          child: Text(
+            title.toUpperCase(),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: Colors.grey,
+              letterSpacing: 1.0,
+            ),
+          ),
         ),
         ...children,
       ],
     );
   }
 }
+
 
 class _ProfileTile extends StatelessWidget {
   final IconData icon;
@@ -691,31 +597,27 @@ class _ProfileTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 0,
+    return Container(
       margin: const EdgeInsets.only(bottom: 8),
-      color: isDark ? AppColors.cardDark : AppColors.cardLight,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
       ),
       child: ListTile(
         onTap: onTap,
-        leading: Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: AppColors.primary.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, color: AppColors.primary, size: 20),
-        ),
-        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12)),
-        trailing: const Icon(Icons.chevron_right_rounded, size: 20),
+        dense: true,
+        leading: Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 20),
+        title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+        trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
       ),
     );
   }
 }
+
 
 // ── Notification Tab ──────────────────────────────────────────────────────────
 
@@ -768,42 +670,52 @@ class _NotificationTab extends StatelessWidget {
 }
 
 class _NotificationCard extends StatelessWidget {
-  final dynamic notification; // Use notification entity
+  final dynamic notification; 
   final bool isDark;
 
   const _NotificationCard({required this.notification, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    final unread = !notification.isRead;
+    return GestureDetector(
       onTap: () {
         context.read<NotificationBloc>().add(MarkReadRequested(notification.id));
         if (notification.ticketId != null) {
           context.push(AppRoutes.ticketDetail.replaceAll(':id', notification.ticketId!));
         }
       },
-      borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
       child: Container(
-        padding: const EdgeInsets.all(AppDimensions.spaceLG),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: notification.isRead
-              ? (isDark ? AppColors.cardDark : AppColors.cardLight)
-              : AppColors.primary.withValues(alpha: 0.05),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+          color: unread 
+              ? AppColors.primary.withValues(alpha: 0.04) 
+              : (isDark ? AppColors.surfaceDark : Colors.white),
+          borderRadius: BorderRadius.circular(10),
           border: Border.all(
-            color: notification.isRead
-                ? (isDark ? AppColors.borderDark : AppColors.borderLight)
-                : AppColors.primary.withValues(alpha: 0.3),
+            color: unread 
+                ? AppColors.primary.withValues(alpha: 0.2) 
+                : (isDark ? AppColors.borderDark : AppColors.borderLight),
           ),
         ),
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            CircleAvatar(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
-              child: const Icon(Icons.notifications_active_outlined, size: 20, color: AppColors.primary),
+            Container(
+              width: 36,
+              height: 36,
+              decoration: BoxDecoration(
+                color: unread ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                unread ? Icons.notifications_active : Icons.notifications_none,
+                size: 18,
+                color: unread ? AppColors.primary : Colors.grey,
+              ),
             ),
-            const SizedBox(width: AppDimensions.spaceMD),
+            const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -811,7 +723,7 @@ class _NotificationCard extends StatelessWidget {
                   Text(
                     notification.title,
                     style: TextStyle(
-                      fontWeight: notification.isRead ? FontWeight.w500 : FontWeight.w700,
+                      fontWeight: unread ? FontWeight.w700 : FontWeight.w500,
                       fontSize: 14,
                     ),
                   ),
@@ -820,26 +732,26 @@ class _NotificationCard extends StatelessWidget {
                     notification.message,
                     style: TextStyle(
                       color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                      fontSize: 12,
+                      fontSize: 13,
+                      height: 1.4,
                     ),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 12),
                   Text(
                     DateFormat('dd MMM, HH:mm').format(notification.createdAt),
-                    style: TextStyle(
-                      color: isDark 
-                        ? AppColors.textSecondaryDark.withValues(alpha: 0.5) 
-                        : AppColors.textSecondaryLight.withValues(alpha: 0.5),
-                      fontSize: 10,
+                    style: const TextStyle(
+                      color: Colors.grey,
+                      fontSize: 11,
                     ),
                   ),
                 ],
               ),
             ),
-            if (!notification.isRead)
+            if (unread)
               Container(
-                width: 8,
-                height: 8,
+                margin: const EdgeInsets.only(top: 4, left: 8),
+                width: 6,
+                height: 6,
                 decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
               ),
           ],
@@ -849,30 +761,6 @@ class _NotificationCard extends StatelessWidget {
   }
 }
 
-class _Badge extends StatelessWidget {
-  final String label;
-  final Color color;
 
-  const _Badge({required this.label, required this.color});
 
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(99),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          color: color,
-          fontWeight: FontWeight.w600,
-        ),
-      ),
-    );
-  }
-}
 

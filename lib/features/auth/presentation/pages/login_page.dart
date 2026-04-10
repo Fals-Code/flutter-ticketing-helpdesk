@@ -6,7 +6,6 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import 'package:uts/core/constants/enums.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
 import '../../../../core/constants/app_strings.dart';
 import '../../../../core/router/app_router.dart';
 import '../../../../shared/widgets/app_button.dart';
@@ -20,8 +19,7 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage>
-    with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -30,38 +28,8 @@ class _LoginPageState extends State<LoginPage>
 
   String _selectedRole = 'user';
 
-  late AnimationController _animController;
-  late Animation<double> _fadeIn;
-  late Animation<Offset> _slideUp;
-
-  static const _roles = [
-    {'value': 'user', 'label': AppStrings.roleUser, 'icon': Icons.person_outline},
-    {'value': 'technician', 'label': AppStrings.roleTechnician, 'icon': Icons.headset_mic_outlined},
-    {'value': 'admin', 'label': AppStrings.roleAdmin, 'icon': Icons.shield_outlined},
-  ];
-
-  @override
-  void initState() {
-    super.initState();
-    _animController = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 700),
-    );
-    _fadeIn = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOut),
-    );
-    _slideUp = Tween<Offset>(
-      begin: const Offset(0, 0.12),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(parent: _animController, curve: Curves.easeOutCubic),
-    );
-    _animController.forward();
-  }
-
   @override
   void dispose() {
-    _animController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _emailFocus.dispose();
@@ -81,7 +49,6 @@ class _LoginPageState extends State<LoginPage>
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final size = MediaQuery.sizeOf(context);
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
@@ -95,59 +62,47 @@ class _LoginPageState extends State<LoginPage>
         }
       },
       child: Scaffold(
-        body: SafeArea(
+        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        body: Center(
           child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                  minHeight: size.height - MediaQuery.paddingOf(context).top),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.spaceLG,
-                  vertical: AppDimensions.spaceXXL,
-                ),
-                child: FadeTransition(
-                  opacity: _fadeIn,
-                  child: SlideTransition(
-                    position: _slideUp,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        _buildHeader(isDark),
-                        const SizedBox(height: AppDimensions.space3XL),
-                        _buildRoleSelector(),
-                        const SizedBox(height: AppDimensions.spaceXXL),
-                        _buildForm(),
-                        const SizedBox(height: AppDimensions.space3XL),
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            return AppButton(
-                              label: AppStrings.login,
-                              onPressed: _handleLogin,
-                              isLoading: state.status == AuthStatus.loading,
-                              icon: Icons.login_rounded,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: AppDimensions.spaceLG),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            TextButton(
-                              onPressed: () =>
-                                  context.push(AppRoutes.resetPassword),
-                              child: const Text('Lupa Password?'),
-                            ),
-                            TextButton(
-                              onPressed: () => context.push(AppRoutes.register),
-                              child: const Text('Daftar Akun baru'),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 400),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildHeader(isDark),
+                  const SizedBox(height: 48),
+                  _buildRoleSelector(),
+                  const SizedBox(height: 32),
+                  _buildForm(),
+                  const SizedBox(height: 32),
+                  BlocBuilder<AuthBloc, AuthState>(
+                    builder: (context, state) {
+                      return AppButton(
+                        label: AppStrings.login,
+                        onPressed: _handleLogin,
+                        isLoading: state.status == AuthStatus.loading,
+                      );
+                    },
                   ),
-                ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      TextButton(
+                        onPressed: () => context.push(AppRoutes.resetPassword),
+                        child: const Text('Lupa Password?'),
+                      ),
+                      const Text('•', style: TextStyle(color: Colors.grey)),
+                      TextButton(
+                        onPressed: () => context.push(AppRoutes.register),
+                        child: const Text('Daftar Akun baru'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ),
           ),
@@ -158,125 +113,57 @@ class _LoginPageState extends State<LoginPage>
 
   Widget _buildHeader(bool isDark) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Logo
         Container(
-          width: 56,
-          height: 56,
+          width: 48,
+          height: 48,
           decoration: BoxDecoration(
-            gradient: AppColors.primaryGradient,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+            color: AppColors.primary,
+            borderRadius: BorderRadius.circular(12),
           ),
           child: const Icon(
-            Icons.confirmation_number_outlined,
-            color: AppColors.white,
-            size: 30,
+            Icons.confirmation_number_rounded,
+            color: Colors.white,
+            size: 28,
           ),
         ),
-        const SizedBox(height: AppDimensions.spaceXXL),
-        Text(
-          AppStrings.loginTitle,
-          style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+        const SizedBox(height: 24),
+        const Text(
+          'Selamat Datang',
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+          ),
         ),
-        const SizedBox(height: AppDimensions.spaceSM),
+        const SizedBox(height: 8),
         Text(
-          AppStrings.loginSubtitle,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
+          'Silakan masuk ke akun helpdesk Anda',
+          style: TextStyle(
+            fontSize: 14,
+            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+          ),
         ),
       ],
     );
   }
 
   Widget _buildRoleSelector() {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          AppStrings.roleLabel,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-              ),
-        ),
-        const SizedBox(height: AppDimensions.spaceSM),
-        Row(
-          children: _roles.map((role) {
-            final isSelected = _selectedRole == role['value'];
-            return Expanded(
-              child: GestureDetector(
-                onTap: () => setState(() => _selectedRole = role['value'] as String),
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 200),
-                  margin: EdgeInsets.only(
-                    right: role['value'] != 'admin'
-                        ? AppDimensions.spaceSM
-                        : 0,
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    vertical: AppDimensions.spaceMD,
-                    horizontal: AppDimensions.spaceXS,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isSelected
-                        ? AppColors.primary.withValues(alpha: 0.1)
-                        : (isDark ? AppColors.cardDark : AppColors.cardLight),
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                    border: Border.all(
-                      color: isSelected
-                          ? AppColors.primary
-                          : (isDark
-                              ? AppColors.borderDark
-                              : AppColors.borderLight),
-                      width: isSelected ? 2 : 1,
-                    ),
-                  ),
-                  child: Column(
-                    children: [
-                      Icon(
-                        role['icon'] as IconData,
-                        size: AppDimensions.iconSM,
-                        color: isSelected
-                            ? AppColors.primary
-                            : (isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight),
-                      ),
-                      const SizedBox(height: AppDimensions.spaceXS),
-                      Text(
-                        role['label'] as String,
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: isSelected
-                              ? FontWeight.w600
-                              : FontWeight.w400,
-                          color: isSelected
-                              ? AppColors.primary
-                              : (isDark
-                                  ? AppColors.textSecondaryDark
-                                  : AppColors.textSecondaryLight),
-                        ),
-                        textAlign: TextAlign.center,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            );
-          }).toList(),
-        ),
+    return SegmentedButton<String>(
+      segments: const [
+        ButtonSegment(value: 'user', label: Text('User'), icon: Icon(Icons.person_outline, size: 16)),
+        ButtonSegment(value: 'technician', label: Text('Teknisi'), icon: Icon(Icons.support_agent, size: 16)),
+        ButtonSegment(value: 'admin', label: Text('Admin'), icon: Icon(Icons.shield_outlined, size: 16)),
       ],
+      selected: {_selectedRole},
+      onSelectionChanged: (Set<String> newSelection) {
+        setState(() => _selectedRole = newSelection.first);
+      },
+      showSelectedIcon: false,
+      style: SegmentedButton.styleFrom(
+        visualDensity: VisualDensity.compact,
+        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+      ),
     );
   }
 
@@ -291,7 +178,6 @@ class _LoginPageState extends State<LoginPage>
             controller: _emailController,
             focusNode: _emailFocus,
             keyboardType: TextInputType.emailAddress,
-            prefixIcon: Icons.email_outlined,
             textInputAction: TextInputAction.next,
             onSubmitted: (_) => _passwordFocus.requestFocus(),
             validator: (value) {
@@ -302,14 +188,13 @@ class _LoginPageState extends State<LoginPage>
               return null;
             },
           ),
-          const SizedBox(height: AppDimensions.spaceLG),
+          const SizedBox(height: 24),
           AppTextField(
             label: AppStrings.password,
             hint: AppStrings.passwordHint,
             controller: _passwordController,
             focusNode: _passwordFocus,
             isPassword: true,
-            prefixIcon: Icons.lock_outline,
             textInputAction: TextInputAction.done,
             onSubmitted: (_) => _handleLogin(),
             validator: (value) {
@@ -323,3 +208,4 @@ class _LoginPageState extends State<LoginPage>
     );
   }
 }
+

@@ -14,20 +14,23 @@ class LoadingWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           const SizedBox(
-            width: 40,
-            height: 40,
+            width: 24,
+            height: 24,
             child: CircularProgressIndicator(
-              strokeWidth: 3,
+              strokeWidth: 2,
               color: AppColors.primary,
             ),
           ),
           if (message != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
             Text(
               message!,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.textSecondaryLight,
-                  ),
+              style: TextStyle(
+                fontSize: 13,
+                color: Theme.of(context).brightness == Brightness.light
+                    ? AppColors.textSecondaryLight
+                    : AppColors.textSecondaryDark,
+              ),
             ),
           ],
         ],
@@ -46,7 +49,7 @@ class ShimmerCard extends StatefulWidget {
     super.key,
     this.height = 80,
     this.width,
-    this.borderRadius = 12,
+    this.borderRadius = 8,
   });
 
   @override
@@ -63,10 +66,10 @@ class _ShimmerCardState extends State<ShimmerCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1400),
+      duration: const Duration(milliseconds: 1500),
     )..repeat();
-    _animation = Tween<double>(begin: -2, end: 2).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    _animation = Tween<double>(begin: -2.0, end: 2.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
     );
   }
 
@@ -94,16 +97,16 @@ class _ShimmerCardState extends State<ShimmerCard>
               stops: const [0.0, 0.5, 1.0],
               colors: isDark
                   ? [
-                      AppColors.borderDark,
-                      AppColors.cardDark.withValues(alpha: 0.8),
-                      AppColors.borderDark,
+                      const Color(0xFF1A1A1E),
+                      const Color(0xFF232329),
+                      const Color(0xFF1A1A1E),
                     ]
                   : [
-                      AppColors.borderLight,
-                      AppColors.white,
-                      AppColors.borderLight,
+                      const Color(0xFFF0F0F5),
+                      const Color(0xFFE8E8F0),
+                      const Color(0xFFF0F0F5),
                     ],
-              transform: GradientRotation(_animation.value),
+              transform: _SlidingGradientTransform(_animation.value),
             ),
           ),
         );
@@ -112,57 +115,15 @@ class _ShimmerCardState extends State<ShimmerCard>
   }
 }
 
-/// Widget state kosong (empty state).
-class EmptyStateWidget extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final IconData icon;
-  final Widget? action;
-
-  const EmptyStateWidget({
-    super.key,
-    required this.title,
-    this.subtitle,
-    this.icon = Icons.inbox_outlined,
-    this.action,
-  });
+class _SlidingGradientTransform extends GradientTransform {
+  const _SlidingGradientTransform(this.slideValue);
+  final double slideValue;
 
   @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              icon,
-              size: 64,
-              color: AppColors.primary.withValues(alpha: 0.4),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-              textAlign: TextAlign.center,
-            ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                subtitle!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondaryLight,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-            ],
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
-          ],
-        ),
-      ),
-    );
+  Matrix4? transform(Rect bounds, {TextDirection? textDirection}) {
+    return Matrix4.translationValues(bounds.width * slideValue, 0.0, 0.0);
   }
 }
+
+
+

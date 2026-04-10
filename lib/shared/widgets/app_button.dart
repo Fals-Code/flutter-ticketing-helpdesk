@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_dimensions.dart';
 
 /// Tombol utama dengan gradient dan animasi hover.
 class AppButton extends StatefulWidget {
@@ -22,7 +21,7 @@ class AppButton extends StatefulWidget {
     this.isOutlined = false,
     this.icon,
     this.width,
-    this.height = AppDimensions.buttonHeight,
+    this.height = 44,
     this.backgroundColor,
     this.textColor,
   });
@@ -41,9 +40,9 @@ class _AppButtonState extends State<AppButton>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 120),
+      duration: const Duration(milliseconds: 150),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.96).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -61,68 +60,54 @@ class _AppButtonState extends State<AppButton>
   }
 
   Widget _buildFilled(BuildContext context) {
+    final bgColor = widget.backgroundColor ?? AppColors.primary;
+    final txtColor = widget.textColor ?? Colors.white;
+
     return GestureDetector(
-      onTapDown: (_) => _controller.forward(),
+      onTapDown: (_) => widget.onPressed != null ? _controller.forward() : null,
       onTapUp: (_) => _controller.reverse(),
       onTapCancel: () => _controller.reverse(),
       child: ScaleTransition(
         scale: _scaleAnimation,
-        child: Container(
+        child: SizedBox(
           width: widget.width ?? double.infinity,
           height: widget.height,
-          decoration: BoxDecoration(
-            gradient: widget.backgroundColor != null
-                ? null
-                : AppColors.primaryGradient,
-            color: widget.backgroundColor,
-            borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-            boxShadow: widget.onPressed != null
-                ? [
-                    BoxShadow(
-                      color: AppColors.primary.withValues(alpha: 0.35),
-                      blurRadius: 16,
-                      offset: const Offset(0, 6),
-                    ),
-                  ]
-                : null,
-          ),
-          child: Material(
-            color: Colors.transparent,
-            child: InkWell(
-              onTap: widget.isLoading ? null : widget.onPressed,
-              borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-              child: Center(
-                child: widget.isLoading
-                    ? const SizedBox(
-                        width: 22,
-                        height: 22,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2.5,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          if (widget.icon != null) ...[
-                            Icon(widget.icon,
-                                color: widget.textColor ?? AppColors.white,
-                                size: AppDimensions.iconSM),
-                            const SizedBox(width: AppDimensions.spaceSM),
-                          ],
-                          Text(
-                            widget.label,
-                            style: TextStyle(
-                              color: widget.textColor ?? AppColors.white,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                              letterSpacing: 0.3,
-                            ),
-                          ),
-                        ],
-                      ),
+          child: ElevatedButton(
+            onPressed: widget.isLoading ? null : widget.onPressed,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: bgColor,
+              foregroundColor: txtColor,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
               ),
+              padding: const EdgeInsets.symmetric(horizontal: 16),
             ),
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, size: 18),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        widget.label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
           ),
         ),
       ),
@@ -130,19 +115,51 @@ class _AppButtonState extends State<AppButton>
   }
 
   Widget _buildOutlined(BuildContext context) {
-    return SizedBox(
-      width: widget.width ?? double.infinity,
-      height: widget.height,
-      child: OutlinedButton(
-        onPressed: widget.isLoading ? null : widget.onPressed,
-        child: widget.isLoading
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
-              )
-            : Text(widget.label),
+    return GestureDetector(
+      onTapDown: (_) => widget.onPressed != null ? _controller.forward() : null,
+      onTapUp: (_) => _controller.reverse(),
+      onTapCancel: () => _controller.reverse(),
+      child: ScaleTransition(
+        scale: _scaleAnimation,
+        child: SizedBox(
+          width: widget.width ?? double.infinity,
+          height: widget.height,
+          child: OutlinedButton(
+            onPressed: widget.isLoading ? null : widget.onPressed,
+            style: OutlinedButton.styleFrom(
+              foregroundColor: AppColors.primary,
+              side: const BorderSide(color: AppColors.primary, width: 1.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+            ),
+            child: widget.isLoading
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (widget.icon != null) ...[
+                        Icon(widget.icon, size: 18),
+                        const SizedBox(width: 8),
+                      ],
+                      Text(
+                        widget.label,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+          ),
+        ),
       ),
     );
   }
 }
+

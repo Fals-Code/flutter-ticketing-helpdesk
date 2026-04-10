@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
-import '../../core/constants/app_dimensions.dart';
 
 /// Text field kustom yang konsisten dengan design system aplikasi.
 class AppTextField extends StatefulWidget {
@@ -55,16 +54,15 @@ class _AppTextFieldState extends State<AppTextField> {
         // Label
         Text(
           widget.label,
-          style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: _isFocused
-                    ? AppColors.primary
-                    : (isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight),
-                fontWeight: FontWeight.w500,
-              ),
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w500,
+            color: _isFocused
+                ? AppColors.primary
+                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+          ),
         ),
-        const SizedBox(height: AppDimensions.spaceXS),
+        const SizedBox(height: 8),
 
         // Input field
         Focus(
@@ -80,18 +78,18 @@ class _AppTextFieldState extends State<AppTextField> {
             maxLines: widget.isPassword ? 1 : widget.maxLines,
             textInputAction: widget.textInputAction,
             onFieldSubmitted: widget.onSubmitted,
-            style: Theme.of(context).textTheme.bodyMedium,
+            style: const TextStyle(fontSize: 14),
             decoration: InputDecoration(
               hintText: widget.hint,
+              fillColor: isDark ? AppColors.surfaceDark : const Color(0xFFFAFAFA),
+              filled: true,
               prefixIcon: widget.prefixIcon != null
                   ? Icon(
                       widget.prefixIcon,
-                      size: AppDimensions.iconSM,
+                      size: 18,
                       color: _isFocused
                           ? AppColors.primary
-                          : (isDark
-                              ? AppColors.textSecondaryDark
-                              : AppColors.textSecondaryLight),
+                          : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
                     )
                   : null,
               suffixIcon: widget.isPassword
@@ -100,7 +98,7 @@ class _AppTextFieldState extends State<AppTextField> {
                         _obscureText
                             ? Icons.visibility_outlined
                             : Icons.visibility_off_outlined,
-                        size: AppDimensions.iconSM,
+                        size: 18,
                         color: isDark
                             ? AppColors.textSecondaryDark
                             : AppColors.textSecondaryLight,
@@ -109,6 +107,22 @@ class _AppTextFieldState extends State<AppTextField> {
                           setState(() => _obscureText = !_obscureText),
                     )
                   : widget.suffixWidget,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                ),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                ),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppColors.primary, width: 2),
+              ),
             ),
           ),
         ),
@@ -116,3 +130,4 @@ class _AppTextFieldState extends State<AppTextField> {
     );
   }
 }
+

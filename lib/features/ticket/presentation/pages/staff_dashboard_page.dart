@@ -76,30 +76,20 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
 
   Widget _buildSummarySection(bool isDark, int active, int resolved) {
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.spaceXL),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: isDark 
-              ? [AppColors.primary.withValues(alpha: 0.8), AppColors.secondary.withValues(alpha: 0.8)]
-              : [AppColors.primary, AppColors.secondary],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
         ),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 15,
-            offset: const Offset(0, 8),
-          ),
-        ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Aktif', active.toString(), Colors.white),
-          Container(width: 1, height: 40, color: Colors.white24),
-          _buildSummaryItem('Selesai', resolved.toString(), Colors.white),
+          _buildSummaryItem('Aktif', active.toString(), AppColors.primary),
+          Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.black12),
+          _buildSummaryItem('Selesai', resolved.toString(), AppColors.statusResolved),
         ],
       ),
     );
@@ -140,11 +130,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   Widget _buildStatusCard(String label, String value, Color color, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.spaceLG),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        border: Border.all(color: color.withValues(alpha: 0.3), width: 1.5),
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,11 +172,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
 
   Widget _buildMiniTicketCard(BuildContext context, TicketEntity ticket, bool isDark) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.spaceMD),
-      padding: const EdgeInsets.all(AppDimensions.spaceMD),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Row(

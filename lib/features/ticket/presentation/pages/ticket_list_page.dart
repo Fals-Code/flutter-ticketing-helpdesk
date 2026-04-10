@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
+import 'package:uts/shared/widgets/empty_state_widget.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
@@ -181,96 +184,91 @@ class _TicketCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.only(bottom: AppDimensions.spaceMD),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.cardDark : AppColors.cardLight,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          width: 1,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
+      margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
-        onTap: () => context.push('${AppRoutes.dashboard}/tickets/${ticket.id}'),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        child: Padding(
-          padding: const EdgeInsets.all(AppDimensions.cardPadding),
+        onTap: () =>
+            context.push('${AppRoutes.dashboard}/tickets/${ticket.id}'),
+        borderRadius: BorderRadius.circular(10),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              width: 1,
+            ),
+          ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    width: 8,
+                    height: 8,
                     decoration: BoxDecoration(
-                      color: ticket.status.color.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(6),
+                      color: ticket.status.color,
+                      shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      ticket.status.label,
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                        color: ticket.status.color,
-                      ),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    '#${ticket.id.substring(0, 8).toUpperCase()}',
+                    style: GoogleFonts.firaCode(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
                     ),
                   ),
                   const Spacer(),
                   Text(
-                    '#${ticket.id.substring(0, 8).toUpperCase()}',
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: AppColors.textSecondaryLight,
-                        ),
+                    DateFormat('dd MMM').format(ticket.createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isDark
+                          ? AppColors.textSecondaryDark
+                          : AppColors.textSecondaryLight,
+                    ),
                   ),
                 ],
               ),
               const SizedBox(height: 12),
               Text(
                 ticket.title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
+                style: const TextStyle(
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
               ),
-              const SizedBox(height: 6),
+              const SizedBox(height: 4),
               Text(
                 ticket.description,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                    ),
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  height: 1.4,
+                ),
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
               ),
               const SizedBox(height: 16),
               Row(
                 children: [
-                  const Icon(Icons.category_outlined, size: 14, color: AppColors.textSecondaryLight),
-                  const SizedBox(width: 4),
-                  Text(
-                    ticket.category,
-                    style: Theme.of(context).textTheme.labelSmall,
+                  _Badge(
+                    label: ticket.category,
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    textColor: AppColors.primary,
                   ),
-                  const SizedBox(width: 16),
-                  Icon(Icons.flag_outlined, size: 14, color: ticket.priority.color),
-                  const SizedBox(width: 4),
-                  Text(
-                    ticket.priority.label,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                          color: ticket.priority.color,
-                        ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    '${ticket.createdAt.day}/${ticket.createdAt.month}/${ticket.createdAt.year}',
-                    style: Theme.of(context).textTheme.labelSmall,
+                  const SizedBox(width: 8),
+                  _Badge(
+                    label: ticket.priority.label,
+                    color: ticket.priority.color.withValues(alpha: 0.1),
+                    textColor: ticket.priority.color,
                   ),
                 ],
               ),
@@ -281,5 +279,37 @@ class _TicketCard extends StatelessWidget {
     );
   }
 }
+
+class _Badge extends StatelessWidget {
+  final String label;
+  final Color color;
+  final Color textColor;
+
+  const _Badge({
+    required this.label,
+    required this.color,
+    required this.textColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.w600,
+          color: textColor,
+        ),
+      ),
+    );
+  }
+}
+
 
 

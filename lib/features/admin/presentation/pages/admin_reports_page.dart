@@ -10,7 +10,7 @@ import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
-import '../../domain/entities/admin_report_entity.dart';
+import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});

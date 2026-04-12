@@ -41,7 +41,7 @@ class _DashboardPageState extends State<DashboardPage> {
   void _fetchInitialData() {
     final ticketBloc = context.read<TicketBloc>();
     final authState = context.read<AuthBloc>().state;
-    final user = authState.user!;
+    final user = authState.user;
     final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
     final isTechnician = user.role == UserRole.technician;
 
@@ -81,8 +81,6 @@ class _DashboardPageState extends State<DashboardPage> {
       child: Scaffold(
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            final isStaff = state.status == AuthStatus.authenticated && 
-                (state.user.role == UserRole.admin || state.user.role == UserRole.technician);
   
             return IndexedStack(
               index: _currentIndex,
@@ -103,7 +101,8 @@ class _DashboardPageState extends State<DashboardPage> {
             setState(() => _currentIndex = i);
             if (i == 1) {
               final authState = context.read<AuthBloc>().state;
-              final user = authState.user!;
+              if (authState.user.isEmpty) return;
+              final user = authState.user;
               final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
               final isTechnician = user.role == UserRole.technician;
               
@@ -255,7 +254,7 @@ class _DashboardHomeTab extends StatelessWidget {
                       crossAxisCount: 2,
                       crossAxisSpacing: AppDimensions.spaceMD,
                       mainAxisSpacing: AppDimensions.spaceMD,
-                      childAspectRatio: 1.1, // Adjusted from 1.2 to prevent small overflows
+                      childAspectRatio: 1.0, // Reduced from 1.1 to allow more vertical space
                     ),
                     itemCount: stats.length,
                     itemBuilder: (context, i) {
@@ -327,6 +326,8 @@ class _DashboardHomeTab extends StatelessWidget {
                 ],
               ),
             ),
+          ),
+        );
       },
     );
   }
@@ -400,7 +401,7 @@ class _AdminHomeTab extends StatelessWidget {
                     crossAxisCount: 2,
                     crossAxisSpacing: 16,
                     mainAxisSpacing: 16,
-                    childAspectRatio: 1.5,
+                    childAspectRatio: 1.3, // Reduced from 1.5 to prevent overflow
                     children: [
                       _StatCard(label: 'Terbuka', value: state.stats.open.toString(), color: AppColors.statusOpen, icon: Icons.folder_open, isDark: isDark),
                       _StatCard(label: 'Diproses', value: state.stats.inProgress.toString(), color: AppColors.statusInProgress, icon: Icons.sync, isDark: isDark),
@@ -568,7 +569,7 @@ class _StatCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12), // Reduced vertical padding
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(12),

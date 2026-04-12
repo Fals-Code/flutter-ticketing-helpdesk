@@ -304,30 +304,38 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId}) {
-    final builder = supabaseClient
+    // We use a broader stream and filter on the client to avoid type errors 
+    // with SupabaseStreamFilterBuilder which often breaks during assignment.
+    return supabaseClient
         .from('tickets')
-        .stream(primaryKey: ['id']);
-    
-    var filteredBuilder = builder;
-    
-    if (userId != null) {
-      filteredBuilder = filteredBuilder.eq('user_id', userId);
-    }
-    
-    if (assignedToId != null) {
-      filteredBuilder = filteredBuilder.eq('assigned_to', assignedToId);
-    }
+        .stream(primaryKey: ['id'])
+        .map((data) {
+          var filtered = data;
+          
+          if (userId != null) {
+            filtered = filtered.where((row) => row['user_id'] == userId).toList();
+          }
+          
+          if (assignedToId != null) {
+            filtered = filtered.where((row) => row['assigned_to'] == assignedToId).toList();
+          }
 
-    return filteredBuilder
-        .order('created_at', ascending: false)
-        .map((data) => data.map((json) {
-              try {
-                return TicketModel.fromJson(json);
-              } catch (e) {
-                debugPrint('Stream Mapping Error: $e');
-                return null;
-              }
-            }).whereType<TicketModel>().toList());
+          // Sort by created_at descending (newest first)
+          filtered.sort((a, b) {
+            final aTime = DateTime.parse(a['created_at']);
+            final bTime = DateTime.parse(b['created_at']);
+            return bTime.compareTo(aTime);
+          });
+
+          return filtered.map((json) {
+            try {
+              return TicketModel.fromJson(json);
+            } catch (e) {
+              debugPrint('Stream Mapping Error: $e');
+              return null;
+            }
+          }).whereType<TicketModel>().toList();
+        });
   }
 
   // Helper methods

@@ -1,4 +1,3 @@
-import 'package:uts/features/auth/domain/entities/user_entity.dart';
 import '../../domain/entities/admin_report_entity.dart';
 
 class AdminReportModel {

@@ -5,7 +5,6 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
-import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/shared/widgets/empty_state_widget.dart';
@@ -41,11 +40,11 @@ class _TicketListPageState extends State<TicketListPage> {
 
   void _fetchInitial() {
     final authState = context.read<AuthBloc>().state;
-    if (authState.user == null) return;
+    if (authState.user.isEmpty) return;
     
-    final userId = authState.user!.id;
-    final isStaff = authState.user!.role == UserRole.admin || authState.user!.role == UserRole.technician;
-    final isTechnician = authState.user!.role == UserRole.technician;
+    final userId = authState.user.id;
+    final isStaff = authState.user.role == UserRole.admin || authState.user.role == UserRole.technician;
+    final isTechnician = authState.user.role == UserRole.technician;
 
     context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: _pageSize));
     context.read<TicketBloc>().add(FetchAllTicketsRequested(
@@ -93,8 +92,8 @@ class _TicketListPageState extends State<TicketListPage> {
     
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        if (authState.user == null) return const Scaffold();
-        final user = authState.user!;
+        if (authState.user.isEmpty) return const Scaffold();
+        final user = authState.user;
         final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
         final isTechnician = user.role == UserRole.technician;
         
@@ -299,6 +298,57 @@ class _TicketListPageState extends State<TicketListPage> {
       ),
     );
   }
+
+  Widget _buildAdminStatsBar(TicketState state, bool isDark) {
+    final stats = state.stats;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+      child: Row(
+        children: [
+          _buildMiniStatCard('Terbuka', stats.open, AppColors.statusOpen, isDark),
+          const SizedBox(width: 8),
+          _buildMiniStatCard('Diproses', stats.inProgress, AppColors.statusInProgress, isDark),
+          const SizedBox(width: 8),
+          _buildMiniStatCard('Selesai', stats.resolved, AppColors.statusResolved, isDark),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStatCard(String label, int value, Color color, bool isDark) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.black26 : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              value.toString(),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _TicketCard extends StatelessWidget {
@@ -444,56 +494,6 @@ class _Badge extends StatelessWidget {
           fontSize: 10,
           fontWeight: FontWeight.w600,
           color: textColor,
-        ),
-      ),
-    );
-  }
-  Widget _buildAdminStatsBar(TicketState state, bool isDark) {
-    final stats = state.stats;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
-      child: Row(
-        children: [
-          _buildMiniStatCard('Terbuka', stats.open, AppColors.statusOpen, isDark),
-          const SizedBox(width: 8),
-          _buildMiniStatCard('Diproses', stats.inProgress, AppColors.statusInProgress, isDark),
-          const SizedBox(width: 8),
-          _buildMiniStatCard('Selesai', stats.resolved, AppColors.statusResolved, isDark),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMiniStatCard(String label, int value, Color color, bool isDark) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-        decoration: BoxDecoration(
-          color: isDark ? Colors.black26 : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-          ],
-        ),
-        child: Column(
-          children: [
-            Text(
-              value.toString(),
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54),
-            ),
-          ],
         ),
       ),
     );

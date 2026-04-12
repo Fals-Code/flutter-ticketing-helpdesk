@@ -229,7 +229,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
 
                         // Priority Section
                         DropdownButtonFormField<String>(
-                          value: _selectedPriority,
+                          initialValue: _selectedPriority,
                           decoration: InputDecoration(
                             labelText: 'Tingkat Prioritas',
                             prefixIcon: const Icon(Icons.priority_high_rounded),
@@ -237,7 +237,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             filled: true,
-                            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
                           ),
                           items: _priorities.map((p) {
                             return DropdownMenuItem<String>(
@@ -333,7 +333,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.borderLight, width: 1),
               ),

@@ -1,10 +1,10 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../data/datasources/notification_remote_data_source.dart';
-import '../data/repositories/notification_repository_impl.dart';
-import '../domain/repositories/notification_repository.dart';
-import '../domain/usecases/notification_usecases.dart';
-import '../presentation/bloc/notification_bloc.dart';
+import 'package:uts/features/notification/data/datasources/notification_remote_data_source.dart';
+import 'package:uts/features/notification/data/repositories/notification_repository_impl.dart';
+import 'package:uts/features/notification/domain/repositories/notification_repository.dart';
+import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
+import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 
 Future<void> initNotificationDependencies(GetIt sl) async {
   // Datasource

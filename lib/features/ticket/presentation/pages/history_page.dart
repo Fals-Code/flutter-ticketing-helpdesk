@@ -206,11 +206,6 @@ class _HistoryPageState extends State<HistoryPage> {
     }
   }
 
-  IconData _getStatusIcon(String? old, String neu) {
-    if (old == null) return Icons.add_circle_outline;
-    return Icons.sync;
-  }
-
   String _getDescription(item) {
     if (item.oldStatus == null) return 'Membuat tiket dengan status ${item.newStatus.toUpperCase()}';
     return 'Mengubah status dari ${item.oldStatus!.toUpperCase()} ke ${item.newStatus.toUpperCase()}';

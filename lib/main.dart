@@ -15,6 +15,7 @@ import 'package:uts/features/notification/presentation/bloc/notification_bloc.da
 import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 import 'package:uts/core/storage/secure_local_storage.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 
 Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
@@ -54,10 +55,6 @@ Future<void> main() async {
   runApp(const ETicketingApp());
 }
 
-import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
-import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
-
-// ... (existing imports)
 
 /// Root widget aplikasi E-Ticketing Helpdesk.
 class ETicketingApp extends StatelessWidget {

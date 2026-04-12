@@ -1,9 +1,9 @@
 import 'package:get_it/get_it.dart';
-import '../data/datasources/admin_remote_data_source.dart';
-import '../data/repositories/admin_repository_impl.dart';
-import '../domain/repositories/admin_repository.dart';
-import '../domain/usecases/admin_usecases.dart';
-import '../presentation/bloc/admin_bloc.dart';
+import 'package:uts/features/admin/data/datasources/admin_remote_data_source.dart';
+import 'package:uts/features/admin/data/repositories/admin_repository_impl.dart';
+import 'package:uts/features/admin/domain/repositories/admin_repository.dart';
+import 'package:uts/features/admin/domain/usecases/admin_usecases.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 
 Future<void> initAdmin(GetIt sl) async {
   // BLoC

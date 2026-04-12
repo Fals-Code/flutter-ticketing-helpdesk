@@ -1,11 +1,11 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../data/datasources/auth_remote_data_source.dart';
-import '../data/repositories/auth_repository_impl.dart';
-import '../domain/repositories/auth_repository.dart';
-import '../domain/usecases/auth_usecases.dart';
-import '../domain/usecases/update_password_usecase.dart';
-import '../presentation/bloc/auth_bloc.dart';
+import 'package:uts/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:uts/features/auth/data/repositories/auth_repository_impl.dart';
+import 'package:uts/features/auth/domain/repositories/auth_repository.dart';
+import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 
 Future<void> initAuthDependencies(GetIt sl) async {
   // BLoC

@@ -8,6 +8,7 @@ import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
+import 'package:uts/core/constants/enums.dart';
 
 class StaffDashboardPage extends StatefulWidget {
   const StaffDashboardPage({super.key});
@@ -37,7 +38,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
           appBar: AppBar(
             title: BlocBuilder<AuthBloc, AuthState>(
               builder: (context, authState) {
-                return Text(authState.user?.role == UserRole.admin ? 'Dashboard Admin' : 'Panel Teknisi');
+                return Text(authState.user.role == UserRole.admin ? 'Dashboard Admin' : 'Panel Teknisi');
               },
             ),
             actions: [
@@ -50,7 +51,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                         FetchAllTicketsRequested(
                           page: 0, 
                           limit: 100,
-                          assignedToId: user?.role == UserRole.technician ? user?.id : null,
+                          assignedToId: user.role == UserRole.technician ? user.id : null,
                         ),
                       );
                 },
@@ -65,7 +66,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                     FetchAllTicketsRequested(
                       page: 0, 
                       limit: 100,
-                      assignedToId: user?.role == UserRole.technician ? user?.id : null,
+                      assignedToId: user.role == UserRole.technician ? user.id : null,
                     ),
                   );
             },
@@ -174,7 +175,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: AppDimensions.spaceMD,
       crossAxisSpacing: AppDimensions.spaceMD,
-      childAspectRatio: 1.5,
+      childAspectRatio: 1.3, // Reduced from 1.5 to prevent overflow
       children: [
         _buildStatusCard('Terbuka', open.toString(), AppColors.statusOpen, Icons.fiber_new_outlined),
         _buildStatusCard('Diproses', prog.toString(), AppColors.statusInProgress, Icons.run_circle_outlined),
@@ -187,7 +188,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   Widget _buildStatusCard(String label, String value, Color color, IconData icon) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(10),
@@ -260,8 +261,7 @@ class _GreetingBanner extends StatelessWidget {
             Text(
               "Semoga harimu produktif dalam melayani pengguna",
               style: TextStyle(
-                fontSize: 14,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
               ),
             ),
           ],

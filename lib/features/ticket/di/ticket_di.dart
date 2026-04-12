@@ -1,11 +1,11 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../data/datasources/ticket_remote_data_source.dart';
-import '../data/repositories/ticket_repository_impl.dart';
-import '../domain/repositories/ticket_repository.dart';
-import '../domain/usecases/ticket_usecases.dart';
-import '../domain/usecases/ticket_admin_usecases.dart';
-import '../presentation/bloc/ticket_bloc.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_remote_data_source.dart';
+import 'package:uts/features/ticket/data/repositories/ticket_repository_impl.dart';
+import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
   // BLoC

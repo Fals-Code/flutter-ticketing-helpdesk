@@ -146,19 +146,19 @@ class _UserManagementPageState extends State<UserManagementPage> {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
             decoration: BoxDecoration(
-              color: roleInfo.color.withValues(alpha: 0.1),
+              color: roleInfo['color']!.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: roleInfo.color.withValues(alpha: 0.2)),
+              border: Border.all(color: roleInfo['color']!.withValues(alpha: 0.2)),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  roleInfo.label,
-                  style: TextStyle(color: roleInfo.color, fontSize: 10, fontWeight: FontWeight.bold),
+                  roleInfo['label']!,
+                  style: TextStyle(color: roleInfo['color'], fontSize: 10, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(width: 4),
-                Icon(Icons.edit_rounded, size: 10, color: roleInfo.color),
+                Icon(Icons.edit_rounded, size: 10, color: roleInfo['color']),
               ],
             ),
           ),
@@ -177,7 +177,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
           children: [
             _buildRoleOption(user, 'Administrator', UserRole.admin, Icons.admin_panel_settings_rounded, Colors.red),
             _buildRoleOption(user, 'Teknisi / Agen', UserRole.technician, Icons.engineering_rounded, Colors.orange),
-            _buildRoleOption(user, 'Customer / User', UserRole.customer, Icons.person_rounded, Colors.green),
+            _buildRoleOption(user, 'Customer / User', UserRole.user, Icons.person_rounded, Colors.green),
           ],
         ),
         actions: [
@@ -201,14 +201,14 @@ class _UserManagementPageState extends State<UserManagementPage> {
     );
   }
 
-  ({String label, Color color}) _getRoleInfo(UserRole role) {
+  Map<String, dynamic> _getRoleInfo(UserRole role) {
     switch (role) {
       case UserRole.admin:
-        return (label: 'ADMIN', color: Colors.error);
+        return {'label': 'Admin', 'color': Colors.red};
       case UserRole.technician:
-        return (label: 'TEKNISI', color: Colors.orange);
-      case UserRole.customer:
-        return (label: 'CUSTOMER', color: Colors.success);
+        return {'label': 'Teknisi', 'color': Colors.blue};
+      case UserRole.user:
+        return {'label': 'User', 'color': Colors.green};
     }
   }
 }

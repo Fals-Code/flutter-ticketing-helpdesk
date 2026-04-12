@@ -75,11 +75,13 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         onError: (error) {
           debugPrint('Realtime Stream Error: $error. Retrying in 5s...');
           Future.delayed(const Duration(seconds: 5), () {
-            if (!isClosed) add(StartTicketSubscription(
-              userId: event.userId,
-              isStaff: event.isStaff,
-              isTechnician: event.isTechnician,
-            ));
+            if (!isClosed) {
+              add(StartTicketSubscription(
+                userId: event.userId,
+                isStaff: event.isStaff,
+                isTechnician: event.isTechnician,
+              ));
+            }
           });
         },
       );

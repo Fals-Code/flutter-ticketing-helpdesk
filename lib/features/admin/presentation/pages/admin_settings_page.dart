@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/constants/app_dimensions.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -165,7 +164,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
       leading: _IconContainer(icon: icon, color: color),
       title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
       subtitle: Text(subtitle, style: const TextStyle(fontSize: 11)),
-      trailing: Switch.adaptive(value: value, onChanged: onChanged, activeColor: AppColors.primary),
+      trailing: Switch.adaptive(value: value, onChanged: onChanged, activeThumbColor: AppColors.primary),
     );
   }
 

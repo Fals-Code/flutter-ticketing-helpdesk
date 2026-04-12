@@ -95,7 +95,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             Icon(
                               Icons.search_off_rounded,
                               size: 80,
-                              color: isDark ? Colors.white24 : Colors.black12,
+                              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
                             ),
                             const SizedBox(height: 24),
                             Text(
@@ -224,11 +224,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     final authState = context.read<AuthBloc>().state;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    if (authState.user == null) return const SizedBox.shrink();
+    if (authState.user.isEmpty) return const SizedBox.shrink();
     
-    final isAdmin = authState.user!.role == UserRole.admin;
-    final isTechnician = authState.user!.role == UserRole.technician;
-    final isAssignedToMe = ticket.assignedTo == authState.user!.id;
+    final isAdmin = authState.user.role == UserRole.admin;
+    final isTechnician = authState.user.role == UserRole.technician;
+    final isAssignedToMe = ticket.assignedTo == authState.user.id;
 
     // Only show actions for Admin or the assigned Technician
     if (isTechnician && !isAssignedToMe) return const SizedBox.shrink();
@@ -362,7 +362,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   const Text('Delegasikan Ke Teknisi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
-                    value: ticket.assignedTo,
+                    initialValue: ticket.assignedTo,
                     isExpanded: true,
                     hint: const Text('Pilih Teknisi', style: TextStyle(fontSize: 14)),
                     decoration: InputDecoration(
@@ -549,7 +549,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
-      barrierColor: Colors.black90,
+      barrierColor: Colors.black.withValues(alpha: 0.9),
       builder: (context) => Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(

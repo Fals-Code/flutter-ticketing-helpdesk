@@ -176,24 +176,33 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         // Category Section
                         _buildLabel('Kategori Laporan'),
                         const SizedBox(height: 12),
-                        SingleChildScrollView(
-                          scrollDirection: Axis.horizontal,
-                          clipBehavior: Clip.none,
-                          child: Row(
-                            children: _categories.map((cat) {
-                              final isSelected = _selectedCategory == cat['value'];
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: ChoiceChip(
-                                  label: Text(cat['label']!),
-                                  selected: isSelected,
-                                  onSelected: (_) => setState(() => _selectedCategory = cat['value']!),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        Wrap(
+                          spacing: 10,
+                          runSpacing: 10,
+                          children: _categories.map((cat) {
+                            final isSelected = _selectedCategory == cat['value'];
+                            return ChoiceChip(
+                              label: Text(
+                                cat['label']!,
+                                style: TextStyle(
+                                  color: isSelected ? Colors.white : Colors.blueGrey,
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
-                              );
-                            }).toList(),
-                          ),
+                              ),
+                              selected: isSelected,
+                              onSelected: (_) => setState(() => _selectedCategory = cat['value']!),
+                              selectedColor: AppColors.primary,
+                              backgroundColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                                side: BorderSide(
+                                  color: isSelected ? Colors.transparent : Colors.grey.withValues(alpha: 0.3),
+                                ),
+                              ),
+                              showCheckmark: false,
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            );
+                          }).toList(),
                         ),
                         const SizedBox(height: 32),
 

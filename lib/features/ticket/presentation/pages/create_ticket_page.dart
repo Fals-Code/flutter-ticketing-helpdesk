@@ -10,7 +10,8 @@ import 'package:uts/shared/widgets/app_text_field.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/core/router/app_router.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateTicketPage extends StatefulWidget {
   const CreateTicketPage({super.key});
@@ -112,7 +113,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
               backgroundColor: AppColors.statusResolved,
             ),
           );
-          context.pop();
+          context.go(AppRoutes.dashboard);
         }
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -241,9 +242,17 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                             isLoading: state.isLoading,
                             onPressed: () {
                               if (!_formKey.currentState!.validate()) return;
-                              final userId = context.read<AuthBloc>().state.user.id;
+                              
+                              final currentUser = Supabase.instance.client.auth.currentUser;
+                              if (currentUser == null) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Sesi telah berakhir. Silakan login kembali.')),
+                                );
+                                return;
+                              }
+
                               context.read<TicketBloc>().add(CreateTicketRequested(
-                                    customerId: userId,
+                                    userId: currentUser.id,
                                     title: _subjectController.text,
                                     description: _descController.text,
                                     category: _selectedCategory,
@@ -290,6 +299,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
       {'value': 'low', 'label': 'Rendah', 'color': Colors.green},
       {'value': 'medium', 'label': 'Sedang', 'color': Colors.orange},
       {'value': 'high', 'label': 'Tinggi', 'color': Colors.red},
+      {'value': 'urgent', 'label': 'Mendesak', 'color': const Color(0xFFD32F2F)},
     ];
 
     return Row(

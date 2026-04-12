@@ -107,7 +107,9 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         limit: event.limit,
         searchQuery: state.searchQuery,
         category: state.categoryFilter,
-        status: state.statusFilter == TicketStatusFilter.all ? null : state.statusFilter.name,
+        status: state.statusFilter == TicketStatusFilter.all 
+            ? null 
+            : (state.statusFilter == TicketStatusFilter.inProgress ? 'in_progress' : state.statusFilter.name),
       ),
     );
 
@@ -132,7 +134,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
 
     final result = await createTicketUseCase(
       CreateTicketParams(
-        customerId: event.customerId,
+        userId: event.userId,
         title: event.title,
         description: event.description,
         category: event.category,
@@ -143,10 +145,17 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
 
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(
-        isLoading: false,
-        successMessage: 'Tiket berhasil dibuat',
-      )),
+      (ticket) {
+        emit(state.copyWith(
+          isLoading: false,
+          successMessage: 'Tiket berhasil dibuat',
+          errorMessage: null, // Clear error message on success
+        ));
+        
+        // Trigger data refresh automatically
+        add(const FetchTicketStatsRequested());
+        add(const FetchTicketsRequested(page: 0, limit: 5));
+      },
     );
   }
 
@@ -207,7 +216,9 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
       GetTicketsParams(
         page: event.page,
         limit: event.limit,
-        status: state.statusFilter == TicketStatusFilter.all ? null : state.statusFilter.name,
+        status: state.statusFilter == TicketStatusFilter.all 
+            ? null 
+            : (state.statusFilter == TicketStatusFilter.inProgress ? 'in_progress' : state.statusFilter.name),
         searchQuery: state.searchQuery,
         category: state.categoryFilter,
       ),

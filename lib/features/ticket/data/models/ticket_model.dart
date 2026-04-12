@@ -19,13 +19,21 @@ class TicketModel extends TicketEntity {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    // Handle join results for assigned_to_name
-    final assignedProfile = json['assigned_profiles'] ?? json['profiles']; 
-    final assignedToName = assignedProfile != null ? assignedProfile['full_name'] : json['assigned_to_name'];
+    // Check for profiles join object to get creator's name
+    final profilesData = json['profiles'];
+    Map<String, dynamic>? creatorProfile;
+    
+    if (profilesData is Map<String, dynamic>) {
+      creatorProfile = profilesData;
+    } else if (profilesData is List && profilesData.isNotEmpty) {
+      creatorProfile = profilesData.first;
+    }
+    
+    final userName = creatorProfile != null ? creatorProfile['full_name'] : 'Pengguna';
 
-    // Handle join results for creator name (userName)
-    final creatorProfile = json['creator_profiles'];
-    final userName = creatorProfile != null ? creatorProfile['full_name'] : json['user_name'];
+    // Handle assigned profile if available (fall back to default)
+    final assignedProfile = json['technician']; 
+    final assignedToName = assignedProfile != null ? assignedProfile['full_name'] : 'Belum ditugaskan';
 
     return TicketModel(
       id: json['id'] ?? '',
@@ -44,15 +52,32 @@ class TicketModel extends TicketEntity {
     );
   }
 
+  factory TicketModel.fromEntity(TicketEntity entity) {
+    return TicketModel(
+      id: entity.id,
+      title: entity.title,
+      description: entity.description,
+      status: entity.status,
+      priority: entity.priority,
+      category: entity.category,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      userId: entity.userId,
+      userName: entity.userName,
+      assignedTo: entity.assignedTo,
+      assignedToName: entity.assignedToName,
+      imageUrls: entity.imageUrls,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'title': title,
       'description': description,
-      'status': status.name,
+      'status': status.name == 'inProgress' ? 'in_progress' : status.name,
       'priority': priority.name,
       'category': category,
-      'user_id': userId.isEmpty ? null : userId,
-      // assigned_to must be null for new tickets from the user
+      'user_id': userId,
       'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
       'images': super.imageUrls,
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),

@@ -90,7 +90,18 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
         bottomNavigationBar: NavigationBar(
           selectedIndex: _currentIndex,
-          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          onDestinationSelected: (i) {
+            setState(() => _currentIndex = i);
+            if (i == 1) {
+              // Refresh tickets when switching to Tickets tab
+              context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: 10));
+              final state = context.read<AuthBloc>().state;
+              if (state.status == AuthStatus.authenticated && 
+                  (state.user.role == UserRole.admin || state.user.role == UserRole.technician)) {
+                context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 10));
+              }
+            }
+          },
           destinations: _navItems.map((item) {
             return NavigationDestination(
               icon: Icon(item['icon'] as IconData),
@@ -229,12 +240,42 @@ class _DashboardHomeTab extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppDimensions.spaceMD),
-                  if (state.tickets.isEmpty && !state.isLoading)
+                  if (state.isLoading && state.tickets.isEmpty)
+                    const Center(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 40),
+                        child: Column(
+                          children: [
+                            CircularProgressIndicator(),
+                            SizedBox(height: 16),
+                            Text('Memuat tiket...'),
+                          ],
+                        ),
+                      ),
+                    )
+                  else if (state.tickets.isEmpty)
                     Center(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 40),
-                        child: Text('Belum ada tiket.',
-                            style: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+                        child: Column(
+                          children: [
+                            Icon(Icons.confirmation_number_outlined, 
+                              size: 48, 
+                              color: isDark ? Colors.white24 : Colors.black12),
+                            const SizedBox(height: 16),
+                            Text('Belum ada tiket bantuan.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight
+                                )),
+                            const SizedBox(height: 8),
+                            const Text('Tiket yang Anda buat akan muncul di sini.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
+                          ],
+                        ),
                       ),
                     )
                   else

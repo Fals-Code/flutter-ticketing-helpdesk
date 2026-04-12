@@ -57,6 +57,7 @@ enum TicketStatus {
         return TicketStatus.open;
       case 'in_progress':
       case 'inprogress':
+      case 'in progress':
         return TicketStatus.inProgress;
       case 'resolved':
         return TicketStatus.resolved;
@@ -92,7 +93,8 @@ enum TicketStatus {
 enum TicketPriority {
   low,
   medium,
-  high;
+  high,
+  urgent;
 
   static TicketPriority fromString(String priority) {
     switch (priority.toLowerCase()) {
@@ -102,6 +104,8 @@ enum TicketPriority {
         return TicketPriority.medium;
       case 'high':
         return TicketPriority.high;
+      case 'urgent':
+        return TicketPriority.urgent;
       default:
         return TicketPriority.medium;
     }
@@ -114,6 +118,7 @@ enum TicketPriority {
       case TicketPriority.low: return 'Rendah';
       case TicketPriority.medium: return 'Sedang';
       case TicketPriority.high: return 'Tinggi';
+      case TicketPriority.urgent: return 'Mendesak';
     }
   }
 
@@ -122,6 +127,7 @@ enum TicketPriority {
       case TicketPriority.low: return AppColors.priorityLow;
       case TicketPriority.medium: return AppColors.priorityMedium;
       case TicketPriority.high: return AppColors.priorityHigh;
+      case TicketPriority.urgent: return const Color(0xFFD32F2F); // Dark Red
     }
   }
 }

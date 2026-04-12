@@ -50,7 +50,7 @@ abstract class TicketRepository {
 
   /// Membuat tiket baru.
   Future<Either<Failure, TicketEntity>> createTicket({
-    required String customerId,
+    required String userId,
     required String title,
     required String description,
     required String category,

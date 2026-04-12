@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -77,7 +78,7 @@ class _TicketListPageState extends State<TicketListPage> {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
         final isStaff = authState.status == AuthStatus.authenticated && 
-            (authState.user.role == UserRole.admin || authState.user.role == UserRole.technician);
+            (authState.user?.role == UserRole.admin || authState.user?.role == UserRole.technician);
 
         return DefaultTabController(
           length: isStaff ? 2 : 1,

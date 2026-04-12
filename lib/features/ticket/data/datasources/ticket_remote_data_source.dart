@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import 'package:uuid/uuid.dart';
 import '../models/ticket_model.dart';
@@ -65,7 +66,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)')
+        .select('*, profiles:user_id(*)')
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (status != null && status != 'all') {
@@ -82,7 +83,14 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .order('created_at', ascending: false)
         .range(from, to);
 
-    return (response as List).map((json) => TicketModel.fromJson(json)).toList();
+    return (response as List).map((json) {
+      try {
+        return TicketModel.fromJson(json);
+      } catch (e) {
+        debugPrint('Error parsing ticket: $e');
+        return null;
+      }
+    }).whereType<TicketModel>().toList();
   }
 
   @override
@@ -92,7 +100,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)');
+        .select('*, profiles:user_id(*)');
     
     if (status != null && status != 'all') {
       query = query.eq('status', status.toLowerCase());
@@ -108,7 +116,14 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .order('created_at', ascending: false)
         .range(from, to);
 
-    return (response as List).map((json) => TicketModel.fromJson(json)).toList();
+    return (response as List).map((json) {
+      try {
+        return TicketModel.fromJson(json);
+      } catch (e) {
+        debugPrint('Error parsing ticket: $e');
+        return null;
+      }
+    }).whereType<TicketModel>().toList();
   }
 
   @override
@@ -138,12 +153,14 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }
 
     final ticketData = ticket.toJson();
+    // Injection of current authenticated user ID
+    ticketData['user_id'] = supabaseClient.auth.currentUser!.id;
     ticketData['images'] = uploadedUrls;
 
     final response = await supabaseClient
         .from('tickets')
         .insert(ticketData)
-        .select()
+        .select('*, profiles:user_id(*)')
         .single();
 
     final newTicket = TicketModel.fromJson(response);
@@ -162,7 +179,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId) async {
     final response = await supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)')
+        .select('*, profiles:user_id(*)')
         .eq('id', ticketId)
         .single();
 

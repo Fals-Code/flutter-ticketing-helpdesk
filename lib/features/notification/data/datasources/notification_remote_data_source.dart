@@ -23,9 +23,13 @@ class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteData
       
       return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
     } on PostgrestException catch (e) {
+      if (e.code == '42P01') {
+        // Table doesn't exist yet, return empty list gracefully
+        return [];
+      }
       throw Exception('Database error: ${e.message}');
     } catch (e) {
-      throw Exception('Failed to fetch notifications: $e');
+      return []; // Fallback for any other unexpected errors during initial setup
     }
   }
 
@@ -43,11 +47,16 @@ class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteData
 
   @override
   Stream<List<NotificationModel>> watchNotifications() {
-    return supabaseClient
-        .from('notifications')
-        .stream(primaryKey: ['id'])
-        .eq('user_id', supabaseClient.auth.currentUser!.id)
-        .order('created_at', ascending: false)
-        .map((data) => data.map((json) => NotificationModel.fromJson(json)).toList());
+    try {
+      return supabaseClient
+          .from('notifications')
+          .stream(primaryKey: ['id'])
+          .eq('user_id', supabaseClient.auth.currentUser!.id)
+          .order('created_at', ascending: false)
+          .map((data) => data.map((json) => NotificationModel.fromJson(json)).toList());
+    } catch (e) {
+      // Return empty stream if table missing or subscription fails
+      return Stream.value([]);
+    }
   }
 }

@@ -85,45 +85,97 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           body: state.isLoading && ticket == null
               ? const Center(child: LoadingWidget())
               : ticket == null
-                  ? const Center(child: Text('Tiket tidak ditemukan'))
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(AppDimensions.spaceXXL),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.search_off_rounded,
+                              size: 80,
+                              color: isDark ? Colors.white24 : Colors.black12,
+                            ),
+                            const SizedBox(height: 24),
+                            Text(
+                              'Tiket Tidak Ditemukan',
+                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 12),
+                            Text(
+                              'Maaf, tiket yang Anda cari tidak tersedia atau mungkin telah dihapus dari sistem.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            SizedBox(
+                              width: 200,
+                              child: ElevatedButton(
+                                onPressed: () => context.pop(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.primary,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(Icons.arrow_back, size: 20),
+                                    SizedBox(width: 8),
+                                    Text('Kembali', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
                   : Column(
                       children: [
                         Expanded(
                           child: SingleChildScrollView(
                             physics: const BouncingScrollPhysics(),
-                              padding: const EdgeInsets.all(AppDimensions.spaceLG),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _buildHeader(context, ticket),
+                            padding: const EdgeInsets.all(AppDimensions.spaceLG),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                _buildHeader(context, ticket),
+                                const SizedBox(height: AppDimensions.spaceLG),
+                                _buildAssignedInfo(context, ticket, isDark),
+                                const SizedBox(height: AppDimensions.spaceXXL),
+                                
+                                // Staff Action Panel
+                                _buildStaffActions(context, state),
+                                
+                                _buildDescription(context, ticket, isDark),
+                                if (ticket.imageUrls.isNotEmpty) ...[
                                   const SizedBox(height: AppDimensions.spaceXXL),
-                                  
-                                  // Staff Action Panel
-                                  _buildStaffActions(context, state),
-                                  
-                                  _buildDescription(context, ticket, isDark),
-                                  if (ticket.imageUrls.isNotEmpty) ...[
-                                    const SizedBox(height: AppDimensions.spaceXXL),
-                                    _buildImages(context, ticket),
-                                  ],
-                                  const SizedBox(height: AppDimensions.spaceXXL),
-                                  const Divider(),
-                                  const SizedBox(height: AppDimensions.spaceLG),
-                                  Text('Timeline Status',
-                                      style: Theme.of(context).textTheme.titleMedium),
-                                  const SizedBox(height: AppDimensions.spaceLG),
-                                  TicketTimelineWidget(activities: state.history, isDark: isDark),
-                                  
-                                  const SizedBox(height: AppDimensions.spaceXXL),
-                                  const Divider(),
-                                  const SizedBox(height: AppDimensions.spaceLG),
-                                  Text('Diskusi & Tanggapan',
-                                      style: Theme.of(context).textTheme.titleMedium),
-                                  const SizedBox(height: AppDimensions.spaceLG),
-                                  _buildCommentsList(context, state.comments, isDark),
-                                  const SizedBox(height: 100), // Space for input field
+                                  _buildImages(context, ticket),
                                 ],
-                              ),
+                                const SizedBox(height: AppDimensions.spaceXXL),
+                                const Divider(),
+                                const SizedBox(height: AppDimensions.spaceLG),
+                                Text('Timeline Status',
+                                    style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: AppDimensions.spaceLG),
+                                TicketTimelineWidget(activities: state.history, isDark: isDark),
+                                
+                                const SizedBox(height: AppDimensions.spaceXXL),
+                                const Divider(),
+                                const SizedBox(height: AppDimensions.spaceLG),
+                                Text('Diskusi & Tanggapan',
+                                    style: Theme.of(context).textTheme.titleMedium),
+                                const SizedBox(height: AppDimensions.spaceLG),
+                                _buildCommentsList(context, state.comments, isDark),
+                                const SizedBox(height: 100), // Space for input field
+                              ],
+                            ),
                           ),
                         ),
                         _buildCommentInput(context, state),
@@ -131,6 +183,38 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                     ),
         );
       },
+    );
+  }
+
+  Widget _buildAssignedInfo(BuildContext context, TicketEntity ticket, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF5F5F7),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.engineering_outlined,
+            size: 16,
+            color: ticket.assignedTo == null ? Colors.orange : AppColors.primary,
+          ),
+          const SizedBox(width: 8),
+          const Text(
+            'Petugas: ',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey),
+          ),
+          Text(
+            ticket.assignedToName ?? 'Belum ditugaskan',
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: ticket.assignedTo == null ? Colors.orange : (isDark ? Colors.white : Colors.black87),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

@@ -17,7 +17,7 @@ class FetchTicketsRequested extends TicketEvent {
 }
 
 class CreateTicketRequested extends TicketEvent {
-  final String customerId;
+  final String userId;
   final String title;
   final String description;
   final String category;
@@ -25,7 +25,7 @@ class CreateTicketRequested extends TicketEvent {
   final List<String> imagePaths;
 
   const CreateTicketRequested({
-    required this.customerId,
+    required this.userId,
     required this.title,
     required this.description,
     required this.category,
@@ -34,7 +34,7 @@ class CreateTicketRequested extends TicketEvent {
   });
 
   @override
-  List<Object?> get props => [customerId, title, description, category, priority, imagePaths];
+  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
 }
 
 class FetchTicketDetailRequested extends TicketEvent {

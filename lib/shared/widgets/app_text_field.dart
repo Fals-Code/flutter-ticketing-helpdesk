@@ -87,14 +87,21 @@ class _AppTextFieldState extends State<AppTextField> {
               filled: true,
               contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               prefixIcon: widget.prefixIcon != null
-                  ? Icon(
-                      widget.prefixIcon,
-                      size: 20, // Slightly increased from 18 for better visual
-                      color: _isFocused
-                          ? AppColors.primary
-                          : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                  ? Padding(
+                      padding: const EdgeInsets.only(right: 20, left: 16),
+                      child: Icon(
+                        widget.prefixIcon,
+                        size: 20,
+                        color: _isFocused
+                            ? AppColors.primary
+                            : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                      ),
                     )
                   : null,
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 56,
+                minHeight: 24,
+              ),
               suffixIcon: widget.isPassword
                   ? IconButton(
                       icon: Icon(

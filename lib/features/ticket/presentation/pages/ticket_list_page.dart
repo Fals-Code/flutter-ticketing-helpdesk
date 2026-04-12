@@ -95,7 +95,6 @@ class _TicketListPageState extends State<TicketListPage> {
         if (authState.user.isEmpty) return const Scaffold();
         final user = authState.user;
         final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
-        final isTechnician = user.role == UserRole.technician;
         
         String title;
         if (user.role == UserRole.admin) {
@@ -106,54 +105,43 @@ class _TicketListPageState extends State<TicketListPage> {
           title = 'Laporan Saya';
         }
 
-        return DefaultTabController(
-          length: isStaff ? 2 : 1,
-          child: Scaffold(
-            appBar: AppBar(
-              title: Text(title),
-              bottom: isStaff 
-                  ? TabBar(
-                      tabs: [
-                        const Tab(text: 'Tiket Saya'),
-                        Tab(text: isTechnician ? 'Tugas Saya' : 'Semua Tiket'),
-                      ],
-                    )
-                  : null,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded),
-                  onPressed: () {
-                    _myTicketsPage = 0;
-                    _allTicketsPage = 0;
-                    _fetchInitial();
-                  },
-                ),
-              ],
-            ),
-            body: BlocBuilder<TicketBloc, TicketState>(
-              builder: (context, state) {
-                return Column(
-                  children: [
-                    _buildFilters(context, state, isDark),
-                    if (user.role == UserRole.admin) _buildAdminStatsBar(state, isDark),
-                    Expanded(
-                      child: TabBarView(
-                        physics: isStaff ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
-                        children: [
-                          _buildTicketList(state.tickets, state.isLoading, state.errorMessage, _myTicketsScrollController, isDark),
-                          if (isStaff) _buildTicketList(state.allTickets, state.isLoading, state.errorMessage, _allTicketsScrollController, isDark),
-                        ],
-                      ),
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(title),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: () {
+                  _myTicketsPage = 0;
+                  _allTicketsPage = 0;
+                  _fetchInitial();
+                },
+              ),
+            ],
+          ),
+          body: BlocBuilder<TicketBloc, TicketState>(
+            builder: (context, state) {
+              return Column(
+                children: [
+                  _buildFilters(context, state, isDark),
+                  if (user.role == UserRole.admin) _buildAdminStatsBar(state, isDark),
+                  Expanded(
+                    child: _buildTicketList(
+                      isStaff ? state.allTickets : state.tickets, 
+                      state.isLoading, 
+                      state.errorMessage, 
+                      isStaff ? _allTicketsScrollController : _myTicketsScrollController, 
+                      isDark
                     ),
-                  ],
-                );
-              },
-            ),
-            floatingActionButton: FloatingActionButton(
-              heroTag: 'ticket_list_fab',
-              onPressed: () => context.push(AppRoutes.createTicket),
-              child: const Icon(Icons.add),
-            ),
+                  ),
+                ],
+              );
+            },
+          ),
+          floatingActionButton: FloatingActionButton(
+            heroTag: 'ticket_list_fab',
+            onPressed: () => context.push(AppRoutes.createTicket),
+            child: const Icon(Icons.add),
           ),
         );
       },

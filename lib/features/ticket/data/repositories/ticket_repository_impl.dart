@@ -82,6 +82,7 @@ class TicketRepositoryImpl implements TicketRepository {
 
   @override
   Future<Either<Failure, TicketEntity>> createTicket({
+    required String customerId,
     required String title,
     required String description,
     required String category,
@@ -97,7 +98,7 @@ class TicketRepositoryImpl implements TicketRepository {
         priority: TicketPriority.fromString(priority),
         category: category,
         createdAt: DateTime.now(),
-        userId: '', // Set by DataSource based on current auth
+        userId: customerId,
       );
 
       final createdTicket = await remoteDataSource.createTicket(ticketModel, imagePaths);

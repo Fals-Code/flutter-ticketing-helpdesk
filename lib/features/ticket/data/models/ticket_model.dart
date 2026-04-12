@@ -51,8 +51,9 @@ class TicketModel extends TicketEntity {
       'status': status.name,
       'priority': priority.name,
       'category': category,
-      'user_id': userId,
-      'assigned_to': assignedTo,
+      'user_id': userId.isEmpty ? null : userId,
+      // assigned_to must be null for new tickets from the user
+      'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
       'images': super.imageUrls,
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
     };

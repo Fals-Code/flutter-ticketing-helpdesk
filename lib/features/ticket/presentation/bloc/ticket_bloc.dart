@@ -132,6 +132,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
 
     final result = await createTicketUseCase(
       CreateTicketParams(
+        customerId: event.customerId,
         title: event.title,
         description: event.description,
         category: event.category,

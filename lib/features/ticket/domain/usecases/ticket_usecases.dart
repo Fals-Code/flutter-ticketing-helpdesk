@@ -26,6 +26,7 @@ class CreateTicketUseCase implements UseCase<Either<Failure, TicketEntity>, Crea
   @override
   Future<Either<Failure, TicketEntity>> call(CreateTicketParams params) async {
     return await repository.createTicket(
+      customerId: params.customerId,
       title: params.title,
       description: params.description,
       category: params.category,
@@ -128,6 +129,7 @@ class GetTicketsParams extends Equatable {
 }
 
 class CreateTicketParams extends Equatable {
+  final String customerId;
   final String title;
   final String description;
   final String category;
@@ -135,6 +137,7 @@ class CreateTicketParams extends Equatable {
   final List<String> imagePaths;
 
   const CreateTicketParams({
+    required this.customerId,
     required this.title,
     required this.description,
     required this.category,
@@ -143,7 +146,7 @@ class CreateTicketParams extends Equatable {
   });
 
   @override
-  List<Object?> get props => [title, description, category, priority, imagePaths];
+  List<Object?> get props => [customerId, title, description, category, priority, imagePaths];
 }
 
 class AddCommentParams extends Equatable {

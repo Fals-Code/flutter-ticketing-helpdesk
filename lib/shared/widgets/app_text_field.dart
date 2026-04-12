@@ -85,10 +85,11 @@ class _AppTextFieldState extends State<AppTextField> {
               hintText: widget.hint,
               fillColor: isDark ? AppColors.surfaceDark : const Color(0xFFFAFAFA),
               filled: true,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               prefixIcon: widget.prefixIcon != null
                   ? Icon(
                       widget.prefixIcon,
-                      size: 18,
+                      size: 20, // Slightly increased from 18 for better visual
                       color: _isFocused
                           ? AppColors.primary
                           : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),

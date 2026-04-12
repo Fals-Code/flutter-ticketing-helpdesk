@@ -214,7 +214,7 @@ class _GreetingBanner extends StatelessWidget {
     final config = _getGreetingConfig();
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
-        final name = state.user.fullName?.split(' ').first ?? 'Staff';
+        final name = state.user.fullName ?? 'Staff';
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

@@ -10,6 +10,7 @@ import 'package:uts/shared/widgets/app_text_field.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 
 class CreateTicketPage extends StatefulWidget {
   const CreateTicketPage({super.key});
@@ -240,7 +241,9 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                             isLoading: state.isLoading,
                             onPressed: () {
                               if (!_formKey.currentState!.validate()) return;
+                              final userId = context.read<AuthBloc>().state.user.id;
                               context.read<TicketBloc>().add(CreateTicketRequested(
+                                    customerId: userId,
                                     title: _subjectController.text,
                                     description: _descController.text,
                                     category: _selectedCategory,

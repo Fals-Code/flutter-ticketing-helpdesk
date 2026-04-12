@@ -94,4 +94,7 @@ abstract class TicketRepository {
 
   /// Aliran data tiket secara realtime.
   Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId});
+
+  /// Aliran data komentar secara realtime.
+  Stream<List<CommentEntity>> watchTicketComments(String ticketId);
 }

@@ -31,6 +31,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   @override
   void initState() {
     context.read<TicketBloc>().add(FetchTicketDetailRequested(widget.ticketId));
+    context.read<TicketBloc>().add(StartTicketCommentsSubscription(widget.ticketId));
     
     // Fetch staff users if role is technician/admin
     final authState = context.read<AuthBloc>().state;

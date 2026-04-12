@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import '../../../../core/constants/enums.dart';
 
 abstract class TicketEvent extends Equatable {
@@ -145,6 +146,20 @@ class TicketStreamUpdated extends TicketEvent {
   const TicketStreamUpdated(this.tickets);
   @override
   List<Object?> get props => [tickets];
+}
+
+class StartTicketCommentsSubscription extends TicketEvent {
+  final String ticketId;
+  const StartTicketCommentsSubscription(this.ticketId);
+  @override
+  List<Object?> get props => [ticketId];
+}
+
+class CommentStreamUpdated extends TicketEvent {
+  final List<CommentEntity> comments;
+  const CommentStreamUpdated(this.comments);
+  @override
+  List<Object?> get props => [comments];
 }
 
 class ResetTicketState extends TicketEvent {}

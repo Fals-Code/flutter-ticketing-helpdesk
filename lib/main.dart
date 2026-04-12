@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'core/constants/app_strings.dart';
-import 'core/constants/env_constants.dart';
-import 'core/di/injection_container.dart';
-import 'core/router/app_router.dart';
+import 'package:uts/core/constants/app_strings.dart';
+import 'package:uts/core/constants/env_constants.dart';
+import 'package:uts/core/di/injection_container.dart';
+import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
@@ -16,10 +17,15 @@ import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 import 'package:uts/core/storage/secure_local_storage.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:uts/core/services/local_notification_service.dart';
+import 'package:uts/shared/widgets/connectivity_banner_widget.dart';
 
 Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 0. Initialize Firebase
+  await Firebase.initializeApp();
 
   // Load environment variables
   try {
@@ -51,6 +57,9 @@ Future<void> main() async {
 
   // 2. Inisialisaasi semua dependensi (GetIt service locator)
   await initDependencies();
+
+  // 3. Inisialisasi Local Notification Service
+  await sl<LocalNotificationService>().initialize();
 
   runApp(const ETicketingApp());
 }
@@ -108,9 +117,10 @@ class ETicketingApp extends StatelessWidget {
                 minScaleFactor: 0.85,
                 maxScaleFactor: 1.2,
               );
+              final connectivityWrapped = ConnectivityBannerWidget(child: child!);
               return MediaQuery(
                 data: mediaQuery.copyWith(textScaler: constrainedTextScaleFactor),
-                child: child!,
+                child: connectivityWrapped,
               );
             },
           );

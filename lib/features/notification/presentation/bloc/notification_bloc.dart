@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/usecases/notification_usecases.dart';
+import 'package:uts/core/services/local_notification_service.dart';
 
 // Events
 abstract class NotificationEvent extends Equatable {
@@ -66,12 +67,14 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final GetNotifications getNotifications;
   final MarkNotificationAsRead markNotificationAsRead;
   final WatchNotifications watchNotifications;
+  final LocalNotificationService localNotificationService;
   StreamSubscription? _notificationSubscription;
 
   NotificationBloc({
     required this.getNotifications,
     required this.markNotificationAsRead,
     required this.watchNotifications,
+    required this.localNotificationService,
   }) : super(const NotificationState()) {
     on<FetchNotificationsRequested>(_onFetchNotifications);
     on<MarkReadRequested>(_onMarkRead);
@@ -95,6 +98,21 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     NotificationStreamUpdated event,
     Emitter<NotificationState> emit,
   ) {
+    // Detect new unread notifications to show popup
+    final currentIds = state.notifications.map((n) => n.id).toSet();
+    
+    for (var notification in event.notifications) {
+      if (!notification.isRead && !currentIds.contains(notification.id)) {
+        // This is a new unread notification
+        localNotificationService.showNotification(
+          id: notification.id.hashCode,
+          title: notification.title,
+          body: notification.message,
+          payload: notification.ticketId,
+        );
+      }
+    }
+
     emit(state.copyWith(notifications: event.notifications));
   }
 

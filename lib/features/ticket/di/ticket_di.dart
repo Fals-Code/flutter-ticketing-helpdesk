@@ -5,6 +5,7 @@ import 'package:uts/features/ticket/data/repositories/ticket_repository_impl.dar
 import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
@@ -23,6 +24,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
         getAllTicketHistoryUseCase: sl(),
         getTicketStatsUseCase: sl(),
         watchTicketsUseCase: sl(),
+        watchTicketCommentsUseCase: sl(),
       ));
 
   // UseCases
@@ -35,6 +37,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => GetTicketHistoryUseCase(sl()));
   sl.registerLazySingleton(() => GetAllTicketHistoryUseCase(sl()));
   sl.registerLazySingleton(() => WatchTicketsUseCase(sl()));
+  sl.registerLazySingleton(() => WatchTicketCommentsUseCase(sl()));
   
   // Admin UseCases
   sl.registerLazySingleton(() => GetAllTicketsUseCase(sl()));

@@ -198,6 +198,13 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
+  Stream<List<CommentEntity>> watchTicketComments(String ticketId) {
+    return remoteDataSource.watchTicketComments(ticketId).map(
+          (models) => models.map((c) => c.toEntity()).toList(),
+        );
+  }
+
+  @override
   Future<Either<Failure, TicketEntity>> assignTicket({
     required String ticketId,
     required String technicianId,

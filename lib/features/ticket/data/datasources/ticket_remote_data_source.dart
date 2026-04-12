@@ -21,11 +21,13 @@ abstract class TicketRemoteDataSource {
   Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy});
   Future<Map<String, int>> getTicketStats({String? assignedToId});
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId});
+  Stream<List<CommentModel>> watchTicketComments(String ticketId);
 }
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   final sup.SupabaseClient supabaseClient;
   static const String _bucketName = 'tickets';
+  final Map<String, Map<String, dynamic>> _profileCache = {};
 
   SupabaseTicketRemoteDataSourceImpl(this.supabaseClient);
 
@@ -401,5 +403,64 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .single();
 
     return CommentModel.fromJson(response);
+  }
+
+  @override
+  Stream<List<CommentModel>> watchTicketComments(String ticketId) {
+    return supabaseClient
+        .from('comments')
+        .stream(primaryKey: ['id'])
+        .eq('ticket_id', ticketId)
+        .order('created_at', ascending: true)
+        .asyncMap((data) async {
+          // 1. Parse raw comments
+          final List<CommentModel> comments = data.map((json) {
+            try {
+              return CommentModel.fromJson(json);
+            } catch (e) {
+              debugPrint('Comment Stream Parsing Error: $e');
+              return null;
+            }
+          }).whereType<CommentModel>().toList();
+
+          if (comments.isEmpty) return comments;
+
+          // 2. Identify unique user IDs that are not in cache
+          final userIds = comments.map((c) => c.userId).toSet();
+          final missingUserIds = userIds.where((id) => !_profileCache.containsKey(id)).toList();
+
+          // 3. Fetch missing profiles
+          if (missingUserIds.isNotEmpty) {
+            try {
+              final List<dynamic> profilesResponse = await supabaseClient
+                  .from('profiles')
+                  .select('id, full_name, role')
+                  .inFilter('id', missingUserIds);
+              
+              for (var profile in profilesResponse) {
+                _profileCache[profile['id']] = profile;
+              }
+            } catch (e) {
+              debugPrint('Error fetching profiles for comments: $e');
+            }
+          }
+
+          // 4. Enrich comments with cached profile data
+          return comments.map((comment) {
+            final profile = _profileCache[comment.userId];
+            if (profile != null) {
+              final roleInt = profile['role'] as int?;
+              final roleName = roleInt != null 
+                  ? UserRole.fromInt(roleInt).name 
+                  : (profile['role']?.toString() ?? 'user');
+
+              return comment.copyWith(
+                userName: profile['full_name'] ?? 'Unknown',
+                userRole: roleName,
+              );
+            }
+            return comment;
+          }).toList();
+        });
   }
 }

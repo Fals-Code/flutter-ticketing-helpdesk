@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'ticket_event.dart';
 import 'ticket_state.dart';
@@ -22,7 +23,9 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   final GetAllTicketHistoryUseCase getAllTicketHistoryUseCase;
   final GetTicketStatsUseCase getTicketStatsUseCase;
   final WatchTicketsUseCase watchTicketsUseCase;
+  final WatchTicketCommentsUseCase watchTicketCommentsUseCase;
   StreamSubscription? _ticketSubscription;
+  StreamSubscription? _commentSubscription;
 
   TicketBloc({
     required this.getTicketsUseCase,
@@ -38,6 +41,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     required this.getAllTicketHistoryUseCase,
     required this.getTicketStatsUseCase,
     required this.watchTicketsUseCase,
+    required this.watchTicketCommentsUseCase,
   }) : super(const TicketState()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
@@ -53,6 +57,8 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     on<FilterCategoryChanged>(_onFilterCategoryChanged);
     on<StartTicketSubscription>(_onStartSubscription);
     on<TicketStreamUpdated>(_onStreamUpdated);
+    on<StartTicketCommentsSubscription>(_onStartCommentSubscription);
+    on<CommentStreamUpdated>(_onCommentStreamUpdated);
     on<FetchTicketStatsRequested>(_onFetchStats);
     on<ResetTicketState>(_onResetState);
   }
@@ -105,6 +111,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   @override
   Future<void> close() {
     _ticketSubscription?.cancel();
+    _commentSubscription?.cancel();
     return super.close();
   }
 
@@ -181,24 +188,15 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     emit(state.copyWith(isLoading: true, comments: []));
 
     final detailResult = await getTicketDetailUseCase(event.ticketId);
-    final commentsResult = await getTicketCommentsUseCase(event.ticketId);
+    
+    // Static fetch removed, now handled by StartTicketCommentsSubscription stream
 
     detailResult.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) {
-        commentsResult.fold(
-          (failure) => emit(state.copyWith(
-            isLoading: false,
-            selectedTicket: ticket,
-            errorMessage: failure.message,
-          )),
-          (comments) => emit(state.copyWith(
-            isLoading: false,
-            selectedTicket: ticket,
-            comments: comments,
-          )),
-        );
-      },
+      (ticket) => emit(state.copyWith(
+        isLoading: false,
+        selectedTicket: ticket,
+      )),
     );
   }
 
@@ -371,8 +369,29 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     Emitter<TicketState> emit,
   ) async {
     _ticketSubscription?.cancel();
+    _commentSubscription?.cancel();
     emit(const TicketState());
   }
+
+  void _onStartCommentSubscription(
+    StartTicketCommentsSubscription event,
+    Emitter<TicketState> emit,
+  ) {
+    _commentSubscription?.cancel();
+    
+    _commentSubscription = watchTicketCommentsUseCase(event.ticketId).listen(
+      (comments) => add(CommentStreamUpdated(comments)),
+      onError: (error) => debugPrint('Comment Stream Error: $error'),
+    );
+  }
+
+  void _onCommentStreamUpdated(
+    CommentStreamUpdated event,
+    Emitter<TicketState> emit,
+  ) {
+    emit(state.copyWith(comments: event.comments));
+  }
+
   List<TicketEntity> _applyFilters(List<TicketEntity> tickets) {
     return tickets.where((ticket) {
       // 1. Status Filter (Lowercase Sync)

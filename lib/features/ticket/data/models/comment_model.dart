@@ -26,6 +26,22 @@ class CommentModel extends CommentEntity {
     );
   }
 
+  CommentModel copyWith({
+    String? userName,
+    String? userRole,
+    String? message,
+  }) {
+    return CommentModel(
+      id: id,
+      ticketId: ticketId,
+      userId: userId,
+      userName: userName ?? this.userName,
+      userRole: userRole ?? this.userRole,
+      message: message ?? this.message,
+      createdAt: createdAt,
+    );
+  }
+
   Map<String, dynamic> toJson() {
     return {
       'ticket_id': ticketId,

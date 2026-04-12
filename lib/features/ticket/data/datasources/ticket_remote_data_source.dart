@@ -66,7 +66,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, profiles:user_id(*)')
+        .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (status != null && status != 'all') {
@@ -100,7 +100,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, profiles:user_id(*)');
+        .select('*, profiles:user_id(*), technician:assigned_to(*)');
     
     if (status != null && status != 'all') {
       query = query.eq('status', status.toLowerCase());
@@ -160,7 +160,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final response = await supabaseClient
         .from('tickets')
         .insert(ticketData)
-        .select('*, profiles:user_id(*)')
+        .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .single();
 
     final newTicket = TicketModel.fromJson(response);
@@ -179,7 +179,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId) async {
     final response = await supabaseClient
         .from('tickets')
-        .select('*, profiles:user_id(*)')
+        .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .eq('id', ticketId)
         .single();
 
@@ -195,7 +195,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
-        .select('*, assigned_profiles:assigned_to(full_name)')
+        .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .single();
     
     final updatedTicket = TicketModel.fromJson(response);
@@ -228,7 +228,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
-        .select('*, assigned_profiles:assigned_to(full_name)')
+        .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .single();
     
     final updatedTicket = TicketModel.fromJson(response);

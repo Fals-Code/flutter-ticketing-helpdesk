@@ -19,21 +19,25 @@ class TicketModel extends TicketEntity {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    // Check for profiles join object to get creator's name
+    // 1. Parse Creator/Reporter Profile (join via profiles:user_id)
     final profilesData = json['profiles'];
     Map<String, dynamic>? creatorProfile;
-    
     if (profilesData is Map<String, dynamic>) {
       creatorProfile = profilesData;
     } else if (profilesData is List && profilesData.isNotEmpty) {
       creatorProfile = profilesData.first;
     }
-    
     final userName = creatorProfile != null ? creatorProfile['full_name'] : 'Pengguna';
 
-    // Handle assigned profile if available (fall back to default)
-    final assignedProfile = json['technician']; 
-    final assignedToName = assignedProfile != null ? assignedProfile['full_name'] : 'Belum ditugaskan';
+    // 2. Parse Technician Profile (join via technician:assigned_to)
+    final technicianData = json['technician'];
+    Map<String, dynamic>? staffProfile;
+    if (technicianData is Map<String, dynamic>) {
+      staffProfile = technicianData;
+    } else if (technicianData is List && technicianData.isNotEmpty) {
+      staffProfile = technicianData.first;
+    }
+    final assignedToName = staffProfile != null ? staffProfile['full_name'] : 'Belum ditugaskan';
 
     return TicketModel(
       id: json['id'] ?? '',

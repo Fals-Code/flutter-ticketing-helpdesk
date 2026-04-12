@@ -22,9 +22,18 @@ class TicketRepositoryImpl implements TicketRepository {
   Future<Either<Failure, List<TicketEntity>>> getTickets({
     required int page,
     required int limit,
+    String? searchQuery,
+    String? category,
+    TicketStatus? status,
   }) async {
     try {
-      final tickets = await remoteDataSource.getTickets(page, limit);
+      final tickets = await remoteDataSource.getTickets(
+        page,
+        limit,
+        searchQuery: searchQuery,
+        category: category,
+        status: status?.name,
+      );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 401));
@@ -38,9 +47,17 @@ class TicketRepositoryImpl implements TicketRepository {
     required int page,
     required int limit,
     String? status,
+    String? searchQuery,
+    String? category,
   }) async {
     try {
-      final tickets = await remoteDataSource.getAllTickets(page, limit, status: status);
+      final tickets = await remoteDataSource.getAllTickets(
+        page,
+        limit,
+        status: status,
+        searchQuery: searchQuery,
+        category: category,
+      );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
@@ -173,6 +190,22 @@ class TicketRepositoryImpl implements TicketRepository {
     try {
       final ticket = await remoteDataSource.assignTicket(ticketId, technicianId);
       return Right(ticket.toEntity());
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TicketStats>> getTicketStats() async {
+    try {
+      final statsMap = await remoteDataSource.getTicketStats();
+      return Right(TicketStats(
+        total: statsMap['total'] ?? 0,
+        open: statsMap['open'] ?? 0,
+        inProgress: statsMap['in_progress'] ?? 0,
+        resolved: statsMap['resolved'] ?? 0,
+        closed: statsMap['closed'] ?? 0,
+      ));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }

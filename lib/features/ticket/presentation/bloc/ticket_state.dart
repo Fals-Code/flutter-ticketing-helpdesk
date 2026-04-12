@@ -36,8 +36,10 @@ class TicketState extends Equatable {
   final TicketStats stats;
   final String? errorMessage;
   final String? successMessage;
-  final bool isLastPage;
   final bool isLastPageAll;
+  final String searchQuery;
+  final TicketStatusFilter statusFilter;
+  final String? categoryFilter;
 
   const TicketState({
     this.isLoading = false,
@@ -52,6 +54,9 @@ class TicketState extends Equatable {
     this.successMessage,
     this.isLastPage = false,
     this.isLastPageAll = false,
+    this.searchQuery = '',
+    this.statusFilter = TicketStatusFilter.all,
+    this.categoryFilter,
   });
 
   TicketState copyWith({
@@ -67,6 +72,9 @@ class TicketState extends Equatable {
     String? successMessage,
     bool? isLastPage,
     bool? isLastPageAll,
+    String? searchQuery,
+    TicketStatusFilter? statusFilter,
+    String? categoryFilter,
   }) {
     return TicketState(
       isLoading: isLoading ?? this.isLoading,
@@ -81,6 +89,9 @@ class TicketState extends Equatable {
       successMessage: successMessage,
       isLastPage: isLastPage ?? this.isLastPage,
       isLastPageAll: isLastPageAll ?? this.isLastPageAll,
+      searchQuery: searchQuery ?? this.searchQuery,
+      statusFilter: statusFilter ?? this.statusFilter,
+      categoryFilter: categoryFilter ?? this.categoryFilter,
     );
   }
 
@@ -98,5 +109,8 @@ class TicketState extends Equatable {
         successMessage,
         isLastPage,
         isLastPageAll,
+        searchQuery,
+        statusFilter,
+        categoryFilter,
       ];
 }

@@ -6,8 +6,8 @@ import '../models/comment_model.dart';
 import '../models/ticket_activity_model.dart';
 
 abstract class TicketRemoteDataSource {
-  Future<List<TicketModel>> getTickets(int page, int limit);
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status});
+  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status});
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category});
   Future<List<Map<String, dynamic>>> getStaffUsers();
   Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths);
   Future<TicketModel> getTicketDetail(String ticketId);
@@ -17,6 +17,7 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
   Future<List<TicketActivityModel>> getTicketActivities(String ticketId);
   Future<List<TicketActivityModel>> getAllActivities();
+  Future<Map<String, int>> getTicketStats();
 }
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
@@ -26,14 +27,46 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   SupabaseTicketRemoteDataSourceImpl(this.supabaseClient);
 
   @override
-  Future<List<TicketModel>> getTickets(int page, int limit) async {
+  Future<Map<String, int>> getTicketStats() async {
+    // Perform parallel count queries for efficiency
+    final results = await Future.wait([
+      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)),
+      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'open'),
+      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'in_progress'),
+      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'resolved'),
+      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'closed'),
+    ]);
+
+    return {
+      'total': results[0].count ?? 0,
+      'open': results[1].count ?? 0,
+      'in_progress': results[2].count ?? 0,
+      'resolved': results[3].count ?? 0,
+      'closed': results[4].count ?? 0,
+    };
+  }
+
+  @override
+  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status}) async {
     final from = page * limit;
     final to = from + limit - 1;
 
-    final response = await supabaseClient
+    var query = supabaseClient
         .from('tickets')
         .select('*, assigned_profiles:assigned_to(full_name)')
-        .eq('user_id', supabaseClient.auth.currentUser!.id)
+        .eq('user_id', supabaseClient.auth.currentUser!.id);
+
+    if (status != null && status != 'all') {
+      query = query.eq('status', status.toLowerCase());
+    }
+    if (category != null) {
+      query = query.eq('category', category);
+    }
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+    }
+
+    final response = await query
         .order('created_at', ascending: false)
         .range(from, to);
 
@@ -41,7 +74,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status}) async {
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category}) async {
     final from = page * limit;
     final to = from + limit - 1;
 
@@ -49,8 +82,14 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .from('tickets')
         .select('*, assigned_profiles:assigned_to(full_name)');
     
-    if (status != null) {
+    if (status != null && status != 'all') {
       query = query.eq('status', status.toLowerCase());
+    }
+    if (category != null) {
+      query = query.eq('category', category);
+    }
+    if (searchQuery != null && searchQuery.isNotEmpty) {
+      query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
     }
 
     final response = await query

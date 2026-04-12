@@ -91,3 +91,24 @@ class FetchTicketActivitiesRequested extends TicketEvent {
   @override
   List<Object?> get props => [ticketId];
 }
+
+class SearchQueryChanged extends TicketEvent {
+  final String query;
+  const SearchQueryChanged(this.query);
+  @override
+  List<Object?> get props => [query];
+}
+
+class FilterStatusChanged extends TicketEvent {
+  final TicketStatus? status;
+  const FilterStatusChanged(this.status);
+  @override
+  List<Object?> get props => [status];
+}
+
+class FilterCategoryChanged extends TicketEvent {
+  final String? category;
+  const FilterCategoryChanged(this.category);
+  @override
+  List<Object?> get props => [category];
+}

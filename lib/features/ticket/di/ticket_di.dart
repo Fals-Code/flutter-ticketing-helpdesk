@@ -21,6 +21,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
         assignTicketUseCase: sl(),
         getTicketActivitiesUseCase: sl(),
         getAllActivitiesUseCase: sl(),
+        getTicketStatsUseCase: sl(),
       ));
 
   // UseCases
@@ -29,6 +30,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => GetTicketDetailUseCase(sl()));
   sl.registerLazySingleton(() => GetTicketCommentsUseCase(sl()));
   sl.registerLazySingleton(() => AddCommentUseCase(sl()));
+  sl.registerLazySingleton(() => GetTicketStatsUseCase(sl()));
   
   // Admin UseCases
   sl.registerLazySingleton(() => GetAllTicketsUseCase(sl()));

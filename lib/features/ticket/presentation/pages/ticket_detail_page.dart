@@ -13,6 +13,7 @@ import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/shared/widgets/ticket_timeline_widget.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -36,6 +37,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         (authState.user.role == UserRole.admin || authState.user.role == UserRole.technician)) {
       context.read<TicketBloc>().add(const FetchStaffUsersRequested());
     }
+    
+    // Fetch activities for timeline
+    context.read<TicketBloc>().add(FetchTicketActivitiesRequested(ticketId: widget.ticketId));
     super.initState();
   }
 
@@ -56,12 +60,12 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         }
         if (state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!), backgroundColor: Colors.red),
+            SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.priorityHigh),
           );
         }
         if (state.successMessage != null && state.successMessage != 'Tanggapan berhasil dikirim') {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.successMessage!), backgroundColor: Colors.green),
+            SnackBar(content: Text(state.successMessage!), backgroundColor: AppColors.statusResolved),
           );
         }
       },
@@ -105,7 +109,15 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                   const SizedBox(height: AppDimensions.spaceXXL),
                                   const Divider(),
                                   const SizedBox(height: AppDimensions.spaceLG),
-                                  Text('Riwayat Aktivitas',
+                                  Text('Timeline Status',
+                                      style: Theme.of(context).textTheme.titleMedium),
+                                  const SizedBox(height: AppDimensions.spaceLG),
+                                  TicketTimelineWidget(activities: state.activities, isDark: isDark),
+                                  
+                                  const SizedBox(height: AppDimensions.spaceXXL),
+                                  const Divider(),
+                                  const SizedBox(height: AppDimensions.spaceLG),
+                                  Text('Diskusi & Tanggapan',
                                       style: Theme.of(context).textTheme.titleMedium),
                                   const SizedBox(height: AppDimensions.spaceLG),
                                   _buildCommentsList(context, state.comments, isDark),
@@ -283,7 +295,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: Colors.grey,
+            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
             letterSpacing: 0.5,
           ),
         ),
@@ -292,7 +304,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: isDark ? const Color(0xFF1A1A1E) : const Color(0xFFF8F8FA),
+            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(10),
             border: Border.all(
               color: isDark ? AppColors.borderDark : AppColors.borderLight,
@@ -391,7 +403,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                       decoration: BoxDecoration(
                         color: isMe
                             ? AppColors.primary
-                            : (isDark ? const Color(0xFF232329) : const Color(0xFFF1F1F4)),
+                            : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
                         borderRadius: BorderRadius.circular(12).copyWith(
                           topRight: isMe ? const Radius.circular(0) : const Radius.circular(12),
                           topLeft: !isMe ? const Radius.circular(0) : const Radius.circular(12),

@@ -10,12 +10,17 @@ import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
+import 'package:uts/core/storage/secure_local_storage.dart';
 
 Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Load environment variables
+  await dotenv.load(fileName: ".env");
 
   // Lock to portrait mode (sesuai SRS requirement mobile)
   await SystemChrome.setPreferredOrientations([
@@ -33,6 +38,9 @@ Future<void> main() async {
   await Supabase.initialize(
     url: EnvConstants.supabaseUrl,
     anonKey: EnvConstants.supabaseAnonKey,
+    authOptions: FlutterAuthClientOptions(
+      localStorage: SecureLocalStorage(),
+    ),
   );
 
   // 2. Inisialisasi semua dependensi (GetIt service locator)

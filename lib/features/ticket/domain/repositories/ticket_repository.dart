@@ -11,6 +11,9 @@ abstract class TicketRepository {
   Future<Either<Failure, List<TicketEntity>>> getTickets({
     required int page,
     required int limit,
+    String? searchQuery,
+    String? category,
+    TicketStatus? status,
   });
 
   /// Mengambil SEMUA daftar tiket di sistem (Paginated - untuk Admin/Staff).
@@ -18,6 +21,8 @@ abstract class TicketRepository {
     required int page,
     required int limit,
     String? status,
+    String? searchQuery,
+    String? category,
   });
 
   /// Mengambil daftar staff (Technician/Admin) untuk penugasan.
@@ -61,4 +66,7 @@ abstract class TicketRepository {
 
   /// Mengambil semua riwayat aktivitas (Admin/Staff only).
   Future<Either<Failure, List<TicketActivityEntity>>> getAllActivities();
+
+  /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
+  Future<Either<Failure, TicketStats>> getTicketStats();
 }

@@ -105,11 +105,18 @@ class _TicketListPageState extends State<TicketListPage> {
             ),
             body: BlocBuilder<TicketBloc, TicketState>(
               builder: (context, state) {
-                return TabBarView(
-                  physics: isStaff ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                return Column(
                   children: [
-                    _buildTicketList(state.tickets, state.isLoading, state.errorMessage, _myTicketsScrollController, isDark),
-                    if (isStaff) _buildTicketList(state.allTickets, state.isLoading, state.errorMessage, _allTicketsScrollController, isDark),
+                    _buildFilters(context, state, isDark),
+                    Expanded(
+                      child: TabBarView(
+                        physics: isStaff ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
+                        children: [
+                          _buildTicketList(state.tickets, state.isLoading, state.errorMessage, _myTicketsScrollController, isDark),
+                          if (isStaff) _buildTicketList(state.allTickets, state.isLoading, state.errorMessage, _allTicketsScrollController, isDark),
+                        ],
+                      ),
+                    ),
                   ],
                 );
               },
@@ -122,6 +129,95 @@ class _TicketListPageState extends State<TicketListPage> {
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFilters(BuildContext context, TicketState state, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.spaceLG),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+      ),
+      child: Column(
+        children: [
+          TextField(
+            onChanged: (val) => context.read<TicketBloc>().add(SearchQueryChanged(val)),
+            decoration: InputDecoration(
+              hintText: 'Cari tiket...',
+              prefixIcon: const Icon(Icons.search_rounded, size: 20),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              fillColor: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF5F5F7),
+              filled: true,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: 32,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              children: [
+                _buildFilterChip(
+                  context,
+                  label: 'Semua',
+                  isSelected: state.statusFilter == TicketStatusFilter.all,
+                  onTap: () => context.read<TicketBloc>().add(const FilterStatusChanged(null)),
+                  isDark: isDark,
+                ),
+                ...TicketStatus.values.map((status) => _buildFilterChip(
+                      context,
+                      label: status.label,
+                      isSelected: state.statusFilter.name == status.name,
+                      onTap: () => context.read<TicketBloc>().add(FilterStatusChanged(status)),
+                      isDark: isDark,
+                    )),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required bool isDark,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          alignment: Alignment.center,
+          decoration: BoxDecoration(
+            color: isSelected 
+                ? AppColors.primary 
+                : (isDark ? const Color(0xFF2A2A2E) : Colors.grey.shade200),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+            ),
+          ),
+        ),
+      ),
     );
   }
 

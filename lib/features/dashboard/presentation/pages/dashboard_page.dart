@@ -601,7 +601,7 @@ class _ProfileTile extends StatelessWidget {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
+        color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: isDark ? AppColors.borderDark : AppColors.borderLight,
@@ -610,10 +610,10 @@ class _ProfileTile extends StatelessWidget {
       child: ListTile(
         onTap: onTap,
         dense: true,
-        leading: Icon(icon, color: isDark ? Colors.white70 : Colors.black87, size: 20),
+        leading: Icon(icon, color: isDark ? AppColors.textPrimaryDark.withValues(alpha: 0.7) : AppColors.textPrimaryLight.withValues(alpha: 0.8), size: 20),
         title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-        subtitle: Text(subtitle, style: const TextStyle(fontSize: 12, color: Colors.grey)),
-        trailing: const Icon(Icons.chevron_right_rounded, size: 18, color: Colors.grey),
+        subtitle: Text(subtitle, style: TextStyle(fontSize: 12, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight)),
+        trailing: Icon(Icons.chevron_right_rounded, size: 18, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
       ),
     );
   }

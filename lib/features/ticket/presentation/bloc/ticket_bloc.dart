@@ -19,6 +19,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   final AssignTicketUseCase assignTicketUseCase;
   final GetTicketActivitiesUseCase getTicketActivitiesUseCase;
   final GetAllActivitiesUseCase getAllActivitiesUseCase;
+  final GetTicketStatsUseCase getTicketStatsUseCase;
 
   TicketBloc({
     required this.getTicketsUseCase,
@@ -32,6 +33,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     required this.assignTicketUseCase,
     required this.getTicketActivitiesUseCase,
     required this.getAllActivitiesUseCase,
+    required this.getTicketStatsUseCase,
   }) : super(const TicketState()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
@@ -41,8 +43,10 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
     on<AssignTicketRequested>(_onAssignTicket);
     on<AddCommentRequested>(_onAddComment);
-    on<FetchTicketStatsRequested>(_onFetchStats);
     on<FetchTicketActivitiesRequested>(_onFetchActivities);
+    on<SearchQueryChanged>(_onSearchQueryChanged);
+    on<FilterStatusChanged>(_onFilterStatusChanged);
+    on<FilterCategoryChanged>(_onFilterCategoryChanged);
   }
 
   Future<void> _onFetchTickets(
@@ -54,7 +58,13 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     }
 
     final result = await getTicketsUseCase(
-      GetTicketsParams(page: event.page, limit: event.limit),
+      GetTicketsParams(
+        page: event.page,
+        limit: event.limit,
+        searchQuery: state.searchQuery,
+        category: state.categoryFilter,
+        status: state.statusFilter == TicketStatusFilter.all ? null : state.statusFilter.name,
+      ),
     );
 
     result.fold(
@@ -149,7 +159,13 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     }
 
     final result = await getAllTicketsUseCase(
-      GetTicketsParams(page: event.page, limit: event.limit),
+      GetTicketsParams(
+        page: event.page,
+        limit: event.limit,
+        status: state.statusFilter == TicketStatusFilter.all ? null : state.statusFilter.name,
+        searchQuery: state.searchQuery,
+        category: state.categoryFilter,
+      ),
     );
 
     result.fold(
@@ -216,27 +232,40 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     FetchTicketStatsRequested event,
     Emitter<TicketState> emit,
   ) async {
-    // For now, we calculate stats from the existing full list or re-fetch first pages
-    // A better way would be a dedicated stats endpoint, but we'll use local calculation 
-    // from the fetched tickets if available, or fetch a baseline.
-    
-    // Using the current logic: the dashboard will call this.
-    // For simulation, we'll fetch the first 100 tickets to get a high-level overview.
-    final result = await getAllTicketsUseCase(const GetTicketsParams(page: 0, limit: 100));
+    final result = await getTicketStatsUseCase(const NoParams());
     
     result.fold(
       (failure) => null,
-      (tickets) {
-        final stats = TicketStats(
-          total: tickets.length,
-          open: tickets.where((t) => t.status == TicketStatus.open).length,
-          inProgress: tickets.where((t) => t.status == TicketStatus.inProgress).length,
-          resolved: tickets.where((t) => t.status == TicketStatus.resolved).length,
-          closed: tickets.where((t) => t.status == TicketStatus.closed).length,
-        );
-        emit(state.copyWith(stats: stats));
-      },
+      (stats) => emit(state.copyWith(stats: stats)),
     );
+  }
+
+  Future<void> _onSearchQueryChanged(
+    SearchQueryChanged event,
+    Emitter<TicketState> emit,
+  ) async {
+    emit(state.copyWith(searchQuery: event.query));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
+  }
+
+  Future<void> _onFilterStatusChanged(
+    FilterStatusChanged event,
+    Emitter<TicketState> emit,
+  ) async {
+    final filter = event.status == null ? TicketStatusFilter.all : TicketStatusFilter.values.byName(event.status!.name);
+    emit(state.copyWith(statusFilter: filter));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
+  }
+
+  Future<void> _onFilterCategoryChanged(
+    FilterCategoryChanged event,
+    Emitter<TicketState> emit,
+  ) async {
+    emit(state.copyWith(categoryFilter: event.category));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
   }
 
   Future<void> _onFetchActivities(

@@ -68,15 +68,33 @@ class AddCommentUseCase implements UseCase<Either<Failure, CommentEntity>, AddCo
   }
 }
 
+class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, NoParams> {
+  final TicketRepository repository;
+  GetTicketStatsUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, TicketStats>> call(NoParams params) async {
+    return await repository.getTicketStats();
+  }
+}
+
 class GetTicketsParams extends Equatable {
   final int page;
   final int limit;
   final String? status;
+  final String? searchQuery;
+  final String? category;
 
-  const GetTicketsParams({required this.page, this.limit = 10, this.status});
+  const GetTicketsParams({
+    required this.page,
+    this.limit = 10,
+    this.status,
+    this.searchQuery,
+    this.category,
+  });
 
   @override
-  List<Object?> get props => [page, limit, status];
+  List<Object?> get props => [page, limit, status, searchQuery, category];
 }
 
 class CreateTicketParams extends Equatable {

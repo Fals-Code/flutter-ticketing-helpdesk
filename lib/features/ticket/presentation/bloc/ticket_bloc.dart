@@ -18,6 +18,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   final UpdateTicketStatusUseCase updateTicketStatusUseCase;
   final AssignTicketUseCase assignTicketUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
+  final GetAllTicketHistoryUseCase getAllTicketHistoryUseCase;
   final GetTicketStatsUseCase getTicketStatsUseCase;
   final WatchTicketsUseCase watchTicketsUseCase;
   StreamSubscription? _ticketSubscription;
@@ -33,6 +34,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     required this.updateTicketStatusUseCase,
     required this.assignTicketUseCase,
     required this.getTicketHistoryUseCase,
+    required this.getAllTicketHistoryUseCase,
     required this.getTicketStatsUseCase,
     required this.watchTicketsUseCase,
   }) : super(const TicketState()) {
@@ -300,13 +302,19 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     FetchTicketActivitiesRequested event,
     Emitter<TicketState> emit,
   ) async {
-    emit(state.copyWith(activities: []));
+    emit(state.copyWith(history: []));
     
     if (event.ticketId != null) {
       final result = await getTicketHistoryUseCase(event.ticketId!);
       result.fold(
         (failure) => emit(state.copyWith(errorMessage: failure.message)),
-        (history) => emit(state.copyWith(activities: history)),
+        (history) => emit(state.copyWith(history: history)),
+      );
+    } else {
+      final result = await getAllTicketHistoryUseCase(const NoParams());
+      result.fold(
+        (failure) => emit(state.copyWith(errorMessage: failure.message)),
+        (history) => emit(state.copyWith(history: history)),
       );
     }
   }

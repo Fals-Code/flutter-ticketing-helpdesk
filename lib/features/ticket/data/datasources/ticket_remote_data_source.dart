@@ -16,6 +16,7 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> updateTicketStatus(String ticketId, String status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
+  Future<List<TicketHistoryModel>> getAllTicketHistory();
   Future<Map<String, int>> getTicketStats();
   Stream<List<TicketModel>> watchTickets();
 }
@@ -243,10 +244,23 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .order('created_at', ascending: false);
       
       return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
+    }
+  }
+
+  @override
+  Future<List<TicketHistoryModel>> getAllTicketHistory() async {
+    try {
+      final response = await supabaseClient
+          .from('ticket_history')
+          .select('*, profiles(full_name)')
+          .order('created_at', ascending: false)
+          .limit(50);
+      
+      return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
     } on sup.PostgrestException catch (e) {
       throw Exception('Database error: ${e.message}');
     } catch (e) {
-      throw Exception('Failed to fetch history: $e');
+      throw Exception('Failed to fetch global history: $e');
     }
   }
 

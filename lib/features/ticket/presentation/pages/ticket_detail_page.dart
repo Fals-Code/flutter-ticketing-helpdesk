@@ -112,7 +112,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                   Text('Timeline Status',
                                       style: Theme.of(context).textTheme.titleMedium),
                                   const SizedBox(height: AppDimensions.spaceLG),
-                                  TicketTimelineWidget(activities: state.activities, isDark: isDark),
+                                  TicketTimelineWidget(activities: state.history, isDark: isDark),
                                   
                                   const SizedBox(height: AppDimensions.spaceXXL),
                                   const Divider(),

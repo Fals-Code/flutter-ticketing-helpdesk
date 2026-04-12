@@ -1,27 +1,9 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_activity_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 import 'package:uts/features/auth/domain/entities/user_entity.dart';
-
-class TicketStats extends Equatable {
-  final int total;
-  final int open;
-  final int inProgress;
-  final int resolved;
-  final int closed;
-
-  const TicketStats({
-    this.total = 0,
-    this.open = 0,
-    this.inProgress = 0,
-    this.resolved = 0,
-    this.closed = 0,
-  });
-
-  @override
-  List<Object?> get props => [total, open, inProgress, resolved, closed];
-}
+import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
 
 enum TicketStatusFilter { all, open, inProgress, resolved, closed }
 
@@ -31,11 +13,12 @@ class TicketState extends Equatable {
   final List<TicketEntity> allTickets;
   final TicketEntity? selectedTicket;
   final List<CommentEntity> comments;
-  final List<TicketActivityEntity> activities;
+  final List<TicketHistoryEntity> history;
   final List<AuthUser> staffUsers;
   final TicketStats stats;
   final String? errorMessage;
   final String? successMessage;
+  final bool isLastPage;
   final bool isLastPageAll;
   final String searchQuery;
   final TicketStatusFilter statusFilter;
@@ -47,7 +30,7 @@ class TicketState extends Equatable {
     this.allTickets = const [],
     this.selectedTicket,
     this.comments = const [],
-    this.activities = const [],
+    this.history = const [],
     this.staffUsers = const [],
     this.stats = const TicketStats(),
     this.errorMessage,
@@ -65,7 +48,7 @@ class TicketState extends Equatable {
     List<TicketEntity>? allTickets,
     TicketEntity? selectedTicket,
     List<CommentEntity>? comments,
-    List<TicketActivityEntity>? activities,
+    List<TicketHistoryEntity>? history,
     List<AuthUser>? staffUsers,
     TicketStats? stats,
     String? errorMessage,
@@ -82,7 +65,7 @@ class TicketState extends Equatable {
       allTickets: allTickets ?? this.allTickets,
       selectedTicket: selectedTicket ?? this.selectedTicket,
       comments: comments ?? this.comments,
-      activities: activities ?? this.activities,
+      history: history ?? this.history,
       staffUsers: staffUsers ?? this.staffUsers,
       stats: stats ?? this.stats,
       errorMessage: errorMessage,
@@ -102,7 +85,7 @@ class TicketState extends Equatable {
         allTickets,
         selectedTicket,
         comments,
-        activities,
+        history,
         staffUsers,
         stats,
         errorMessage,

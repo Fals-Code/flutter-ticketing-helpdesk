@@ -180,6 +180,16 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory() async {
+    try {
+      final activities = await remoteDataSource.getAllTicketHistory();
+      return Right(activities.map((a) => a.toEntity()).toList());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Stream<List<TicketEntity>> watchTickets() {
     return remoteDataSource.watchTickets().map(
           (models) => models.map((m) => m.toEntity()).toList(),

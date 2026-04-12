@@ -1,8 +1,30 @@
 import 'package:dartz/dartz.dart';
+import 'package:equatable/equatable.dart';
 import '../../../../core/error/failures.dart';
+import '../../../../core/constants/enums.dart';
+import '../../../auth/domain/entities/user_entity.dart';
 import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
 import '../entities/ticket_history_entity.dart';
+
+class TicketStats extends Equatable {
+  final int total;
+  final int open;
+  final int inProgress;
+  final int resolved;
+  final int closed;
+
+  const TicketStats({
+    this.total = 0,
+    this.open = 0,
+    this.inProgress = 0,
+    this.resolved = 0,
+    this.closed = 0,
+  });
+
+  @override
+  List<Object?> get props => [total, open, inProgress, resolved, closed];
+}
 
 abstract class TicketRepository {
   /// Mengambil daftar tiket milik user saat ini (Paginated).
@@ -61,6 +83,9 @@ abstract class TicketRepository {
 
   /// Mengambil riwayat status perjalanan tiket (FR-011).
   Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId);
+
+  /// Mengambil SEMUA riwayat perjalanan tiket di sistem (Admin/Staff only).
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory();
 
   /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
   Future<Either<Failure, TicketStats>> getTicketStats();

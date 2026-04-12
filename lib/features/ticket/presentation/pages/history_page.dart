@@ -26,7 +26,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Riwayat Aktivitas'),
+        title: const Text('Riwayat Aktivitas Sistem'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
@@ -36,11 +36,11 @@ class _HistoryPageState extends State<HistoryPage> {
       ),
       body: BlocBuilder<TicketBloc, TicketState>(
         builder: (context, state) {
-          if (state.isLoading) {
+          if (state.isLoading && state.history.isEmpty) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          if (state.activities.isEmpty) {
+          if (state.history.isEmpty) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -55,10 +55,10 @@ class _HistoryPageState extends State<HistoryPage> {
 
           return ListView.separated(
             padding: const EdgeInsets.all(24),
-            itemCount: state.activities.length,
+            itemCount: state.history.length,
             separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              final activity = state.activities[index];
+              final item = state.history[index];
               return Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
@@ -75,13 +75,13 @@ class _HistoryPageState extends State<HistoryPage> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: _getActivityColor(activity.activityType).withValues(alpha: 0.1),
+                        color: _getStatusColor(item.newStatus).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: Icon(
-                        _getActivityIcon(activity.activityType),
+                        _getStatusIcon(item.oldStatus, item.newStatus),
                         size: 16,
-                        color: _getActivityColor(activity.activityType),
+                        color: _getStatusColor(item.newStatus),
                       ),
                     ),
                     const SizedBox(width: 16),
@@ -93,18 +93,18 @@ class _HistoryPageState extends State<HistoryPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text(
-                                activity.userName,
+                                item.changedByName ?? 'Sistem',
                                 style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
                               ),
                               Text(
-                                DateFormat('dd MMM, HH:mm').format(activity.createdAt),
+                                DateFormat('dd MMM, HH:mm').format(item.createdAt),
                                 style: const TextStyle(fontSize: 11, color: Colors.grey),
                               ),
                             ],
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            activity.description,
+                            _getDescription(item),
                             style: TextStyle(
                               fontSize: 13,
                               color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
@@ -113,10 +113,10 @@ class _HistoryPageState extends State<HistoryPage> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            '#${activity.ticketId.substring(0, 8).toUpperCase()}',
+                            'TIKET #${item.ticketId.substring(0, 8).toUpperCase()}',
                             style: const TextStyle(
                               color: AppColors.primary,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: FontWeight.w700,
                               fontSize: 10,
                               letterSpacing: 0.5,
                             ),
@@ -134,33 +134,28 @@ class _HistoryPageState extends State<HistoryPage> {
     );
   }
 
-  Color _getActivityColor(String type) {
-    switch (type) {
-      case 'created':
-        return AppColors.statusOpen;
-      case 'status_updated':
+  Color _getStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
+        return AppColors.primary;
+      case 'in_progress':
         return AppColors.statusInProgress;
-      case 'assigned':
-        return AppColors.primary;
-      case 'comment_added':
-        return AppColors.primary;
+      case 'resolved':
+        return AppColors.statusResolved;
+      case 'closed':
+        return Colors.grey;
       default:
-        return AppColors.textSecondaryLight;
+        return AppColors.primary;
     }
   }
 
-  IconData _getActivityIcon(String type) {
-    switch (type) {
-      case 'created':
-        return Icons.add_circle_outline;
-      case 'status_updated':
-        return Icons.sync;
-      case 'assigned':
-        return Icons.person_add_alt_1_outlined;
-      case 'comment_added':
-        return Icons.chat_bubble_outline;
-      default:
-        return Icons.history;
-    }
+  IconData _getStatusIcon(String? old, String neu) {
+    if (old == null) return Icons.add_circle_outline;
+    return Icons.sync;
+  }
+
+  String _getDescription(item) {
+    if (item.oldStatus == null) return 'Membuat tiket dengan status ${item.newStatus.toUpperCase()}';
+    return 'Mengubah status dari ${item.oldStatus!.toUpperCase()} ke ${item.newStatus.toUpperCase()}';
   }
 }

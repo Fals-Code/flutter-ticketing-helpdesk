@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'core/constants/app_strings.dart';
 import 'core/constants/env_constants.dart';
 import 'core/di/injection_container.dart';
@@ -9,8 +10,8 @@ import 'core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 import 'package:uts/core/storage/secure_local_storage.dart';
@@ -43,7 +44,7 @@ Future<void> main() async {
     ),
   );
 
-  // 2. Inisialisasi semua dependensi (GetIt service locator)
+  // 2. Inisialisaasi semua dependensi (GetIt service locator)
   await initDependencies();
 
   runApp(const ETicketingApp());

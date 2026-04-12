@@ -89,6 +89,16 @@ class GetTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHist
   }
 }
 
+class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, NoParams> {
+  final TicketRepository repository;
+  GetAllTicketHistoryUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(NoParams params) async {
+    return await repository.getAllTicketHistory();
+  }
+}
+
 class WatchTicketsUseCase {
   final TicketRepository repository;
   WatchTicketsUseCase(this.repository);

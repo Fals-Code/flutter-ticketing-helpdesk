@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
+import 'package:uts/core/constants/enums.dart';
 
 abstract class TicketRemoteDataSource {
   Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status});
@@ -14,7 +15,7 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId);
   Future<List<CommentModel>> getTicketComments(String ticketId);
   Future<CommentModel> addComment(CommentModel comment);
-  Future<TicketModel> updateTicketStatus(String ticketId, String status);
+  Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
   Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy});
@@ -202,11 +203,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<TicketModel> updateTicketStatus(String ticketId, String status) async {
+  Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status) async {
     final response = await supabaseClient
         .from('tickets')
         .update({
-          'status': status.toLowerCase(),
+          'status': status.dbValue,
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
@@ -218,7 +219,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     // History is handled by DB Trigger, but we can verify or manual log if trigger doesn't exist
     await _logHistory(
       ticketId: ticketId,
-      newStatus: status.toLowerCase(),
+      newStatus: status.dbValue,
       changedBy: supabaseClient.auth.currentUser!.id,
     );
 
@@ -226,7 +227,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     await _notifyUser(
       userId: updatedTicket.userId,
       title: 'Update Tiket #${ticketId.substring(0, 8).toUpperCase()}',
-      message: 'Status tiket Anda kini ${status.toUpperCase()}',
+      message: 'Status tiket Anda kini ${status.label.toUpperCase()}',
       ticketId: ticketId,
     );
 
@@ -271,7 +272,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     try {
       final response = await supabaseClient
           .from('ticket_history')
-          .select('*, profiles(full_name)')
+          .select('*, profiles!ticket_history_changed_by_fkey(full_name)')
           .eq('ticket_id', ticketId)
           .order('created_at', ascending: false);
       
@@ -286,7 +287,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     try {
       var query = supabaseClient
           .from('ticket_history')
-          .select('*, profiles:changed_by(full_name)');
+          .select('*, profiles:ticket_history_changed_by_fkey(full_name)');
       
       if (changedBy != null) {
         query = query.eq('changed_by', changedBy);
@@ -389,9 +390,13 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Future<CommentModel> addComment(CommentModel comment) async {
+    final commentData = comment.toJson();
+    // Injection of current authenticated user ID
+    commentData['user_id'] = supabaseClient.auth.currentUser!.id;
+    
     final response = await supabaseClient
         .from('comments')
-        .insert(comment.toJson())
+        .insert(commentData)
         .select('*, profiles(full_name, role)')
         .single();
 

@@ -78,8 +78,8 @@ class TicketModel extends TicketEntity {
     return {
       'title': title,
       'description': description,
-      'status': status.name == 'inProgress' ? 'in_progress' : status.name,
-      'priority': priority.name,
+      'status': status.dbValue,
+      'priority': priority.dbValue,
       'category': category,
       'user_id': userId,
       'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,

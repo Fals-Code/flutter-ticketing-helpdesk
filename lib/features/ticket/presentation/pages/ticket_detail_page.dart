@@ -333,32 +333,6 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 if (isAdmin) ...[
                   const Divider(),
                   const SizedBox(height: 20),
-                  const Text('Ubah Status Manual', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: TicketStatus.values.map((status) {
-                      final isSelected = ticket.status == status;
-                      return ChoiceChip(
-                        label: Text(status.label, style: const TextStyle(fontSize: 12)),
-                        selected: isSelected,
-                        selectedColor: status.color.withValues(alpha: 0.2),
-                        labelStyle: TextStyle(
-                          color: isSelected ? status.color : (isDark ? Colors.white70 : Colors.black54),
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                        onSelected: (val) {
-                          if (val && !isSelected) {
-                            context.read<TicketBloc>().add(
-                              UpdateTicketStatusRequested(ticketId: ticket.id, status: status),
-                            );
-                          }
-                        },
-                      );
-                    }).toList(),
-                  ),
-                  const SizedBox(height: 24),
                   const Text('Delegasikan Ke Teknisi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(

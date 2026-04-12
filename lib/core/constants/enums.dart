@@ -79,6 +79,13 @@ enum TicketStatus {
     }
   }
 
+  String get dbValue {
+    switch (this) {
+      case TicketStatus.inProgress: return 'in_progress';
+      default: return name;
+    }
+  }
+
   Color get color {
     switch (this) {
       case TicketStatus.open: return AppColors.statusOpen;
@@ -121,6 +128,8 @@ enum TicketPriority {
       case TicketPriority.urgent: return 'Mendesak';
     }
   }
+
+  String get dbValue => name;
 
   Color get color {
     switch (this) {

@@ -141,9 +141,9 @@ class TicketRepositoryImpl implements TicketRepository {
   }) async {
     try {
       final commentModel = CommentModel(
-        id: '',
+        id: 'placeholder',
         ticketId: ticketId,
-        userId: '', // Set by DB/DataSource
+        userId: 'placeholder', // Overwritten by remote data source
         userName: '',
         userRole: '',
         message: message,
@@ -163,7 +163,7 @@ class TicketRepositoryImpl implements TicketRepository {
     required TicketStatus status,
   }) async {
     try {
-      final ticket = await remoteDataSource.updateTicketStatus(ticketId, status.name);
+      final ticket = await remoteDataSource.updateTicketStatus(ticketId, status);
       return Right(ticket.toEntity());
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));

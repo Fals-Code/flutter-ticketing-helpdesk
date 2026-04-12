@@ -115,6 +115,7 @@ class _TicketListPageState extends State<TicketListPage> {
               },
             ),
             floatingActionButton: FloatingActionButton(
+              heroTag: 'ticket_list_fab',
               onPressed: () => context.push(AppRoutes.createTicket),
               child: const Icon(Icons.add),
             ),

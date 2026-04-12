@@ -83,6 +83,7 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
       floatingActionButton: _currentIndex == 1
           ? FloatingActionButton(
+              heroTag: 'dashboard_fab',
               onPressed: () => context.push(AppRoutes.createTicket),
               backgroundColor: AppColors.primary,
               foregroundColor: Colors.white,

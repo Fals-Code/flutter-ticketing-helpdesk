@@ -8,7 +8,6 @@ import '../../domain/repositories/ticket_repository.dart';
 import '../datasources/ticket_remote_data_source.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
-import '../models/ticket_history_model.dart';
 
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/data/models/profile_model.dart';

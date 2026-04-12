@@ -52,7 +52,13 @@ class _LoginPageState extends State<LoginPage> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state.status == AuthStatus.authenticated) {
-          context.go(AppRoutes.dashboard);
+          final role = state.user.role;
+          final isStaff = role == UserRole.admin || role == UserRole.technician;
+          if (isStaff) {
+            context.go(AppRoutes.staffDashboard);
+          } else {
+            context.go(AppRoutes.dashboard);
+          }
         }
         if (state.status == AuthStatus.error) {
           ScaffoldMessenger.of(context).showSnackBar(

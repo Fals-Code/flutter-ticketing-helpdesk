@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
-import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
@@ -87,9 +86,9 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('Total Tiket', total.toString(), isDark ? Colors.white : Colors.black),
+          _buildSummaryItem('Total Masuk', total.toString(), isDark ? Colors.white : Colors.black),
           Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.black12),
-          _buildSummaryItem('Aktif', active.toString(), AppColors.primary),
+          _buildSummaryItem('Perlu Penanganan', active.toString(), AppColors.primary),
           Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.black12),
           _buildSummaryItem('Selesai', resolved.toString(), AppColors.statusResolved),
         ],
@@ -106,7 +105,8 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
+          style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: color.withValues(alpha: 0.8)),
+          textAlign: TextAlign.center,
         ),
       ],
     );
@@ -130,12 +130,12 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
           const Icon(Icons.analytics_outlined, color: AppColors.primary, size: 32),
           const SizedBox(height: 12),
           Text(
-            'Total Seluruh Laporan: $total',
+            'Total Tiket Masuk: $total',
             style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 4),
           const Text(
-            'Statistik diperbarui secara realtime dari server',
+            'Data statistik dikelola secara terpusat oleh sistem',
             style: TextStyle(fontSize: 12, color: Colors.grey),
           ),
         ],

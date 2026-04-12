@@ -43,7 +43,18 @@ final GoRouter appRouter = GoRouter(
                           state.matchedLocation == AppRoutes.splash;
 
     if (authState.status == AuthStatus.authenticated) {
-      if (loggingIn) return AppRoutes.dashboard;
+      final role = authState.user.role;
+      final isStaff = role == UserRole.admin || role == UserRole.technician;
+      
+      // If user is already logged in and tries to go to login/splash, redirect to dashboard
+      if (loggingIn) {
+        return isStaff ? AppRoutes.staffDashboard : AppRoutes.dashboard;
+      }
+      
+      // Guard: Role 3 (Customer) cannot access /staff-dashboard
+      if (state.matchedLocation == AppRoutes.staffDashboard && !isStaff) {
+        return AppRoutes.dashboard;
+      }
     } else if (authState.status == AuthStatus.unauthenticated) {
       if (!loggingIn) return AppRoutes.login;
     }

@@ -51,7 +51,7 @@ class _SplashPageState extends State<SplashPage>
     if (state.status != AuthStatus.initial) {
       // Tunggu sedikit agar animasi selesai jika status sudah diketahui sangat cepat
       Future.delayed(const Duration(milliseconds: 800), () {
-        if (!mounted) return;
+        if (!context.mounted) return;
         if (state.status == AuthStatus.authenticated) {
           final role = state.user.role;
           if (role == UserRole.admin || role == UserRole.technician) {

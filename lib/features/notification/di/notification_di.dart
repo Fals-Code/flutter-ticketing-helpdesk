@@ -20,12 +20,14 @@ Future<void> initNotificationDependencies(GetIt sl) async {
   // UseCases
   sl.registerLazySingleton(() => GetNotifications(sl()));
   sl.registerLazySingleton(() => MarkNotificationAsRead(sl()));
+  sl.registerLazySingleton(() => WatchNotifications(sl()));
 
   // Bloc
-  sl.registerFactory(
+  sl.registerLazySingleton(
     () => NotificationBloc(
       getNotifications: sl(),
       markNotificationAsRead: sl(),
+      watchNotifications: sl(),
     ),
   );
 }

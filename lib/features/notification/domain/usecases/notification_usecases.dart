@@ -22,3 +22,13 @@ class MarkNotificationAsRead {
     return repository.markAsRead(id);
   }
 }
+
+class WatchNotifications {
+  final NotificationRepository repository;
+
+  WatchNotifications(this.repository);
+
+  Stream<List<NotificationEntity>> call() {
+    return repository.watchNotifications();
+  }
+}

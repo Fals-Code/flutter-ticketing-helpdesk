@@ -5,6 +5,7 @@ import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
+import '../entities/ticket_history_entity.dart';
 import '../repositories/ticket_repository.dart';
 
 class GetTicketsUseCase
@@ -75,6 +76,25 @@ class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, NoP
   @override
   Future<Either<Failure, TicketStats>> call(NoParams params) async {
     return await repository.getTicketStats();
+  }
+}
+
+class GetTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, String> {
+  final TicketRepository repository;
+  GetTicketHistoryUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(String ticketId) async {
+    return await repository.getTicketHistory(ticketId);
+  }
+}
+
+class WatchTicketsUseCase {
+  final TicketRepository repository;
+  WatchTicketsUseCase(this.repository);
+
+  Stream<List<TicketEntity>> call() {
+    return repository.watchTickets();
   }
 }
 

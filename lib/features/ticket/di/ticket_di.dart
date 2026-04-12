@@ -9,7 +9,7 @@ import '../presentation/bloc/ticket_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
   // BLoC
-  sl.registerFactory(() => TicketBloc(
+  sl.registerLazySingleton(() => TicketBloc(
         getTicketsUseCase: sl(),
         createTicketUseCase: sl(),
         getTicketDetailUseCase: sl(),
@@ -19,9 +19,9 @@ Future<void> initTicketDependencies(GetIt sl) async {
         getStaffUsersUseCase: sl(),
         updateTicketStatusUseCase: sl(),
         assignTicketUseCase: sl(),
-        getTicketActivitiesUseCase: sl(),
-        getAllActivitiesUseCase: sl(),
+        getTicketHistoryUseCase: sl(),
         getTicketStatsUseCase: sl(),
+        watchTicketsUseCase: sl(),
       ));
 
   // UseCases
@@ -31,16 +31,14 @@ Future<void> initTicketDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => GetTicketCommentsUseCase(sl()));
   sl.registerLazySingleton(() => AddCommentUseCase(sl()));
   sl.registerLazySingleton(() => GetTicketStatsUseCase(sl()));
+  sl.registerLazySingleton(() => GetTicketHistoryUseCase(sl()));
+  sl.registerLazySingleton(() => WatchTicketsUseCase(sl()));
   
   // Admin UseCases
   sl.registerLazySingleton(() => GetAllTicketsUseCase(sl()));
   sl.registerLazySingleton(() => GetStaffUsersUseCase(sl()));
   sl.registerLazySingleton(() => UpdateTicketStatusUseCase(sl()));
   sl.registerLazySingleton(() => AssignTicketUseCase(sl()));
-
-  // Activity UseCases
-  sl.registerLazySingleton(() => GetTicketActivitiesUseCase(sl()));
-  sl.registerLazySingleton(() => GetAllActivitiesUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<TicketRepository>(
@@ -49,6 +47,6 @@ Future<void> initTicketDependencies(GetIt sl) async {
 
   // Data Sources
   sl.registerLazySingleton<TicketRemoteDataSource>(
-    () => SupabaseTicketRemoteDataSourceImpl(sl()),
+    () => SupabaseTicketRemoteDataSourceImpl(sl<sup.SupabaseClient>()),
   );
 }

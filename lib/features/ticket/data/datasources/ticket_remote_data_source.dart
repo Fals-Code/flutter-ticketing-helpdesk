@@ -3,7 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import 'package:uuid/uuid.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
-import '../models/ticket_activity_model.dart';
+import '../models/ticket_history_model.dart';
 
 abstract class TicketRemoteDataSource {
   Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status});
@@ -15,9 +15,9 @@ abstract class TicketRemoteDataSource {
   Future<CommentModel> addComment(CommentModel comment);
   Future<TicketModel> updateTicketStatus(String ticketId, String status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
-  Future<List<TicketActivityModel>> getTicketActivities(String ticketId);
-  Future<List<TicketActivityModel>> getAllActivities();
+  Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
   Future<Map<String, int>> getTicketStats();
+  Stream<List<TicketModel>> watchTickets();
 }
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
@@ -28,22 +28,33 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Future<Map<String, int>> getTicketStats() async {
-    // Perform parallel count queries for efficiency
-    final results = await Future.wait([
-      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)),
-      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'open'),
-      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'in_progress'),
-      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'resolved'),
-      supabaseClient.from('tickets').select('id', const sup.FetchOptions(count: sup.CountOption.exact, head: true)).eq('status', 'closed'),
-    ]);
+    try {
+      final List<dynamic> response = await supabaseClient.rpc('get_ticket_stats');
+      
+      final Map<String, int> stats = {
+        'total': 0,
+        'open': 0,
+        'in_progress': 0,
+        'resolved': 0,
+        'closed': 0,
+      };
 
-    return {
-      'total': results[0].count ?? 0,
-      'open': results[1].count ?? 0,
-      'in_progress': results[2].count ?? 0,
-      'resolved': results[3].count ?? 0,
-      'closed': results[4].count ?? 0,
-    };
+      for (var row in response) {
+        final String status = (row['status'] as String).toLowerCase();
+        final int count = row['count'] as int;
+        
+        if (stats.containsKey(status)) {
+          stats[status] = count;
+        }
+        stats['total'] = (stats['total'] ?? 0) + count;
+      }
+
+      return stats;
+    } on sup.PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch stats: $e');
+    }
   }
 
   @override
@@ -136,11 +147,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     final newTicket = TicketModel.fromJson(response);
     
-    // Log Activity
-    await _logActivity(
+    // History is handled by DB Trigger usually, but if manual:
+    await _logHistory(
       ticketId: newTicket.id,
-      activityType: 'created',
-      description: 'Tiket berhasil dibuat',
+      newStatus: 'open',
+      changedBy: supabaseClient.auth.currentUser!.id,
     );
 
     return newTicket;
@@ -171,11 +182,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     
     final updatedTicket = TicketModel.fromJson(response);
 
-    // Log Activity
-    await _logActivity(
+    // History is handled by DB Trigger, but we can verify or manual log if trigger doesn't exist
+    await _logHistory(
       ticketId: ticketId,
-      activityType: 'status_updated',
-      description: 'Status berubah menjadi ${status.toUpperCase()}',
+      newStatus: status.toLowerCase(),
+      changedBy: supabaseClient.auth.currentUser!.id,
     );
 
     // Notify User
@@ -204,11 +215,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     
     final updatedTicket = TicketModel.fromJson(response);
 
-    // Log Activity
-    await _logActivity(
+    // History
+    await _logHistory(
       ticketId: ticketId,
-      activityType: 'assigned',
-      description: 'Tiket ditugaskan kepada petugas baru',
+      newStatus: 'in_progress',
+      changedBy: supabaseClient.auth.currentUser!.id,
     );
 
     // Notify User
@@ -223,42 +234,47 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketActivityModel>> getTicketActivities(String ticketId) async {
-    final response = await supabaseClient
-        .from('ticket_activities')
-        .select('*, profiles(full_name)')
-        .eq('ticket_id', ticketId)
-        .order('created_at', ascending: false);
-    
-    return (response as List).map((json) => TicketActivityModel.fromJson(json)).toList();
+  Future<List<TicketHistoryModel>> getTicketHistory(String ticketId) async {
+    try {
+      final response = await supabaseClient
+          .from('ticket_history')
+          .select('*, profiles(full_name)')
+          .eq('ticket_id', ticketId)
+          .order('created_at', ascending: false);
+      
+      return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
+    } on sup.PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch history: $e');
+    }
   }
 
   @override
-  Future<List<TicketActivityModel>> getAllActivities() async {
-    final response = await supabaseClient
-        .from('ticket_activities')
-        .select('*, profiles(full_name)')
+  Stream<List<TicketModel>> watchTickets() {
+    return supabaseClient
+        .from('tickets')
+        .stream(primaryKey: ['id'])
         .order('created_at', ascending: false)
-        .limit(50);
-    
-    return (response as List).map((json) => TicketActivityModel.fromJson(json)).toList();
+        .map((data) => data.map((json) => TicketModel.fromJson(json)).toList());
   }
 
   // Helper methods
-  Future<void> _logActivity({
+  Future<void> _logHistory({
     required String ticketId,
-    required String activityType,
-    required String description,
+    required String newStatus,
+    required String changedBy,
+    String? oldStatus,
   }) async {
     try {
-      await supabaseClient.from('ticket_activities').insert({
+      await supabaseClient.from('ticket_history').insert({
         'ticket_id': ticketId,
-        'user_id': supabaseClient.auth.currentUser!.id,
-        'activity_type': activityType,
-        'description': description,
+        'old_status': oldStatus,
+        'new_status': newStatus,
+        'changed_by': changedBy,
       });
     } catch (e) {
-      // Ignored: Activity logging shouldn't break the main flow
+      // Ignored: History logging issues shouldn't break the main flow if triggers fail
     }
   }
 

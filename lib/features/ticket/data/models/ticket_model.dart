@@ -18,8 +18,8 @@ class TicketModel extends TicketEntity {
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    // Handle join results for assigned_to_name if available
-    final assignedProfile = json['assigned_profiles'];
+    // Handle join results for assigned_to_name if available (from profiles table)
+    final assignedProfile = json['profiles']; 
     final assignedToName = assignedProfile != null ? assignedProfile['full_name'] : json['assigned_to_name'];
 
     return TicketModel(

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/notification_entity.dart';
@@ -17,6 +18,15 @@ class MarkReadRequested extends NotificationEvent {
   const MarkReadRequested(this.notificationId);
   @override
   List<Object?> get props => [notificationId];
+}
+
+class StartNotificationSubscription extends NotificationEvent {}
+
+class NotificationStreamUpdated extends NotificationEvent {
+  final List<NotificationEntity> notifications;
+  const NotificationStreamUpdated(this.notifications);
+  @override
+  List<Object?> get props => [notifications];
 }
 
 // State
@@ -51,13 +61,41 @@ class NotificationState extends Equatable {
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final GetNotifications getNotifications;
   final MarkNotificationAsRead markNotificationAsRead;
+  final WatchNotifications watchNotifications;
+  StreamSubscription? _notificationSubscription;
 
   NotificationBloc({
     required this.getNotifications,
     required this.markNotificationAsRead,
+    required this.watchNotifications,
   }) : super(const NotificationState()) {
     on<FetchNotificationsRequested>(_onFetchNotifications);
     on<MarkReadRequested>(_onMarkRead);
+    on<StartNotificationSubscription>(_onStartSubscription);
+    on<NotificationStreamUpdated>(_onStreamUpdated);
+  }
+
+  void _onStartSubscription(
+    StartNotificationSubscription event,
+    Emitter<NotificationState> emit,
+  ) {
+    _notificationSubscription?.cancel();
+    _notificationSubscription = watchNotifications().listen(
+      (notifications) => add(NotificationStreamUpdated(notifications)),
+    );
+  }
+
+  void _onStreamUpdated(
+    NotificationStreamUpdated event,
+    Emitter<NotificationState> emit,
+  ) {
+    emit(state.copyWith(notifications: event.notifications));
+  }
+
+  @override
+  Future<void> close() {
+    _notificationSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onFetchNotifications(

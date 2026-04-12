@@ -2,9 +2,7 @@ import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
-import '../entities/ticket_activity_entity.dart';
-import '../../../auth/domain/entities/user_entity.dart';
-import '../../../../core/constants/enums.dart';
+import '../entities/ticket_history_entity.dart';
 
 abstract class TicketRepository {
   /// Mengambil daftar tiket milik user saat ini (Paginated).
@@ -61,12 +59,12 @@ abstract class TicketRepository {
     required String message,
   });
 
-  /// Mengambil riwayat aktivitas untuk tiket tertentu.
-  Future<Either<Failure, List<TicketActivityEntity>>> getTicketActivities(String ticketId);
-
-  /// Mengambil semua riwayat aktivitas (Admin/Staff only).
-  Future<Either<Failure, List<TicketActivityEntity>>> getAllActivities();
+  /// Mengambil riwayat status perjalanan tiket (FR-011).
+  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId);
 
   /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
   Future<Either<Failure, TicketStats>> getTicketStats();
+
+  /// Aliran data tiket secara realtime.
+  Stream<List<TicketEntity>> watchTickets();
 }

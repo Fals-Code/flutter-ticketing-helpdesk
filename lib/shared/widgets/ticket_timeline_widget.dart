@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_activity_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 
 class TicketTimelineWidget extends StatelessWidget {
-  final List<TicketActivityEntity> activities;
+  final List<TicketHistoryEntity> activities;
   final bool isDark;
 
   const TicketTimelineWidget({
@@ -45,7 +45,7 @@ class TicketTimelineWidget extends StatelessWidget {
                     width: 12,
                     height: 12,
                     decoration: BoxDecoration(
-                      color: _getActivityColor(activity.type),
+                      color: _getActivityColor(activity.newStatus),
                       shape: BoxShape.circle,
                       border: Border.all(
                         color: Colors.white,
@@ -53,7 +53,7 @@ class TicketTimelineWidget extends StatelessWidget {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: _getActivityColor(activity.type).withValues(alpha: 0.3),
+                          color: _getActivityColor(activity.newStatus).withValues(alpha: 0.3),
                           blurRadius: 4,
                           spreadRadius: 1,
                         ),
@@ -80,7 +80,7 @@ class TicketTimelineWidget extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            _getActivityTitle(activity.type),
+                            _getActivityTitle(activity.oldStatus, activity.newStatus),
                             style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
@@ -98,17 +98,17 @@ class TicketTimelineWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        activity.description,
+                        _getActivityDescription(activity),
                         style: TextStyle(
                           fontSize: 13,
                           color: isDark ? Colors.white70 : Colors.black87,
                           height: 1.4,
                         ),
                       ),
-                      if (activity.userName != null) ...[
+                      if (activity.changedByName != null) ...[
                         const SizedBox(height: 4),
                         Text(
-                          'oleh ${activity.userName}',
+                          'oleh ${activity.changedByName}',
                           style: const TextStyle(
                             fontSize: 11,
                             fontStyle: FontStyle.italic,
@@ -127,14 +127,12 @@ class TicketTimelineWidget extends StatelessWidget {
     );
   }
 
-  Color _getActivityColor(String type) {
-    switch (type) {
-      case 'created':
+  Color _getActivityColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'open':
         return AppColors.primary;
-      case 'status_updated':
+      case 'in_progress':
         return AppColors.statusInProgress;
-      case 'assigned':
-        return Colors.orange;
       case 'resolved':
         return AppColors.statusResolved;
       case 'closed':
@@ -144,20 +142,13 @@ class TicketTimelineWidget extends StatelessWidget {
     }
   }
 
-  String _getActivityTitle(String type) {
-    switch (type) {
-      case 'created':
-        return 'Tiket Dibuat';
-      case 'status_updated':
-        return 'Status Diperbarui';
-      case 'assigned':
-        return 'Penugasan Petugas';
-      case 'resolved':
-        return 'Masalah Selesai';
-      case 'closed':
-        return 'Tiket Ditutup';
-      default:
-        return 'Aktivitas';
-    }
+  String _getActivityTitle(String? oldStatus, String newStatus) {
+    if (oldStatus == null) return 'Tiket Dibuat';
+    return 'Status Diperbarui';
+  }
+
+  String _getActivityDescription(TicketHistoryEntity activity) {
+    if (activity.oldStatus == null) return 'Tiket berhasil dibuat dengan status ${activity.newStatus.toUpperCase()}';
+    return 'Status berubah dari ${activity.oldStatus!.toUpperCase()} menjadi ${activity.newStatus.toUpperCase()}';
   }
 }

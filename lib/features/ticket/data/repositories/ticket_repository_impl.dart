@@ -3,14 +3,16 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/ticket_entity.dart';
 import '../../domain/entities/comment_entity.dart';
-import '../../domain/entities/ticket_activity_entity.dart';
+import '../../domain/entities/ticket_history_entity.dart';
 import '../../domain/repositories/ticket_repository.dart';
 import '../datasources/ticket_remote_data_source.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
+import '../models/ticket_history_model.dart';
 
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/data/models/user_model.dart';
+import '../../../auth/data/models/profile_model.dart';
 import '../../../../core/constants/enums.dart';
 
 class TicketRepositoryImpl implements TicketRepository {
@@ -68,10 +70,15 @@ class TicketRepositoryImpl implements TicketRepository {
   Future<Either<Failure, List<AuthUser>>> getStaffUsers() async {
     try {
       final staffData = await remoteDataSource.getStaffUsers();
-      final users = staffData.map((json) => UserModel.fromJson(json).toEntity()).toList();
-      return Right(users);
+      final users = staffData.map((json) => ProfileModel.fromJson(json).toEntity()).toList();
+      return Right(users.map((p) => AuthUser(
+        id: p.id,
+        email: p.email,
+        fullName: p.fullName,
+        role: p.role,
+      )).toList());
     } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
@@ -163,23 +170,20 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<TicketActivityEntity>>> getTicketActivities(String ticketId) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId) async {
     try {
-      final activities = await remoteDataSource.getTicketActivities(ticketId);
+      final activities = await remoteDataSource.getTicketHistory(ticketId);
       return Right(activities.map((a) => a.toEntity()).toList());
     } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+      return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<TicketActivityEntity>>> getAllActivities() async {
-    try {
-      final activities = await remoteDataSource.getAllActivities();
-      return Right(activities.map((a) => a.toEntity()).toList());
-    } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
-    }
+  Stream<List<TicketEntity>> watchTickets() {
+    return remoteDataSource.watchTickets().map(
+          (models) => models.map((m) => m.toEntity()).toList(),
+        );
   }
 
   @override

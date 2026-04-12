@@ -1,9 +1,9 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/activity_usecases.dart';
 import 'ticket_event.dart';
 import 'ticket_state.dart';
 
@@ -17,9 +17,10 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   final GetStaffUsersUseCase getStaffUsersUseCase;
   final UpdateTicketStatusUseCase updateTicketStatusUseCase;
   final AssignTicketUseCase assignTicketUseCase;
-  final GetTicketActivitiesUseCase getTicketActivitiesUseCase;
-  final GetAllActivitiesUseCase getAllActivitiesUseCase;
+  final GetTicketHistoryUseCase getTicketHistoryUseCase;
   final GetTicketStatsUseCase getTicketStatsUseCase;
+  final WatchTicketsUseCase watchTicketsUseCase;
+  StreamSubscription? _ticketSubscription;
 
   TicketBloc({
     required this.getTicketsUseCase,
@@ -31,9 +32,9 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     required this.getStaffUsersUseCase,
     required this.updateTicketStatusUseCase,
     required this.assignTicketUseCase,
-    required this.getTicketActivitiesUseCase,
-    required this.getAllActivitiesUseCase,
+    required this.getTicketHistoryUseCase,
     required this.getTicketStatsUseCase,
+    required this.watchTicketsUseCase,
   }) : super(const TicketState()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
@@ -47,6 +48,33 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     on<SearchQueryChanged>(_onSearchQueryChanged);
     on<FilterStatusChanged>(_onFilterStatusChanged);
     on<FilterCategoryChanged>(_onFilterCategoryChanged);
+    on<StartTicketSubscription>(_onStartSubscription);
+    on<TicketStreamUpdated>(_onStreamUpdated);
+  }
+
+  void _onStartSubscription(
+    StartTicketSubscription event,
+    Emitter<TicketState> emit,
+  ) {
+    _ticketSubscription?.cancel();
+    _ticketSubscription = watchTicketsUseCase().listen(
+      (tickets) => add(TicketStreamUpdated(tickets)),
+    );
+  }
+
+  void _onStreamUpdated(
+    TicketStreamUpdated event,
+    Emitter<TicketState> emit,
+  ) {
+    // Sync realtime updates with current list (optional: depends on how stream is filtered)
+    // For simplicity, we can refresh stats or update specific items
+    emit(state.copyWith(tickets: event.tickets));
+  }
+
+  @override
+  Future<void> close() {
+    _ticketSubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onFetchTickets(
@@ -275,16 +303,10 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     emit(state.copyWith(activities: []));
     
     if (event.ticketId != null) {
-      final result = await getTicketActivitiesUseCase(event.ticketId!);
+      final result = await getTicketHistoryUseCase(event.ticketId!);
       result.fold(
         (failure) => emit(state.copyWith(errorMessage: failure.message)),
-        (activities) => emit(state.copyWith(activities: activities)),
-      );
-    } else {
-      final result = await getAllActivitiesUseCase();
-      result.fold(
-        (failure) => emit(state.copyWith(errorMessage: failure.message)),
-        (activities) => emit(state.copyWith(activities: activities)),
+        (history) => emit(state.copyWith(activities: history)),
       );
     }
   }

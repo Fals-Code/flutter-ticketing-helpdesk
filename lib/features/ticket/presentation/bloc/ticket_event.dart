@@ -112,3 +112,12 @@ class FilterCategoryChanged extends TicketEvent {
   @override
   List<Object?> get props => [category];
 }
+
+class StartTicketSubscription extends TicketEvent {}
+
+class TicketStreamUpdated extends TicketEvent {
+  final List<TicketEntity> tickets;
+  const TicketStreamUpdated(this.tickets);
+  @override
+  List<Object?> get props => [tickets];
+}

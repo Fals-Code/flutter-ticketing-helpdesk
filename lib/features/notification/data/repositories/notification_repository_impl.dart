@@ -33,4 +33,11 @@ class NotificationRepositoryImpl implements NotificationRepository {
       return Left(ServerFailure(message: e.toString()));
     }
   }
+
+  @override
+  Stream<List<NotificationEntity>> watchNotifications() {
+    return remoteDataSource.watchNotifications().map(
+          (models) => models.map((m) => m.toEntity()).toList(),
+        );
+  }
 }

@@ -67,11 +67,11 @@ class ETicketingApp extends StatelessWidget {
         ),
         // TicketBloc untuk fitur tiket
         BlocProvider<TicketBloc>(
-          create: (_) => sl<TicketBloc>(),
+          create: (_) => sl<TicketBloc>()..add(StartTicketSubscription()),
         ),
         // NotificationBloc untuk fitur notifikasi
         BlocProvider<NotificationBloc>(
-          create: (_) => sl<NotificationBloc>(),
+          create: (_) => sl<NotificationBloc>()..add(StartNotificationSubscription()),
         ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(

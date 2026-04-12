@@ -4,6 +4,7 @@ import '../models/notification_model.dart';
 abstract class NotificationRemoteDataSource {
   Future<List<NotificationModel>> getNotifications();
   Future<void> markAsRead(String notificationId);
+  Stream<List<NotificationModel>> watchNotifications();
 }
 
 class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
@@ -13,20 +14,40 @@ class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteData
 
   @override
   Future<List<NotificationModel>> getNotifications() async {
-    final response = await supabaseClient
-        .from('notifications')
-        .select('*')
-        .eq('user_id', supabaseClient.auth.currentUser!.id)
-        .order('created_at', ascending: false);
-    
-    return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
+    try {
+      final response = await supabaseClient
+          .from('notifications')
+          .select('*')
+          .eq('user_id', supabaseClient.auth.currentUser!.id)
+          .order('created_at', ascending: false);
+      
+      return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to fetch notifications: $e');
+    }
   }
 
   @override
   Future<void> markAsRead(String notificationId) async {
-    await supabaseClient
+    try {
+      await supabaseClient
+          .from('notifications')
+          .update({'is_read': true})
+          .eq('id', notificationId);
+    } catch (e) {
+      throw Exception('Failed to mark notification as read: $e');
+    }
+  }
+
+  @override
+  Stream<List<NotificationModel>> watchNotifications() {
+    return supabaseClient
         .from('notifications')
-        .update({'is_read': true})
-        .eq('id', notificationId);
+        .stream(primaryKey: ['id'])
+        .eq('user_id', supabaseClient.auth.currentUser!.id)
+        .order('created_at', ascending: false)
+        .map((data) => data.map((json) => NotificationModel.fromJson(json)).toList());
   }
 }

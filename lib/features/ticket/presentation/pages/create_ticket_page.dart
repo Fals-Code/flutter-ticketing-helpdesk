@@ -29,12 +29,6 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
   final List<String> _imagePaths = [];
   final ImagePicker _picker = ImagePicker();
 
-  static const _priorities = [
-    {'value': 'low', 'label': AppStrings.priorityLow, 'color': AppColors.priorityLow},
-    {'value': 'medium', 'label': AppStrings.priorityMedium, 'color': AppColors.priorityMedium},
-    {'value': 'high', 'label': AppStrings.priorityHigh, 'color': AppColors.priorityHigh},
-  ];
-
   static const _categories = [
     {'value': 'hardware', 'label': 'Hardware'},
     {'value': 'software', 'label': 'Software'},
@@ -131,235 +125,256 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: const Text(AppStrings.createTicket),
+          elevation: 0,
+          backgroundColor: Colors.transparent,
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back_ios_new),
+            icon: const Icon(Icons.close_rounded),
             onPressed: () => context.pop(),
           ),
         ),
-        body: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader('INFORMASI UMUM', Icons.info_outline),
-                  const SizedBox(height: 20),
-                  AppTextField(
-                    label: AppStrings.ticketSubject,
-                    hint: 'Contoh: Printer Rusak, Komputer Lag',
-                    controller: _subjectController,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Subjek tidak boleh kosong' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Kategori',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    clipBehavior: Clip.none,
-                    child: Row(
-                      children: _categories.map((cat) {
-                        final isSelected = _selectedCategory == cat['value'];
-                        return Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ChoiceChip(
-                            label: Text(cat['label']!),
-                            selected: isSelected,
-                            onSelected: (_) =>
-                                setState(() => _selectedCategory = cat['value']!),
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-                  const SizedBox(height: 40),
-                  _buildSectionHeader('DETAIL LAPORAN', Icons.description_outlined),
-                  const SizedBox(height: 20),
-                  AppTextField(
-                    label: AppStrings.ticketDescription,
-                    hint: 'Jelaskan detail masalah Anda...',
-                    controller: _descController,
-                    maxLines: 4,
-                    validator: (v) =>
-                        v == null || v.isEmpty ? 'Deskripsi tidak boleh kosong' : null,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Prioritas',
-                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: _priorities.map((p) {
-                      final isSelected = _selectedPriority == p['value'];
-                      final color = p['color'] as Color;
-                      return Expanded(
-                        child: GestureDetector(
-                          onTap: () =>
-                              setState(() => _selectedPriority = p['value'] as String),
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            margin: const EdgeInsets.only(right: 8),
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            decoration: BoxDecoration(
-                              color: isSelected ? color.withValues(alpha: 0.1) : Colors.transparent,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: isSelected ? color : AppColors.borderLight,
-                                width: isSelected ? 2 : 1,
-                              ),
-                            ),
-                            child: Column(
-                              children: [
-                                Icon(
-                                  _getPriorityIcon(p['value'] as String),
-                                  size: 16,
-                                  color: isSelected ? color : Colors.grey,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  p['label'] as String,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
-                                    color: isSelected ? color : Colors.grey,
-                                  ),
-                                ),
-                              ],
-                            ),
+        body: BlocBuilder<TicketBloc, TicketState>(
+          builder: (context, state) {
+            return Stack(
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header Section
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Buat Laporan Baru',
+                          style: TextStyle(
+                            fontSize: 28,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: -0.5,
                           ),
                         ),
-                      );
-                    }).toList(),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Berikan detail masalah Anda agar tim kami dapat membantu dengan cepat.',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+
+                        // Subject Field
+                        AppTextField(
+                          label: 'Judul Laporan',
+                          hint: 'Apa masalah yang Anda hadapi?',
+                          controller: _subjectController,
+                          prefixIcon: Icons.title_rounded,
+                          borderRadius: 16,
+                          validator: (v) => v == null || v.isEmpty ? 'Judul laporan wajib diisi' : null,
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Category Section
+                        _buildLabel('Kategori Laporan'),
+                        const SizedBox(height: 12),
+                        SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          clipBehavior: Clip.none,
+                          child: Row(
+                            children: _categories.map((cat) {
+                              final isSelected = _selectedCategory == cat['value'];
+                              return Padding(
+                                padding: const EdgeInsets.only(right: 8),
+                                child: ChoiceChip(
+                                  label: Text(cat['label']!),
+                                  selected: isSelected,
+                                  onSelected: (_) => setState(() => _selectedCategory = cat['value']!),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Description Field
+                        AppTextField(
+                          label: 'Deskripsi Masalah',
+                          hint: 'Jelaskan detail kronologi atau kendala...',
+                          controller: _descController,
+                          maxLines: 5,
+                          borderRadius: 16,
+                          prefixIcon: Icons.description_rounded,
+                          keyboardType: TextInputType.multiline,
+                          validator: (v) => v == null || v.isEmpty ? 'Harap jelaskan deskripsi masalah' : null,
+                        ),
+                        const SizedBox(height: 32),
+
+                        // Priority Section
+                        _buildLabel('Tingkat Prioritas'),
+                        const SizedBox(height: 12),
+                        _buildPrioritySelector(),
+                        const SizedBox(height: 32),
+
+                        // Image Picker Section
+                        _buildLabel('Lampiran Foto (Opsional)'),
+                        const SizedBox(height: 12),
+                        _buildImagePicker(isDark),
+
+                        const SizedBox(height: 48),
+
+                        // Submit Button
+                        SizedBox(
+                          width: double.infinity,
+                          child: AppButton(
+                            label: 'Kirim Laporan',
+                            isLoading: state.isLoading,
+                            onPressed: () {
+                              if (!_formKey.currentState!.validate()) return;
+                              context.read<TicketBloc>().add(CreateTicketRequested(
+                                    title: _subjectController.text,
+                                    description: _descController.text,
+                                    category: _selectedCategory,
+                                    priority: _selectedPriority,
+                                    imagePaths: _imagePaths,
+                                  ));
+                            },
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 40),
-                  _buildSectionHeader('LAMPIRAN', Icons.image_outlined),
-                  const SizedBox(height: 20),
-                  _buildImagePicker(isDark),
-                  const SizedBox(height: 48),
-                  BlocBuilder<TicketBloc, TicketState>(
-                    builder: (context, state) {
-                      return AppButton(
-                        label: 'Kirim Laporan',
-                        isLoading: state.isLoading,
-                        onPressed: () {
-                          if (!_formKey.currentState!.validate()) return;
-                          context.read<TicketBloc>().add(CreateTicketRequested(
-                                title: _subjectController.text,
-                                description: _descController.text,
-                                category: _selectedCategory,
-                                priority: _selectedPriority,
-                                imagePaths: _imagePaths,
-                              ));
-                        },
-                      );
-                    },
+                ),
+                if (state.isLoading)
+                  Container(
+                    color: Colors.black26,
+                    child: const Center(
+                      child: CircularProgressIndicator(),
+                    ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
-            ),
-          ),
+              ],
+            );
+          },
         ),
       ),
     );
   }
 
-  IconData _getPriorityIcon(String val) {
-    switch (val) {
-      case 'low': return Icons.keyboard_double_arrow_down_rounded;
-      case 'high': return Icons.keyboard_double_arrow_up_rounded;
-      default: return Icons.remove_rounded;
-    }
+  Widget _buildLabel(String text) {
+    return Text(
+      text,
+      style: const TextStyle(
+        fontSize: 13,
+        fontWeight: FontWeight.w600,
+        color: Colors.grey,
+        letterSpacing: 0.5,
+      ),
+    );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildPrioritySelector() {
+    final List<Map<String, dynamic>> priorities = [
+      {'value': 'low', 'label': 'Rendah', 'color': Colors.green},
+      {'value': 'medium', 'label': 'Sedang', 'color': Colors.orange},
+      {'value': 'high', 'label': 'Tinggi', 'color': Colors.red},
+    ];
+
     return Row(
-      children: [
-        Icon(icon, size: 14, color: AppColors.primary),
-        const SizedBox(width: 8),
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 1.0,
-            color: AppColors.primary,
+      children: priorities.map((p) {
+        final isSelected = _selectedPriority == p['value'];
+        final Color color = p['color'];
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(right: p['value'] == 'high' ? 0 : 8),
+            child: ChoiceChip(
+              label: Container(
+                width: double.infinity,
+                alignment: Alignment.center,
+                child: Text(
+                  p['label'],
+                  style: TextStyle(
+                    color: isSelected ? Colors.white : color,
+                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+              ),
+              selected: isSelected,
+              onSelected: (selected) {
+                if (selected) {
+                  setState(() => _selectedPriority = p['value']);
+                }
+              },
+              selectedColor: color,
+              backgroundColor: color.withOpacity(0.1),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: isSelected ? Colors.transparent : color.withOpacity(0.3)),
+              ),
+              showCheckmark: false,
+            ),
           ),
-        ),
-      ],
+        );
+      }).toList(),
     );
   }
 
   Widget _buildImagePicker(bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none,
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: _showImageSourceSheet,
-                child: Container(
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF1F1F23) : const Color(0xFFF1F1F4),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.borderLight, width: 1),
-                  ),
-                  child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey, size: 24),
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      clipBehavior: Clip.none,
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _showImageSourceSheet,
+            child: Container(
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.borderLight, width: 1),
+              ),
+              child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey, size: 28),
+            ),
+          ),
+          const SizedBox(width: 12),
+          ..._imagePaths.asMap().entries.map((entry) {
+            return Container(
+              margin: const EdgeInsets.only(right: 12),
+              width: 80,
+              height: 80,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                image: DecorationImage(
+                  image: FileImage(File(entry.value)),
+                  fit: BoxFit.cover,
                 ),
               ),
-              const SizedBox(width: 12),
-              ..._imagePaths.asMap().entries.map((entry) {
-                return Container(
-                  margin: const EdgeInsets.only(right: 12),
-                  width: 80,
-                  height: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    image: DecorationImage(
-                      image: FileImage(File(entry.value)),
-                      fit: BoxFit.cover,
+              child: Stack(
+                children: [
+                  Positioned(
+                    right: 4,
+                    top: 4,
+                    child: GestureDetector(
+                      onTap: () => _removeImage(entry.key),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.close, size: 12, color: Colors.white),
+                      ),
                     ),
                   ),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        right: 4,
-                        top: 4,
-                        child: GestureDetector(
-                          onTap: () => _removeImage(entry.key),
-                          child: Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Colors.red,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(Icons.close, size: 12, color: Colors.white),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }),
-            ],
-          ),
-        ),
-      ],
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 }
-
-

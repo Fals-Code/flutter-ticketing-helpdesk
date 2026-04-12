@@ -121,3 +121,5 @@ class TicketStreamUpdated extends TicketEvent {
   @override
   List<Object?> get props => [tickets];
 }
+
+class ResetTicketState extends TicketEvent {}

@@ -55,48 +55,60 @@ class _DashboardPageState extends State<DashboardPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: BlocBuilder<AuthBloc, AuthState>(
-        builder: (context, state) {
-          final isStaff = state.status == AuthStatus.authenticated && 
-              (state.user.role == UserRole.admin || state.user.role == UserRole.technician);
-
-          return SingleChildScrollView(
-            child: SizedBox(
-              height: MediaQuery.of(context).size.height - kBottomNavigationBarHeight - 20,
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  isStaff ? const StaffDashboardPage() : const _DashboardHomeTab(),
-                  const TicketListPage(),
-                  const _NotificationTab(),
-                  const _ProfileTab(),
-                ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.status == AuthStatus.unauthenticated) {
+          // Clear states of other blocs
+          context.read<TicketBloc>().add(ResetTicketState());
+          context.read<NotificationBloc>().add(ResetNotificationState());
+          
+          // Redirect to login
+          context.go(AppRoutes.login);
+        }
+      },
+      child: Scaffold(
+        body: BlocBuilder<AuthBloc, AuthState>(
+          builder: (context, state) {
+            final isStaff = state.status == AuthStatus.authenticated && 
+                (state.user.role == UserRole.admin || state.user.role == UserRole.technician);
+  
+            return SingleChildScrollView(
+              child: SizedBox(
+                height: MediaQuery.of(context).size.height - kBottomNavigationBarHeight - 20,
+                child: IndexedStack(
+                  index: _currentIndex,
+                  children: [
+                    isStaff ? const StaffDashboardPage() : const _DashboardHomeTab(),
+                    const TicketListPage(),
+                    const _NotificationTab(),
+                    const _ProfileTab(),
+                  ],
+                ),
               ),
-            ),
-          );
-        },
+            );
+          },
+        ),
+        bottomNavigationBar: NavigationBar(
+          selectedIndex: _currentIndex,
+          onDestinationSelected: (i) => setState(() => _currentIndex = i),
+          destinations: _navItems.map((item) {
+            return NavigationDestination(
+              icon: Icon(item['icon'] as IconData),
+              selectedIcon: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
+              label: item['label'] as String,
+            );
+          }).toList(),
+        ),
+        floatingActionButton: _currentIndex == 1
+            ? FloatingActionButton(
+                heroTag: 'dashboard_fab',
+                onPressed: () => context.push(AppRoutes.createTicket),
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                child: const Icon(Icons.add),
+              )
+            : null,
       ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: (i) => setState(() => _currentIndex = i),
-        destinations: _navItems.map((item) {
-          return NavigationDestination(
-            icon: Icon(item['icon'] as IconData),
-            selectedIcon: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
-            label: item['label'] as String,
-          );
-        }).toList(),
-      ),
-      floatingActionButton: _currentIndex == 1
-          ? FloatingActionButton(
-              heroTag: 'dashboard_fab',
-              onPressed: () => context.push(AppRoutes.createTicket),
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-              child: const Icon(Icons.add),
-            )
-          : null,
     );
   }
 }
@@ -189,7 +201,7 @@ class _DashboardHomeTab extends StatelessWidget {
                       crossAxisCount: 2,
                       crossAxisSpacing: AppDimensions.spaceMD,
                       mainAxisSpacing: AppDimensions.spaceMD,
-                      childAspectRatio: 1.2,
+                      childAspectRatio: 1.1, // Adjusted from 1.2 to prevent small overflows
                     ),
                     itemCount: stats.length,
                     itemBuilder: (context, i) {
@@ -546,6 +558,7 @@ class _ProfileTab extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   onPressed: () {
                     context.read<AuthBloc>().add(LogoutRequested());
+                    context.go('/login');
                   },
                 ),
                 const SizedBox(height: AppDimensions.spaceXXL),

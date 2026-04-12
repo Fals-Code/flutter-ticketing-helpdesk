@@ -53,6 +53,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     on<StartTicketSubscription>(_onStartSubscription);
     on<TicketStreamUpdated>(_onStreamUpdated);
     on<FetchTicketStatsRequested>(_onFetchStats);
+    on<ResetTicketState>(_onResetState);
   }
 
   void _onStartSubscription(
@@ -330,5 +331,13 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         (history) => emit(state.copyWith(history: history)),
       );
     }
+  }
+
+  Future<void> _onResetState(
+    ResetTicketState event,
+    Emitter<TicketState> emit,
+  ) async {
+    _ticketSubscription?.cancel();
+    emit(const TicketState());
   }
 }

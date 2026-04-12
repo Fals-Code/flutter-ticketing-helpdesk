@@ -14,6 +14,8 @@ import 'package:uts/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
 import 'package:uts/features/ticket/presentation/pages/history_page.dart';
 import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
+import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
+import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
 
 /// Named route constants untuk type-safe navigation.
 abstract class AppRoutes {
@@ -32,6 +34,7 @@ abstract class AppRoutes {
   static const String adminReports = '/admin-reports';
   static const String adminSettings = '/admin-settings';
   static const String ticketManagement = '/ticket-management';
+  static const String userManagement = '/user-management';
 }
 
 /// Konfigurasi GoRouter — navigasi deklaratif.
@@ -189,6 +192,22 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) => const CustomTransitionPage(
         child: TicketListPage(),
         transitionsBuilder: _slideTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.adminSettings,
+      name: 'admin-settings',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: AdminSettingsPage(),
+        transitionsBuilder: _slideUpTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.userManagement,
+      name: 'user-management',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: UserManagementPage(),
+        transitionsBuilder: _slideUpTransition,
       ),
     ),
   ],

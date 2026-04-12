@@ -29,6 +29,8 @@ class NotificationStreamUpdated extends NotificationEvent {
   List<Object?> get props => [notifications];
 }
 
+class ResetNotificationState extends NotificationEvent {}
+
 // State
 class NotificationState extends Equatable {
   final bool isLoading;
@@ -73,6 +75,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<MarkReadRequested>(_onMarkRead);
     on<StartNotificationSubscription>(_onStartSubscription);
     on<NotificationStreamUpdated>(_onStreamUpdated);
+    on<ResetNotificationState>(_onResetState);
   }
 
   void _onStartSubscription(
@@ -135,5 +138,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         emit(state.copyWith(notifications: updatedList));
       },
     );
+  }
+
+  Future<void> _onResetState(
+    ResetNotificationState event,
+    Emitter<NotificationState> emit,
+  ) async {
+    _notificationSubscription?.cancel();
+    emit(const NotificationState());
   }
 }

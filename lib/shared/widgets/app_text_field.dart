@@ -16,6 +16,7 @@ class AppTextField extends StatefulWidget {
   final int maxLines;
   final FocusNode? focusNode;
   final TextInputAction textInputAction;
+  final double borderRadius;
   final void Function(String)? onSubmitted;
 
   const AppTextField({
@@ -33,6 +34,7 @@ class AppTextField extends StatefulWidget {
     this.maxLines = 1,
     this.focusNode,
     this.textInputAction = TextInputAction.next,
+    this.borderRadius = 8,
     this.onSubmitted,
   });
 
@@ -108,19 +110,19 @@ class _AppTextFieldState extends State<AppTextField> {
                     )
                   : widget.suffixWidget,
               border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: BorderSide(
                   color: isDark ? AppColors.borderDark : AppColors.borderLight,
                 ),
               ),
               enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: BorderSide(
                   color: isDark ? AppColors.borderDark : AppColors.borderLight,
                 ),
               ),
               focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.circular(widget.borderRadius),
                 borderSide: const BorderSide(color: AppColors.primary, width: 2),
               ),
             ),

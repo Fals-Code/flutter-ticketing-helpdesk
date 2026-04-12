@@ -33,7 +33,7 @@ abstract class TicketRepository {
     required int limit,
     String? searchQuery,
     String? category,
-    TicketStatus? status,
+    String? status,
   });
 
   /// Mengambil SEMUA daftar tiket di sistem (Paginated - untuk Admin/Staff).
@@ -43,6 +43,7 @@ abstract class TicketRepository {
     String? status,
     String? searchQuery,
     String? category,
+    String? assignedToId,
   });
 
   /// Mengambil daftar staff (Technician/Admin) untuk penugasan.
@@ -92,5 +93,5 @@ abstract class TicketRepository {
   Future<Either<Failure, TicketStats>> getTicketStats();
 
   /// Aliran data tiket secara realtime.
-  Stream<List<TicketEntity>> watchTickets();
+  Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId});
 }

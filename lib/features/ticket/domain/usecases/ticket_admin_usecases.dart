@@ -19,6 +19,9 @@ class GetAllTicketsUseCase implements UseCase<Either<Failure, List<TicketEntity>
       page: params.page,
       limit: params.limit,
       status: params.status,
+      searchQuery: params.searchQuery,
+      category: params.category,
+      assignedToId: params.assignedToId,
     );
   }
 }

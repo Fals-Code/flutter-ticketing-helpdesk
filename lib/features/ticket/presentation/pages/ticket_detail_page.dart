@@ -14,6 +14,7 @@ import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/shared/widgets/ticket_timeline_widget.dart';
+import 'package:uts/shared/widgets/app_button.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -222,10 +223,16 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     final ticket = state.selectedTicket!;
     final authState = context.read<AuthBloc>().state;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final isStaff = authState.status == AuthStatus.authenticated && 
-        (authState.user.role == UserRole.admin || authState.user.role == UserRole.technician);
+    
+    if (authState.user == null) return const SizedBox.shrink();
+    
+    final isAdmin = authState.user!.role == UserRole.admin;
+    final isTechnician = authState.user!.role == UserRole.technician;
+    final isAssignedToMe = ticket.assignedTo == authState.user!.id;
 
-    if (!isStaff) return const SizedBox.shrink();
+    // Only show actions for Admin or the assigned Technician
+    if (isTechnician && !isAssignedToMe) return const SizedBox.shrink();
+    if (!isAdmin && !isTechnician) return const SizedBox.shrink();
 
     return Container(
       margin: const EdgeInsets.only(bottom: 32),
@@ -243,11 +250,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         children: [
           Row(
             children: [
-              const Icon(Icons.shield_outlined, size: 18, color: AppColors.primary),
+              Icon(isAdmin ? Icons.shield_outlined : Icons.engineering_outlined, size: 18, color: AppColors.primary),
               const SizedBox(width: 8),
-              const Text(
-                'STAFF ACTIONS',
-                style: TextStyle(
+              Text(
+                isAdmin ? 'ADMIN ACTIONS' : 'TUGAS TEKNISI',
+                style: const TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
                   color: AppColors.primary,
@@ -257,48 +264,91 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             ],
           ),
           const SizedBox(height: 20),
-          const Text('Update Status', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            children: TicketStatus.values.map((status) {
-              final isSelected = ticket.status == status;
-              return ChoiceChip(
-                label: Text(status.label, style: const TextStyle(fontSize: 12)),
-                selected: isSelected,
-                onSelected: (val) {
-                  if (val && !isSelected) {
-                    context.read<TicketBloc>().add(
-                          UpdateTicketStatusRequested(ticketId: ticket.id, status: status),
-                        );
-                  }
-                },
-              );
-            }).toList(),
-          ),
-          const SizedBox(height: 20),
-          const Text('Tugaskan Ke', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: ticket.assignedTo,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          
+          if (isTechnician || isAdmin) ...[
+            const Text('Tindakan Cepat', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                if (ticket.status == TicketStatus.open)
+                  Expanded(
+                    child: AppButton(
+                      label: 'Kerjakan',
+                      icon: Icons.play_arrow_rounded,
+                      backgroundColor: AppColors.statusInProgress,
+                      onPressed: () => context.read<TicketBloc>().add(
+                        UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.inProgress),
+                      ),
+                    ),
+                  ),
+                if (ticket.status == TicketStatus.inProgress)
+                  Expanded(
+                    child: AppButton(
+                      label: 'Selesai',
+                      icon: Icons.check_circle_outline_rounded,
+                      backgroundColor: AppColors.statusResolved,
+                      onPressed: () => context.read<TicketBloc>().add(
+                        UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.resolved),
+                      ),
+                    ),
+                  ),
+                if (ticket.status == TicketStatus.resolved || ticket.status == TicketStatus.closed)
+                  const Expanded(
+                    child: Center(
+                      child: Text('Tiket telah diselesaikan', style: TextStyle(color: Colors.grey, fontSize: 13)),
+                    ),
+                  ),
+              ],
             ),
-            items: state.staffUsers.map((user) {
-              return DropdownMenuItem<String>(
-                value: user.id,
-                child: Text(user.fullName ?? user.email, style: const TextStyle(fontSize: 14)),
-              );
-            }).toList(),
-            onChanged: (val) {
-              if (val != null && val != ticket.assignedTo) {
-                context.read<TicketBloc>().add(
-                      AssignTicketRequested(ticketId: ticket.id, technicianId: val),
-                    );
-              }
-            },
-          ),
+            const SizedBox(height: 20),
+          ],
+
+          if (isAdmin) ...[
+            const Divider(),
+            const SizedBox(height: 16),
+            const Text('Update Status (Full)', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              children: TicketStatus.values.map((status) {
+                final isSelected = ticket.status == status;
+                return ChoiceChip(
+                  label: Text(status.label, style: const TextStyle(fontSize: 12)),
+                  selected: isSelected,
+                  onSelected: (val) {
+                    if (val && !isSelected) {
+                      context.read<TicketBloc>().add(
+                            UpdateTicketStatusRequested(ticketId: ticket.id, status: status),
+                          );
+                    }
+                  },
+                );
+              }).toList(),
+            ),
+            const SizedBox(height: 20),
+            const Text('Tugaskan Ke', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              value: ticket.assignedTo,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+              items: state.staffUsers.map((user) {
+                return DropdownMenuItem<String>(
+                  value: user.id,
+                  child: Text(user.fullName ?? user.email, style: const TextStyle(fontSize: 14)),
+                );
+              }).toList(),
+              onChanged: (val) {
+                if (val != null && val != ticket.assignedTo) {
+                  context.read<TicketBloc>().add(
+                        AssignTicketRequested(ticketId: ticket.id, technicianId: val),
+                      );
+                }
+              },
+            ),
+          ],
         ],
       ),
     );

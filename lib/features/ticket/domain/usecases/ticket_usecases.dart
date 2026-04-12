@@ -15,7 +15,13 @@ class GetTicketsUseCase
 
   @override
   Future<Either<Failure, List<TicketEntity>>> call(GetTicketsParams params) async {
-    return await repository.getTickets(page: params.page, limit: params.limit);
+    return await repository.getTickets(
+      page: params.page,
+      limit: params.limit,
+      searchQuery: params.searchQuery,
+      category: params.category,
+      status: params.status,
+    );
   }
 }
 
@@ -104,8 +110,8 @@ class WatchTicketsUseCase {
   final TicketRepository repository;
   WatchTicketsUseCase(this.repository);
 
-  Stream<List<TicketEntity>> call() {
-    return repository.watchTickets();
+  Stream<List<TicketEntity>> call({String? userId, String? assignedToId}) {
+    return repository.watchTickets(userId: userId, assignedToId: assignedToId);
   }
 }
 
@@ -122,10 +128,13 @@ class GetTicketsParams extends Equatable {
     this.status,
     this.searchQuery,
     this.category,
+    this.assignedToId,
   });
 
+  final String? assignedToId;
+
   @override
-  List<Object?> get props => [page, limit, status, searchQuery, category];
+  List<Object?> get props => [page, limit, status, searchQuery, category, assignedToId];
 }
 
 class CreateTicketParams extends Equatable {

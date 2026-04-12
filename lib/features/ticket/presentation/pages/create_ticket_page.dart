@@ -25,10 +25,16 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
   final _subjectController = TextEditingController();
   final _descController = TextEditingController();
 
-  String _selectedPriority = 'medium';
   String _selectedCategory = 'software';
+  String _selectedPriority = 'medium';
   final List<String> _imagePaths = [];
   final ImagePicker _picker = ImagePicker();
+
+  static const _priorities = [
+    {'value': 'low', 'label': 'Rendah'},
+    {'value': 'medium', 'label': 'Sedang'},
+    {'value': 'high', 'label': 'Tinggi'},
+  ];
 
   static const _categories = [
     {'value': 'hardware', 'label': 'Hardware'},
@@ -222,9 +228,28 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         const SizedBox(height: 32),
 
                         // Priority Section
-                        _buildLabel('Tingkat Prioritas'),
-                        const SizedBox(height: 12),
-                        _buildPrioritySelector(),
+                        DropdownButtonFormField<String>(
+                          value: _selectedPriority,
+                          decoration: InputDecoration(
+                            labelText: 'Tingkat Prioritas',
+                            prefixIcon: const Icon(Icons.priority_high_rounded),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            filled: true,
+                            fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.withOpacity(0.05),
+                          ),
+                          items: _priorities.map((p) {
+                            return DropdownMenuItem<String>(
+                              value: p['value'],
+                              child: Text(p['label']!),
+                            );
+                          }).toList(),
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedPriority = val);
+                          },
+                          validator: (v) => v == null ? 'Pilih tingkat prioritas' : null,
+                        ),
                         const SizedBox(height: 32),
 
                         // Image Picker Section
@@ -294,52 +319,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
     );
   }
 
-  Widget _buildPrioritySelector() {
-    final List<Map<String, dynamic>> priorities = [
-      {'value': 'low', 'label': 'Rendah', 'color': Colors.green},
-      {'value': 'medium', 'label': 'Sedang', 'color': Colors.orange},
-      {'value': 'high', 'label': 'Tinggi', 'color': Colors.red},
-      {'value': 'urgent', 'label': 'Mendesak', 'color': const Color(0xFFD32F2F)},
-    ];
 
-    return Row(
-      children: priorities.map((p) {
-        final isSelected = _selectedPriority == p['value'];
-        final Color color = p['color'];
-        return Expanded(
-          child: Padding(
-            padding: EdgeInsets.only(right: p['value'] == 'high' ? 0 : 8),
-            child: ChoiceChip(
-              label: Container(
-                width: double.infinity,
-                alignment: Alignment.center,
-                child: Text(
-                  p['label'],
-                  style: TextStyle(
-                    color: isSelected ? Colors.white : color,
-                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-              ),
-              selected: isSelected,
-              onSelected: (selected) {
-                if (selected) {
-                  setState(() => _selectedPriority = p['value']);
-                }
-              },
-              selectedColor: color,
-              backgroundColor: color.withValues(alpha: 0.1),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: isSelected ? Colors.transparent : color.withValues(alpha: 0.3)),
-              ),
-              showCheckmark: false,
-            ),
-          ),
-        );
-      }).toList(),
-    );
-  }
 
   Widget _buildImagePicker(bool isDark) {
     return SingleChildScrollView(

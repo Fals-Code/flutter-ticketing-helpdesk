@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -43,6 +42,22 @@ class _TicketListPageState extends State<TicketListPage> {
   void _fetchInitial() {
     context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: _pageSize));
     context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: _pageSize));
+    
+    final isTechnician = authState.user!.role == UserRole.technician;
+    
+    context.read<TicketBloc>().add(StartTicketSubscription(
+      userId: userId, 
+      isStaff: isStaff,
+      isTechnician: isTechnician,
+    ));
+    
+    if (isStaff) {
+      context.read<TicketBloc>().add(FetchAllTicketsRequested(
+        page: 0, 
+        limit: _pageSize,
+        assignedToId: isTechnician ? userId : null,
+      ));
+    }
   }
 
   void _onScroll(ScrollController controller, bool isMyTickets) {
@@ -77,19 +92,30 @@ class _TicketListPageState extends State<TicketListPage> {
     
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, authState) {
-        final isStaff = authState.status == AuthStatus.authenticated && 
-            (authState.user?.role == UserRole.admin || authState.user?.role == UserRole.technician);
+        if (authState.user == null) return const Scaffold();
+        final user = authState.user!;
+        final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
+        final isTechnician = user.role == UserRole.technician;
+        
+        String title;
+        if (user.role == UserRole.admin) {
+          title = 'Daftar Semua Laporan';
+        } else if (user.role == UserRole.technician) {
+          title = 'Tugas Perbaikan Saya';
+        } else {
+          title = 'Laporan Saya';
+        }
 
         return DefaultTabController(
           length: isStaff ? 2 : 1,
           child: Scaffold(
             appBar: AppBar(
-              title: const Text(AppStrings.myTickets),
+              title: Text(title),
               bottom: isStaff 
-                  ? const TabBar(
+                  ? TabBar(
                       tabs: [
-                        Tab(text: 'Tiket Saya'),
-                        Tab(text: 'Semua Tiket'),
+                        const Tab(text: 'Tiket Saya'),
+                        Tab(text: isTechnician ? 'Tugas Saya' : 'Semua Tiket'),
                       ],
                     )
                   : null,
@@ -109,6 +135,7 @@ class _TicketListPageState extends State<TicketListPage> {
                 return Column(
                   children: [
                     _buildFilters(context, state, isDark),
+                    if (user.role == UserRole.admin) _buildAdminStatsBar(state, isDark),
                     Expanded(
                       child: TabBarView(
                         physics: isStaff ? const BouncingScrollPhysics() : const NeverScrollableScrollPhysics(),
@@ -420,7 +447,56 @@ class _Badge extends StatelessWidget {
       ),
     );
   }
-}
+  Widget _buildAdminStatsBar(TicketState state, bool isDark) {
+    final stats = state.stats;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+      child: Row(
+        children: [
+          _buildMiniStatCard('Terbuka', stats.open, AppColors.statusOpen, isDark),
+          const SizedBox(width: 8),
+          _buildMiniStatCard('Diproses', stats.inProgress, AppColors.statusInProgress, isDark),
+          const SizedBox(width: 8),
+          _buildMiniStatCard('Selesai', stats.resolved, AppColors.statusResolved, isDark),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildMiniStatCard(String label, int value, Color color, bool isDark) {
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        decoration: BoxDecoration(
+          color: isDark ? Colors.black26 : Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withValues(alpha: 0.3)),
+          boxShadow: [
+            if (!isDark)
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.05),
+                blurRadius: 4,
+                offset: const Offset(0, 2),
+              ),
+          ],
+        ),
+        child: Column(
+          children: [
+            Text(
+              value.toString(),
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: TextStyle(fontSize: 10, color: isDark ? Colors.white70 : Colors.black54),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
 
 

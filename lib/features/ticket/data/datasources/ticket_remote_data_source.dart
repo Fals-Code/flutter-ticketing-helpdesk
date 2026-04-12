@@ -8,7 +8,7 @@ import '../models/ticket_history_model.dart';
 
 abstract class TicketRemoteDataSource {
   Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status});
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category});
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId});
   Future<List<Map<String, dynamic>>> getStaffUsers();
   Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths);
   Future<TicketModel> getTicketDetail(String ticketId);
@@ -19,7 +19,7 @@ abstract class TicketRemoteDataSource {
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
   Future<List<TicketHistoryModel>> getAllTicketHistory();
   Future<Map<String, int>> getTicketStats();
-  Stream<List<TicketModel>> watchTickets();
+  Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId});
 }
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
@@ -70,7 +70,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (status != null && status != 'all') {
-      query = query.eq('status', status.toLowerCase());
+      if (status.contains(',')) {
+        query = query.inFilter('status', status.split(',').map((s) => s.trim().toLowerCase()).toList());
+      } else {
+        query = query.eq('status', status.toLowerCase());
+      }
     }
     if (category != null) {
       query = query.eq('category', category);
@@ -94,16 +98,24 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category}) async {
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId}) async {
     final from = page * limit;
     final to = from + limit - 1;
 
     var query = supabaseClient
         .from('tickets')
         .select('*, profiles:user_id(*), technician:assigned_to(*)');
+
+    if (assignedToId != null) {
+      query = query.eq('assigned_to', assignedToId);
+    }
     
     if (status != null && status != 'all') {
-      query = query.eq('status', status.toLowerCase());
+      if (status.contains(',')) {
+        query = query.inFilter('status', status.split(',').map((s) => s.trim().toLowerCase()).toList());
+      } else {
+        query = query.eq('status', status.toLowerCase());
+      }
     }
     if (category != null) {
       query = query.eq('category', category);
@@ -131,7 +143,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final response = await supabaseClient
         .from('profiles')
         .select('id, full_name, email, role')
-        .inFilter('role', ['technician', 'admin', 'helpdesk']);
+        .eq('role', 'technician');
     
     return List<Map<String, dynamic>>.from(response);
   }
@@ -271,7 +283,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     try {
       final response = await supabaseClient
           .from('ticket_history')
-          .select('*, profiles(full_name)')
+          .select('*, profiles:user_id(full_name)')
           .order('created_at', ascending: false)
           .limit(50);
       
@@ -282,12 +294,31 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Stream<List<TicketModel>> watchTickets() {
-    return supabaseClient
+  Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId}) {
+    final builder = supabaseClient
         .from('tickets')
-        .stream(primaryKey: ['id'])
+        .stream(primaryKey: ['id']);
+    
+    var filteredBuilder = builder;
+    
+    if (userId != null) {
+      filteredBuilder = filteredBuilder.eq('user_id', userId);
+    }
+    
+    if (assignedToId != null) {
+      filteredBuilder = filteredBuilder.eq('assigned_to', assignedToId);
+    }
+
+    return filteredBuilder
         .order('created_at', ascending: false)
-        .map((data) => data.map((json) => TicketModel.fromJson(json)).toList());
+        .map((data) => data.map((json) {
+              try {
+                return TicketModel.fromJson(json);
+              } catch (e) {
+                debugPrint('Stream Mapping Error: $e');
+                return null;
+              }
+            }).whereType<TicketModel>().toList());
   }
 
   // Helper methods

@@ -24,7 +24,7 @@ class TicketRepositoryImpl implements TicketRepository {
     required int limit,
     String? searchQuery,
     String? category,
-    TicketStatus? status,
+    String? status,
   }) async {
     try {
       final tickets = await remoteDataSource.getTickets(
@@ -32,7 +32,7 @@ class TicketRepositoryImpl implements TicketRepository {
         limit,
         searchQuery: searchQuery,
         category: category,
-        status: status?.name,
+        status: status,
       );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } on sup.AuthException catch (e) {
@@ -49,6 +49,7 @@ class TicketRepositoryImpl implements TicketRepository {
     String? status,
     String? searchQuery,
     String? category,
+    String? assignedToId,
   }) async {
     try {
       final tickets = await remoteDataSource.getAllTickets(
@@ -57,6 +58,7 @@ class TicketRepositoryImpl implements TicketRepository {
         status: status,
         searchQuery: searchQuery,
         category: category,
+        assignedToId: assignedToId,
       );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } catch (e) {
@@ -189,8 +191,8 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Stream<List<TicketEntity>> watchTickets() {
-    return remoteDataSource.watchTickets().map(
+  Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId}) {
+    return remoteDataSource.watchTickets(userId: userId, assignedToId: assignedToId).map(
           (models) => models.map((m) => m.toEntity()).toList(),
         );
   }

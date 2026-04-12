@@ -93,12 +93,20 @@ class _DashboardPageState extends State<DashboardPage> {
           onDestinationSelected: (i) {
             setState(() => _currentIndex = i);
             if (i == 1) {
+              final authState = context.read<AuthBloc>().state;
+              final user = authState.user!;
+              final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
+              final isTechnician = user.role == UserRole.technician;
+              
               // Refresh tickets when switching to Tickets tab
-              context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: 10));
-              final state = context.read<AuthBloc>().state;
-              if (state.status == AuthStatus.authenticated && 
-                  (state.user.role == UserRole.admin || state.user.role == UserRole.technician)) {
-                context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 10));
+              context.read<TicketBloc>().add(FetchTicketsRequested(page: 0, limit: 10));
+              
+              if (isStaff) {
+                context.read<TicketBloc>().add(FetchAllTicketsRequested(
+                  page: 0, 
+                  limit: 10,
+                  assignedToId: isTechnician ? user.id : null,
+                ));
               }
             }
           },

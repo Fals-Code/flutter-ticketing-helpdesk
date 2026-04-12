@@ -4,6 +4,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'ticket_event.dart';
 import 'ticket_state.dart';
 
@@ -61,13 +62,24 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     Emitter<TicketState> emit,
   ) {
     _ticketSubscription?.cancel();
+    
     try {
-      _ticketSubscription = watchTicketsUseCase().listen(
+      // If it's a Technician, we filter by assignedToId
+      // If it's a regular Staff (Admin), we see all (userId = null)
+      // If it's a User, we filter by userId
+      _ticketSubscription = watchTicketsUseCase(
+        userId: event.isStaff && !event.isTechnician ? null : event.userId,
+        assignedToId: event.isTechnician ? event.userId : null,
+      ).listen(
         (tickets) => add(TicketStreamUpdated(tickets)),
         onError: (error) {
           debugPrint('Realtime Stream Error: $error. Retrying in 5s...');
           Future.delayed(const Duration(seconds: 5), () {
-            if (!isClosed) add(StartTicketSubscription());
+            if (!isClosed) add(StartTicketSubscription(
+              userId: event.userId,
+              isStaff: event.isStaff,
+              isTechnician: event.isTechnician,
+            ));
           });
         },
       );
@@ -80,8 +92,9 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     TicketStreamUpdated event,
     Emitter<TicketState> emit,
   ) {
-    // Sync realtime updates with current list
-    emit(state.copyWith(tickets: event.tickets));
+    // Sync realtime updates with current list, applying UI filters
+    final filteredTickets = _applyFilters(event.tickets);
+    emit(state.copyWith(tickets: filteredTickets));
     
     // Refresh stats whenever there's a realtime update
     add(const FetchTicketStatsRequested());
@@ -109,7 +122,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         category: state.categoryFilter,
         status: state.statusFilter == TicketStatusFilter.all 
             ? null 
-            : (state.statusFilter == TicketStatusFilter.inProgress ? 'in_progress' : state.statusFilter.name),
+            : _mapStatusFilter(state.statusFilter),
       ),
     );
 
@@ -218,11 +231,17 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         limit: event.limit,
         status: state.statusFilter == TicketStatusFilter.all 
             ? null 
-            : (state.statusFilter == TicketStatusFilter.inProgress ? 'in_progress' : state.statusFilter.name),
+            : _mapStatusFilter(state.statusFilter),
         searchQuery: state.searchQuery,
         category: state.categoryFilter,
+        assignedToId: event.assignedToId,
       ),
     );
+
+    // If fetching first page for staff, refresh global stats too
+    if (event.page == 0) {
+      add(const FetchTicketStatsRequested());
+    }
 
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
@@ -351,5 +370,50 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
   ) async {
     _ticketSubscription?.cancel();
     emit(const TicketState());
+  }
+  List<TicketEntity> _applyFilters(List<TicketEntity> tickets) {
+    return tickets.where((ticket) {
+      // 1. Status Filter (Lowercase Sync)
+      if (state.statusFilter != TicketStatusFilter.all) {
+        final mappedStatus = _mapStatusFilter(state.statusFilter);
+        final ticketStatusName = ticket.status.name.toLowerCase();
+        
+        if (mappedStatus.contains(',')) {
+          final allowed = mappedStatus.split(',');
+          if (!allowed.contains(ticketStatusName)) return false;
+        } else {
+          if (ticketStatusName != mappedStatus) return false;
+        }
+      }
+
+      // 2. Category Filter
+      if (state.categoryFilter != null && state.categoryFilter != 'General') {
+        if (ticket.category != state.categoryFilter) return false;
+      }
+
+      // 3. Search Query (Null-Safe)
+      final query = state.searchQuery.toLowerCase();
+      if (query.isNotEmpty) {
+        final title = ticket.title.toLowerCase();
+        final desc = ticket.description.toLowerCase();
+        if (!title.contains(query) && !desc.contains(query)) return false;
+      }
+
+      return true;
+    }).toList();
+  }
+
+  String _mapStatusFilter(TicketStatusFilter filter) {
+    switch (filter) {
+      case TicketStatusFilter.open:
+        return 'open';
+      case TicketStatusFilter.inProgress:
+        return 'in_progress';
+      case TicketStatusFilter.resolved:
+      case TicketStatusFilter.closed:
+        return 'resolved,closed';
+      case TicketStatusFilter.all:
+        return 'all';
+    }
   }
 }

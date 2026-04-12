@@ -48,9 +48,15 @@ class FetchAllTicketsRequested extends TicketEvent {
   final int page;
   final int limit;
   final String? status;
-  const FetchAllTicketsRequested({required this.page, this.limit = 10, this.status});
+  final String? assignedToId;
+  const FetchAllTicketsRequested({
+    required this.page, 
+    this.limit = 10, 
+    this.status,
+    this.assignedToId,
+  });
   @override
-  List<Object?> get props => [page, limit, status];
+  List<Object?> get props => [page, limit, status, assignedToId];
 }
 
 class FetchStaffUsersRequested extends TicketEvent {
@@ -115,7 +121,20 @@ class FilterCategoryChanged extends TicketEvent {
   List<Object?> get props => [category];
 }
 
-class StartTicketSubscription extends TicketEvent {}
+class StartTicketSubscription extends TicketEvent {
+  final String? userId;
+  final bool isStaff;
+  final bool isTechnician;
+
+  const StartTicketSubscription({
+    this.userId, 
+    this.isStaff = false,
+    this.isTechnician = false,
+  });
+
+  @override
+  List<Object?> get props => [userId, isStaff, isTechnician];
+}
 
 class TicketStreamUpdated extends TicketEvent {
   final List<TicketEntity> tickets;

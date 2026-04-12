@@ -35,19 +35,39 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Staff Dashboard'),
+            title: BlocBuilder<AuthBloc, AuthState>(
+              builder: (context, authState) {
+                return Text(authState.user?.role == UserRole.admin ? 'Dashboard Admin' : 'Panel Teknisi');
+              },
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () => context.read<TicketBloc>().add(
-                      const FetchAllTicketsRequested(page: 0, limit: 100),
-                    ),
+                onPressed: () {
+                  final authState = context.read<AuthBloc>().state;
+                  final user = authState.user;
+                  context.read<TicketBloc>().add(
+                        FetchAllTicketsRequested(
+                          page: 0, 
+                          limit: 100,
+                          assignedToId: user?.role == UserRole.technician ? user?.id : null,
+                        ),
+                      );
+                },
               ),
             ],
           ),
           body: RefreshIndicator(
             onRefresh: () async {
-              context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 100));
+              final authState = context.read<AuthBloc>().state;
+              final user = authState.user;
+              context.read<TicketBloc>().add(
+                    FetchAllTicketsRequested(
+                      page: 0, 
+                      limit: 100,
+                      assignedToId: user?.role == UserRole.technician ? user?.id : null,
+                    ),
+                  );
             },
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppDimensions.spaceLG),

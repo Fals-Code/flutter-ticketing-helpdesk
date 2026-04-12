@@ -53,7 +53,12 @@ class _SplashPageState extends State<SplashPage>
       Future.delayed(const Duration(milliseconds: 800), () {
         if (!mounted) return;
         if (state.status == AuthStatus.authenticated) {
-          context.go(AppRoutes.dashboard);
+          final role = state.user.role;
+          if (role == UserRole.admin || role == UserRole.technician) {
+            context.go(AppRoutes.staffDashboard);
+          } else {
+            context.go(AppRoutes.dashboard);
+          }
         } else {
           context.go(AppRoutes.login);
         }

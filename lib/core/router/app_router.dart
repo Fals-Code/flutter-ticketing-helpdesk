@@ -27,6 +27,7 @@ abstract class AppRoutes {
   static const String notifications = '/notifications';
   static const String profile = '/profile';
   static const String history = '/history';
+  static const String staffDashboard = '/staff-dashboard';
 }
 
 /// Konfigurasi GoRouter — navigasi deklaratif.
@@ -86,6 +87,14 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.dashboard,
       name: 'dashboard',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: DashboardPage(),
+        transitionsBuilder: _slideUpTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.staffDashboard,
+      name: 'staff-dashboard',
       pageBuilder: (context, state) => const CustomTransitionPage(
         child: DashboardPage(),
         transitionsBuilder: _slideUpTransition,

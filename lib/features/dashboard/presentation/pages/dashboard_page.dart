@@ -61,14 +61,19 @@ class _DashboardPageState extends State<DashboardPage> {
           final isStaff = state.status == AuthStatus.authenticated && 
               (state.user.role == UserRole.admin || state.user.role == UserRole.technician);
 
-          return IndexedStack(
-            index: _currentIndex,
-            children: [
-              isStaff ? const StaffDashboardPage() : const _DashboardHomeTab(),
-              const TicketListPage(),
-              const _NotificationTab(),
-              const _ProfileTab(),
-            ],
+          return SingleChildScrollView(
+            child: SizedBox(
+              height: MediaQuery.of(context).size.height - kBottomNavigationBarHeight - 20,
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  isStaff ? const StaffDashboardPage() : const _DashboardHomeTab(),
+                  const TicketListPage(),
+                  const _NotificationTab(),
+                  const _ProfileTab(),
+                ],
+              ),
+            ),
           );
         },
       ),

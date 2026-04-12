@@ -27,9 +27,19 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw const sup.AuthException('Login gagal: User tidak ditemukan');
     }
 
+    // Fetch role from profiles table (Integer migration)
+    final profileResponse = await supabaseClient
+        .from('profiles')
+        .select('role')
+        .eq('id', response.user!.id)
+        .single();
+    
+    final int roleInt = profileResponse['role'] as int;
+
     return UserModel.fromJson(
       response.user!.toJson(),
       token: response.session?.accessToken,
+      roleInt: roleInt,
     );
   }
 

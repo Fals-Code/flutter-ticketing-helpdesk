@@ -17,6 +17,17 @@ enum UserRole {
   technician,
   admin;
 
+  static UserRole fromInt(int role) {
+    switch (role) {
+      case 1:
+        return UserRole.admin;
+      case 2:
+        return UserRole.technician;
+      default:
+        return UserRole.user;
+    }
+  }
+
   static UserRole fromString(String role) {
     switch (role.toLowerCase()) {
       case 'admin':

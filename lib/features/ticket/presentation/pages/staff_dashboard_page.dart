@@ -27,7 +27,6 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
         }
 
         final stats = state.stats;
-        final tickets = state.allTickets;
         final openCount = stats.open;
         final inProgressCount = stats.inProgress;
         final resolvedCount = stats.resolved;

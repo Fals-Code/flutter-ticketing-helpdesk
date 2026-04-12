@@ -26,7 +26,6 @@ class _LoginPageState extends State<LoginPage> {
   final _emailFocus = FocusNode();
   final _passwordFocus = FocusNode();
 
-  String _selectedRole = 'user';
 
   @override
   void dispose() {
@@ -74,8 +73,6 @@ class _LoginPageState extends State<LoginPage> {
                 children: [
                   _buildHeader(isDark),
                   const SizedBox(height: 48),
-                  _buildRoleSelector(),
-                  const SizedBox(height: 32),
                   _buildForm(),
                   const SizedBox(height: 32),
                   BlocBuilder<AuthBloc, AuthState>(
@@ -148,24 +145,6 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _buildRoleSelector() {
-    return SegmentedButton<String>(
-      segments: const [
-        ButtonSegment(value: 'user', label: Text('User'), icon: Icon(Icons.person_outline, size: 16)),
-        ButtonSegment(value: 'technician', label: Text('Teknisi'), icon: Icon(Icons.support_agent, size: 16)),
-        ButtonSegment(value: 'admin', label: Text('Admin'), icon: Icon(Icons.shield_outlined, size: 16)),
-      ],
-      selected: {_selectedRole},
-      onSelectionChanged: (Set<String> newSelection) {
-        setState(() => _selectedRole = newSelection.first);
-      },
-      showSelectedIcon: false,
-      style: SegmentedButton.styleFrom(
-        visualDensity: VisualDensity.compact,
-        textStyle: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
-      ),
-    );
-  }
 
   Widget _buildForm() {
     return Form(

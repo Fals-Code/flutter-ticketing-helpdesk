@@ -87,7 +87,9 @@ class _DashboardPageState extends State<DashboardPage> {
               children: [
                 state.user.role == UserRole.admin 
                     ? const _AdminHomeTab() 
-                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : const _DashboardHomeTab()),
+                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : _DashboardHomeTab(
+                        onSeeAll: () => setState(() => _currentIndex = 1),
+                      )),
                 const TicketListPage(),
                 const _NotificationTab(),
                 const _ProfileTab(),
@@ -170,7 +172,8 @@ class _DashboardPageState extends State<DashboardPage> {
 // ── Dashboard Home Tab ─────────────────────────────────────────────────────────
 
 class _DashboardHomeTab extends StatelessWidget {
-  const _DashboardHomeTab();
+  final VoidCallback onSeeAll;
+  const _DashboardHomeTab({required this.onSeeAll});
 
   @override
   Widget build(BuildContext context) {
@@ -274,9 +277,7 @@ class _DashboardHomeTab extends StatelessWidget {
                     children: [
                       Text('Tiket Terbaru', style: Theme.of(context).textTheme.titleLarge),
                       TextButton(
-                        onPressed: () {
-                          // In a real app, this would switch the tab index
-                        },
+                        onPressed: onSeeAll,
                         child: const Text('Lihat Semua'),
                       ),
                     ],

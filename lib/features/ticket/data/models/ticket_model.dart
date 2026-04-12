@@ -12,15 +12,20 @@ class TicketModel extends TicketEntity {
     required super.createdAt,
     super.updatedAt,
     required super.userId,
+    super.userName,
     super.assignedTo,
     super.assignedToName,
     super.imageUrls,
   });
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    // Handle join results for assigned_to_name if available (from profiles table)
-    final assignedProfile = json['profiles']; 
+    // Handle join results for assigned_to_name
+    final assignedProfile = json['assigned_profiles'] ?? json['profiles']; 
     final assignedToName = assignedProfile != null ? assignedProfile['full_name'] : json['assigned_to_name'];
+
+    // Handle join results for creator name (userName)
+    final creatorProfile = json['creator_profiles'];
+    final userName = creatorProfile != null ? creatorProfile['full_name'] : json['user_name'];
 
     return TicketModel(
       id: json['id'] ?? '',
@@ -32,6 +37,7 @@ class TicketModel extends TicketEntity {
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
       userId: json['user_id'] ?? '',
+      userName: userName,
       assignedTo: json['assigned_to'],
       assignedToName: assignedToName,
       imageUrls: List<String>.from(json['images'] ?? []),
@@ -63,6 +69,7 @@ class TicketModel extends TicketEntity {
       createdAt: createdAt,
       updatedAt: updatedAt,
       userId: userId,
+      userName: userName,
       assignedTo: assignedTo,
       assignedToName: assignedToName,
       imageUrls: imageUrls,

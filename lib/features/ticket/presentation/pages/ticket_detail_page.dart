@@ -196,7 +196,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           const Text('Tugaskan Ke', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           DropdownButtonFormField<String>(
-            value: ticket.assignedTo,
+            initialValue: ticket.assignedTo,
             isExpanded: true,
             decoration: const InputDecoration(
               contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),

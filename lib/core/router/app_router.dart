@@ -13,6 +13,7 @@ import 'package:uts/features/ticket/presentation/pages/create_ticket_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
 import 'package:uts/features/ticket/presentation/pages/history_page.dart';
+import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
 
 /// Named route constants untuk type-safe navigation.
 abstract class AppRoutes {
@@ -28,6 +29,9 @@ abstract class AppRoutes {
   static const String profile = '/profile';
   static const String history = '/history';
   static const String staffDashboard = '/staff-dashboard';
+  static const String adminReports = '/admin-reports';
+  static const String adminSettings = '/admin-settings';
+  static const String ticketManagement = '/ticket-management';
 }
 
 /// Konfigurasi GoRouter — navigasi deklaratif.
@@ -39,21 +43,39 @@ final GoRouter appRouter = GoRouter(
     final authState = context.read<AuthBloc>().state;
     final bool loggingIn = state.matchedLocation == AppRoutes.login || 
                           state.matchedLocation == AppRoutes.register ||
-                          state.matchedLocation == AppRoutes.resetPassword ||
-                          state.matchedLocation == AppRoutes.splash;
+                          state.matchedLocation == AppRoutes.resetPassword;
 
     if (authState.status == AuthStatus.authenticated) {
       final role = authState.user.role;
-      final isStaff = role == UserRole.admin || role == UserRole.technician;
+      final bool isAdmin = role == UserRole.admin;
+      final bool isStaff = role == UserRole.admin || role == UserRole.technician;
       
-      // If user is already logged in and tries to go to login/splash, redirect to dashboard
+      // If user is already logged in and tries to go to login/register, redirect to dashboard
+      // We exclude splash from here to let SplashPage handle its 2s delay
       if (loggingIn) {
         return isStaff ? AppRoutes.staffDashboard : AppRoutes.dashboard;
       }
       
-      // Guard: Role 3 (Customer) cannot access /staff-dashboard
-      if (state.matchedLocation == AppRoutes.staffDashboard && !isStaff) {
-        return AppRoutes.dashboard;
+      final location = state.matchedLocation;
+
+      // RDAC Guard: Role 3 (Customer) Restrictions
+      if (!isStaff) {
+        final blockedForCustomer = [
+          AppRoutes.staffDashboard,
+          AppRoutes.adminReports,
+          AppRoutes.adminSettings,
+          AppRoutes.ticketManagement,
+        ];
+        if (blockedForCustomer.contains(location)) return AppRoutes.dashboard;
+      }
+
+      // RBAC Guard: Role 2 (Staff/Technician) Restrictions
+      if (isStaff && !isAdmin) {
+        final blockedForStaff = [
+          AppRoutes.adminReports,
+          AppRoutes.adminSettings,
+        ];
+        if (blockedForStaff.contains(location)) return AppRoutes.staffDashboard;
       }
     } else if (authState.status == AuthStatus.unauthenticated) {
       if (!loggingIn) return AppRoutes.login;
@@ -65,7 +87,10 @@ final GoRouter appRouter = GoRouter(
     GoRoute(
       path: AppRoutes.splash,
       name: 'splash',
-      builder: (context, state) => const SplashPage(),
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: SplashPage(),
+        transitionsBuilder: _fadeTransition,
+      ),
     ),
 
     // ── Auth ─────────────────────────────────────────────────────────────────
@@ -148,8 +173,39 @@ final GoRouter appRouter = GoRouter(
         transitionsBuilder: _slideTransition,
       ),
     ),
+
+    // ── Admin & Staff Management ──────────────────────────────────────────────
+    GoRoute(
+      path: AppRoutes.adminReports,
+      name: 'admin-reports',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: AdminReportsPage(),
+        transitionsBuilder: _slideUpTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ticketManagement,
+      name: 'ticket-management',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: TicketListPage(),
+        transitionsBuilder: _slideTransition,
+      ),
+    ),
   ],
 );
+
+// Stub for unimplement pages until we create them
+class UnimplementedPage extends StatelessWidget {
+  final String title;
+  const UnimplementedPage({super.key, required this.title});
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(child: Text('$title - Dalam Pengembangan')),
+    );
+  }
+}
 
 // ── Transition helpers ────────────────────────────────────────────────────────
 

@@ -1,5 +1,5 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';

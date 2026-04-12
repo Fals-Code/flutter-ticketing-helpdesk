@@ -320,6 +320,19 @@ class _TicketCard extends StatelessWidget {
                           : AppColors.textSecondaryLight,
                     ),
                   ),
+                  if (ticket.userName != null) ...[
+                    const SizedBox(width: 8),
+                    Container(width: 4, height: 4, decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
+                    Text(
+                      ticket.userName!,
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white70 : Colors.black87,
+                      ),
+                    ),
+                  ],
                   const Spacer(),
                   Text(
                     DateFormat('dd MMM').format(ticket.createdAt),

@@ -80,9 +80,19 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final user = supabaseClient.auth.currentUser;
 
     if (session != null && user != null) {
+      // Fetch role from profiles table (Integer migration)
+      final profileResponse = await supabaseClient
+          .from('profiles')
+          .select('role')
+          .eq('id', user.id)
+          .single();
+      
+      final int roleInt = profileResponse['role'] as int;
+
       return UserModel.fromJson(
         user.toJson(),
         token: session.accessToken,
+        roleInt: roleInt,
       );
     }
     return null;

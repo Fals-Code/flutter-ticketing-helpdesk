@@ -65,7 +65,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name)')
+        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)')
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (status != null && status != 'all') {
@@ -92,7 +92,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name)');
+        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)');
     
     if (status != null && status != 'all') {
       query = query.eq('status', status.toLowerCase());
@@ -162,7 +162,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId) async {
     final response = await supabaseClient
         .from('tickets')
-        .select('*, assigned_profiles:assigned_to(full_name)')
+        .select('*, assigned_profiles:assigned_to(full_name), creator_profiles:user_id(full_name)')
         .eq('id', ticketId)
         .single();
 

@@ -12,6 +12,7 @@ class TicketEntity extends Equatable {
   final DateTime createdAt;
   final DateTime? updatedAt;
   final String userId;
+  final String? userName;
   final String? assignedTo;
   final String? assignedToName;
   final List<String> imageUrls;
@@ -26,6 +27,7 @@ class TicketEntity extends Equatable {
     required this.createdAt,
     this.updatedAt,
     required this.userId,
+    this.userName,
     this.assignedTo,
     this.assignedToName,
     this.imageUrls = const [],
@@ -42,6 +44,7 @@ class TicketEntity extends Equatable {
         createdAt,
         updatedAt,
         userId,
+        userName,
         assignedTo,
         assignedToName,
         imageUrls,

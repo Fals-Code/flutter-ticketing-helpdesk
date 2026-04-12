@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/core/constants/enums.dart';
@@ -52,6 +53,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     on<FilterCategoryChanged>(_onFilterCategoryChanged);
     on<StartTicketSubscription>(_onStartSubscription);
     on<TicketStreamUpdated>(_onStreamUpdated);
+    on<FetchTicketStatsRequested>(_onFetchStats);
   }
 
   void _onStartSubscription(
@@ -59,18 +61,30 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     Emitter<TicketState> emit,
   ) {
     _ticketSubscription?.cancel();
-    _ticketSubscription = watchTicketsUseCase().listen(
-      (tickets) => add(TicketStreamUpdated(tickets)),
-    );
+    try {
+      _ticketSubscription = watchTicketsUseCase().listen(
+        (tickets) => add(TicketStreamUpdated(tickets)),
+        onError: (error) {
+          debugPrint('Realtime Stream Error: $error. Retrying in 5s...');
+          Future.delayed(const Duration(seconds: 5), () {
+            if (!isClosed) add(StartTicketSubscription());
+          });
+        },
+      );
+    } catch (e) {
+      debugPrint('Error starting ticket subscription: $e');
+    }
   }
 
   void _onStreamUpdated(
     TicketStreamUpdated event,
     Emitter<TicketState> emit,
   ) {
-    // Sync realtime updates with current list (optional: depends on how stream is filtered)
-    // For simplicity, we can refresh stats or update specific items
+    // Sync realtime updates with current list
     emit(state.copyWith(tickets: event.tickets));
+    
+    // Refresh stats whenever there's a realtime update
+    add(const FetchTicketStatsRequested());
   }
 
   @override

@@ -21,7 +21,11 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Load environment variables
-  await dotenv.load(fileName: ".env");
+  try {
+    await dotenv.load(fileName: ".env");
+  } catch (e) {
+    debugPrint("Warning: .env file not found or failed to load. Ensure it is added to assets in pubspec.yaml.");
+  }
 
   // Lock to portrait mode (sesuai SRS requirement mobile)
   await SystemChrome.setPreferredOrientations([

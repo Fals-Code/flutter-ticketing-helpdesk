@@ -6,7 +6,6 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 
 class StaffDashboardPage extends StatefulWidget {
@@ -27,11 +26,12 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
           return const Center(child: LoadingWidget());
         }
 
+        final stats = state.stats;
         final tickets = state.allTickets;
-        final openCount = tickets.where((t) => t.status == TicketStatus.open).length;
-        final inProgressCount = tickets.where((t) => t.status == TicketStatus.inProgress).length;
-        final resolvedCount = tickets.where((t) => t.status == TicketStatus.resolved).length;
-        final closedCount = tickets.where((t) => t.status == TicketStatus.closed).length;
+        final openCount = stats.open;
+        final inProgressCount = stats.inProgress;
+        final resolvedCount = stats.resolved;
+        final closedCount = stats.closed;
 
         return Scaffold(
           appBar: AppBar(
@@ -55,7 +55,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildSummarySection(isDark, openCount + inProgressCount, resolvedCount),
+                  _buildSummarySection(isDark, stats.open + stats.inProgress, stats.resolved, stats.total),
                   const SizedBox(height: AppDimensions.spaceXXL),
                   Text(
                     'Statistik Status',
@@ -64,7 +64,8 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                   const SizedBox(height: AppDimensions.spaceLG),
                   _buildStatusGrid(context, openCount, inProgressCount, resolvedCount, closedCount),
                   const SizedBox(height: AppDimensions.spaceXXL),
-                  _buildRecentActivitySection(context, tickets, isDark),
+                  // Removed recent tickets section as per user request to use stats only
+                  _buildTotalSection(context, stats.total, isDark),
                 ],
               ),
             ),
@@ -74,7 +75,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
     );
   }
 
-  Widget _buildSummarySection(bool isDark, int active, int resolved) {
+  Widget _buildSummarySection(bool isDark, int active, int resolved, int total) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -87,6 +88,8 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
+          _buildSummaryItem('Total Tiket', total.toString(), isDark ? Colors.white : Colors.black),
+          Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.black12),
           _buildSummaryItem('Aktif', active.toString(), AppColors.primary),
           Container(width: 1, height: 40, color: isDark ? Colors.white10 : Colors.black12),
           _buildSummaryItem('Selesai', resolved.toString(), AppColors.statusResolved),
@@ -100,13 +103,44 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
       children: [
         Text(
           value,
-          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: color),
+          style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: color),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 14, color: color.withValues(alpha: 0.8)),
+          style: TextStyle(fontSize: 12, color: color.withValues(alpha: 0.8)),
         ),
       ],
+    );
+  }
+
+  Widget _buildTotalSection(BuildContext context, int total, bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: isDark 
+            ? [AppColors.primary.withValues(alpha: 0.2), AppColors.surfaceDark]
+            : [AppColors.primary.withValues(alpha: 0.05), Colors.white],
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.analytics_outlined, color: AppColors.primary, size: 32),
+          const SizedBox(height: 12),
+          Text(
+            'Total Seluruh Laporan: $total',
+            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 4),
+          const Text(
+            'Statistik diperbarui secara realtime dari server',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -148,58 +182,6 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
             ],
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildRecentActivitySection(BuildContext context, List<TicketEntity> tickets, bool isDark) {
-    final recentTickets = tickets.take(5).toList();
-    if (recentTickets.isEmpty) return const SizedBox.shrink();
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'Laporan Terbaru',
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: AppDimensions.spaceLG),
-        ...recentTickets.map((t) => _buildMiniTicketCard(context, t, isDark)),
-      ],
-    );
-  }
-
-  Widget _buildMiniTicketCard(BuildContext context, TicketEntity ticket, bool isDark) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 8,
-            height: 40,
-            decoration: BoxDecoration(
-              color: ticket.status.color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(ticket.title, style: const TextStyle(fontWeight: FontWeight.bold), maxLines: 1, overflow: TextOverflow.ellipsis),
-                Text('#${ticket.id.substring(0, 8).toUpperCase()} • ${ticket.category}', style: Theme.of(context).textTheme.labelSmall),
-              ],
-            ),
-          ),
-          const Icon(Icons.chevron_right, size: 20),
         ],
       ),
     );

@@ -39,8 +39,10 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _fetchInitialData() {
-    context.read<TicketBloc>().add(const FetchTicketStatsRequested());
-    context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: 5));
+    final ticketBloc = context.read<TicketBloc>();
+    ticketBloc.add(const FetchTicketStatsRequested());
+    ticketBloc.add(const FetchTicketsRequested(page: 0, limit: 5));
+    
     context.read<NotificationBloc>().add(FetchNotificationsRequested());
   }
 
@@ -163,7 +165,7 @@ class _DashboardHomeTab extends StatelessWidget {
               context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: 5));
             },
             child: SingleChildScrollView(
-              physics: const AlwaysScrollableScrollPhysics(parent: BouncingScrollPhysics()),
+              physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -182,7 +184,7 @@ class _DashboardHomeTab extends StatelessWidget {
                       crossAxisCount: 2,
                       crossAxisSpacing: AppDimensions.spaceMD,
                       mainAxisSpacing: AppDimensions.spaceMD,
-                      childAspectRatio: 1.4,
+                      childAspectRatio: 1.2,
                     ),
                     itemCount: stats.length,
                     itemBuilder: (context, i) {

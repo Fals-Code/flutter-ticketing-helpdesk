@@ -11,7 +11,6 @@ import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
 
 import '../../../auth/domain/entities/user_entity.dart';
-import '../../../auth/data/models/user_model.dart';
 import '../../../auth/data/models/profile_model.dart';
 import '../../../../core/constants/enums.dart';
 

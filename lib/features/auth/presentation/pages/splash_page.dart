@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
+import 'package:uts/core/router/app_router.dart';
 import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_routes.dart';
 import '../../../../core/constants/enums.dart';
 import '../../presentation/bloc/auth_bloc.dart';
 import '../../presentation/bloc/auth_state.dart';
@@ -51,12 +51,11 @@ class _SplashPageState extends State<SplashPage>
     if (state.status != AuthStatus.initial) {
       // Tunggu sedikit agar animasi selesai jika status sudah diketahui sangat cepat
       Future.delayed(const Duration(milliseconds: 800), () {
-        if (mounted) {
-          if (state.status == AuthStatus.authenticated) {
-            context.go(AppRoutes.dashboard);
-          } else {
-            context.go(AppRoutes.login);
-          }
+        if (!mounted) return;
+        if (state.status == AuthStatus.authenticated) {
+          context.go(AppRoutes.dashboard);
+        } else {
+          context.go(AppRoutes.login);
         }
       });
     }
@@ -104,7 +103,7 @@ class _SplashPageState extends State<SplashPage>
                     const SizedBox(height: 32),
                     FadeTransition(
                       opacity: _fadeIn,
-                      child: const Column(
+                      child: Column(
                         children: [
                           Text(
                             'E-Ticketing Helpdesk',

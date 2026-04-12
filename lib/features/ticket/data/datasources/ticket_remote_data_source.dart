@@ -244,6 +244,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .order('created_at', ascending: false);
       
       return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
+    } catch (e) {
+      rethrow;
     }
   }
 
@@ -257,10 +259,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .limit(50);
       
       return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
-    } on sup.PostgrestException catch (e) {
-      throw Exception('Database error: ${e.message}');
     } catch (e) {
-      throw Exception('Failed to fetch global history: $e');
+      rethrow;
     }
   }
 

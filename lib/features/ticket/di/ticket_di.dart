@@ -1,10 +1,10 @@
 import 'package:get_it/get_it.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../data/datasources/ticket_remote_data_source.dart';
 import '../data/repositories/ticket_repository_impl.dart';
 import '../domain/repositories/ticket_repository.dart';
 import '../domain/usecases/ticket_usecases.dart';
 import '../domain/usecases/ticket_admin_usecases.dart';
-import '../domain/usecases/activity_usecases.dart';
 import '../presentation/bloc/ticket_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
@@ -48,7 +48,11 @@ Future<void> initTicketDependencies(GetIt sl) async {
   );
 
   // Data Sources
+  if (!sl.isRegistered<SupabaseClient>()) {
+    sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
+  }
+
   sl.registerLazySingleton<TicketRemoteDataSource>(
-    () => SupabaseTicketRemoteDataSourceImpl(sl<sup.SupabaseClient>()),
+    () => SupabaseTicketRemoteDataSourceImpl(sl<SupabaseClient>()),
   );
 }

@@ -1,6 +1,6 @@
 import 'package:equatable/equatable.dart';
-
-import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import '../../../../core/constants/enums.dart';
 
 abstract class TicketEvent extends Equatable {
   const TicketEvent();

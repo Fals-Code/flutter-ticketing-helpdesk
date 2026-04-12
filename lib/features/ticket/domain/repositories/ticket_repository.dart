@@ -3,9 +3,9 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/constants/enums.dart';
 import '../../../auth/domain/entities/user_entity.dart';
-import '../entities/ticket_entity.dart';
-import '../entities/comment_entity.dart';
-import '../entities/ticket_history_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 
 class TicketStats extends Equatable {
   final int total;

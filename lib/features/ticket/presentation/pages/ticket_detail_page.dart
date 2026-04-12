@@ -290,7 +290,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
+        Text(
           'DESKRIPSI MASALAH',
           style: TextStyle(
             fontSize: 11,

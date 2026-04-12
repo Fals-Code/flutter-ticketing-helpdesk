@@ -4,6 +4,7 @@ import '../../shared/theme/theme_cubit.dart';
 import '../../features/auth/di/auth_di.dart';
 import '../../features/ticket/di/ticket_di.dart';
 import '../../features/notification/di/notification_di.dart';
+import '../../features/admin/di/admin_di.dart';
 
 /// Global service locator instance.
 final GetIt sl = GetIt.instance;
@@ -24,4 +25,5 @@ Future<void> initDependencies() async {
   await initAuthDependencies(sl);
   await initTicketDependencies(sl);
   await initNotificationDependencies(sl);
+  await initAdmin(sl);
 }

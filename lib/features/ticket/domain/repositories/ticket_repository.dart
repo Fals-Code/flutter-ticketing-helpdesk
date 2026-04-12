@@ -87,10 +87,10 @@ abstract class TicketRepository {
   Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId);
 
   /// Mengambil SEMUA riwayat perjalanan tiket di sistem (Admin/Staff only).
-  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory();
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy});
 
   /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
-  Future<Either<Failure, TicketStats>> getTicketStats();
+  Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId});
 
   /// Aliran data tiket secara realtime.
   Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId});

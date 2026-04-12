@@ -3,10 +3,14 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
+import '../../domain/entities/admin_report_entity.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});
@@ -19,8 +23,12 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   @override
   void initState() {
     super.initState();
-    // Refresh stats when opening report
+    _refreshData();
+  }
+
+  void _refreshData() {
     context.read<TicketBloc>().add(const FetchTicketStatsRequested());
+    context.read<AdminBloc>().add(const FetchAdminReportsRequested());
   }
 
   @override
@@ -33,34 +41,48 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => context.read<TicketBloc>().add(const FetchTicketStatsRequested()),
+            onPressed: _refreshData,
           ),
         ],
       ),
-      body: BlocBuilder<TicketBloc, TicketState>(
-        builder: (context, state) {
-          if (state.isLoading && state.stats.total == 0) {
-            return const Center(child: LoadingWidget());
-          }
+      body: BlocBuilder<AdminBloc, AdminState>(
+        builder: (context, adminState) {
+          return BlocBuilder<TicketBloc, TicketState>(
+            builder: (context, ticketState) {
+              if (adminState.status == AdminStatus.loading && adminState.report == null) {
+                return const Center(child: LoadingWidget());
+              }
 
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(AppDimensions.spaceLG),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildSectionTitle('Ringkasan Tiket', isDark),
-                const SizedBox(height: 16),
-                _buildStatsGrid(state),
-                const SizedBox(height: 32),
-                _buildSectionTitle('Performa Tim', isDark),
-                const SizedBox(height: 16),
-                _buildPerformanceList(isDark),
-                const SizedBox(height: 32),
-                _buildSectionTitle('Distribusi Kategori', isDark),
-                const SizedBox(height: 16),
-                _buildCategoryChart(isDark),
-              ],
-            ),
+              return RefreshIndicator(
+                onRefresh: () async => _refreshData(),
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(AppDimensions.spaceLG),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _buildSectionTitle('Ringkasan Tiket', isDark),
+                      const SizedBox(height: 16),
+                      _buildStatsGrid(ticketState),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Performa Tim (Resolved)', isDark),
+                      const SizedBox(height: 16),
+                      if (adminState.report != null) 
+                        _buildPerformanceList(adminState.report!.teamPerformance, isDark)
+                      else
+                        const Center(child: Text('Data tidak tersedia')),
+                      const SizedBox(height: 32),
+                      _buildSectionTitle('Distribusi Kategori', isDark),
+                      const SizedBox(height: 16),
+                      if (adminState.report != null)
+                        _buildCategoryChart(adminState.report!.categoryDistribution, isDark)
+                      else
+                        const Center(child: Text('Data tidak tersedia')),
+                      const SizedBox(height: 40),
+                    ],
+                  ),
+                ),
+              );
+            },
           );
         },
       ),
@@ -87,30 +109,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.5,
       children: [
-        _buildStatCard(
-          'Total Tiket',
-          state.stats.total.toString(),
-          Icons.analytics_rounded,
-          AppColors.primary,
-        ),
-        _buildStatCard(
-          'Tiket Terbuka',
-          state.stats.open.toString(),
-          Icons.hourglass_empty_rounded,
-          Colors.orange,
-        ),
-        _buildStatCard(
-          'Selesai',
-          state.stats.resolved.toString(),
-          Icons.check_circle_outline_rounded,
-          Colors.green,
-        ),
-        _buildStatCard(
-          'Dalam Proses',
-          state.stats.inProgress.toString(),
-          Icons.running_with_errors_rounded,
-          Colors.blue,
-        ),
+        _buildStatCard('Total Tiket', state.stats.total.toString(), Icons.analytics_rounded, AppColors.primary),
+        _buildStatCard('Terbuka', state.stats.open.toString(), Icons.hourglass_empty_rounded, Colors.orange),
+        _buildStatCard('Selesai', state.stats.resolved.toString(), Icons.check_circle_outline_rounded, Colors.green),
+        _buildStatCard('Dalam Proses', state.stats.inProgress.toString(), Icons.running_with_errors_rounded, Colors.blue),
       ],
     );
   }
@@ -122,16 +124,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
         boxShadow: [
-          if (!isDark)
-            BoxShadow(
-              color: Colors.black.withAlpha(10),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
+          if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -144,88 +139,46 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
               Icon(icon, color: color, size: 24),
               Text(
                 value,
-                style: GoogleFonts.poppins(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: isDark ? Colors.white : AppColors.textPrimaryLight,
-                ),
+                style: GoogleFonts.poppins(fontSize: 24, fontWeight: FontWeight.bold, color: isDark ? Colors.white : AppColors.textPrimaryLight),
               ),
             ],
           ),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: isDark ? Colors.white70 : Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(label, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.grey[600], fontWeight: FontWeight.w500)),
         ],
       ),
     );
   }
 
-  Widget _buildPerformanceList(bool isDark) {
-    // Mock performance data for UTS demo
-    final List<Map<String, dynamic>> team = [
-      {'name': 'Admin Utama', 'resolved': 12, 'avgTime': '2j 15m', 'rating': 4.8},
-      {'name': 'Staff Teknik 1', 'resolved': 8, 'avgTime': '4j 30m', 'rating': 4.5},
-      {'name': 'Staff Teknik 2', 'resolved': 5, 'avgTime': '1j 45m', 'rating': 4.9},
-    ];
+  Widget _buildPerformanceList(List<TeamPerformance> performance, bool isDark) {
+    if (performance.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('Belum ada data teknisi.')));
 
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
-        itemCount: team.length,
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        itemCount: performance.length,
+        separatorBuilder: (context, index) => Divider(height: 1, color: isDark ? AppColors.borderDark : AppColors.borderLight),
         itemBuilder: (context, index) {
-          final member = team[index];
+          final item = performance[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withAlpha(25),
-              child: Text(
-                member['name'][0],
-                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold),
-              ),
+              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              child: Text(item.fullName.isNotEmpty ? item.fullName[0].toUpperCase() : 'T', 
+                style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
-            title: Text(
-              member['name'],
-              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-            ),
-            subtitle: Text(
-              'Rata-rata: ${member['avgTime']}',
-              style: const TextStyle(fontSize: 12),
-            ),
+            title: Text(item.fullName, style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+            subtitle: const Text('Teknisi Terverifikasi', style: TextStyle(fontSize: 11)),
             trailing: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
-                Text(
-                  '${member['resolved']} Tiket',
-                  style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green),
-                ),
-                Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.star, color: Colors.amber, size: 12),
-                    const SizedBox(width: 4),
-                    Text(
-                      member['rating'].toString(),
-                      style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600),
-                    ),
-                  ],
-                ),
+                Text('${item.resolvedCount}', style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.green, fontSize: 16)),
+                const Text('Selesai', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500)),
               ],
             ),
           );
@@ -234,60 +187,49 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
   }
 
-  Widget _buildCategoryChart(bool isDark) {
-    final categories = [
-      {'label': 'Hardware', 'percentage': 0.45, 'color': Colors.blue},
-      {'label': 'Software', 'percentage': 0.30, 'color': Colors.purple},
-      {'label': 'Network', 'percentage': 0.15, 'color': Colors.orange},
-      {'label': 'Other', 'percentage': 0.10, 'color': Colors.grey},
-    ];
+  Widget _buildCategoryChart(List<CategoryDistribution> distribution, bool isDark) {
+    if (distribution.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('Belum ada data tiket.')));
+
+    final total = distribution.fold<int>(0, (sum, item) => sum + item.count);
+    final List<Color> colors = [Colors.blue, Colors.purple, Colors.orange, Colors.teal, Colors.pink, Colors.amber];
 
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: isDark ? AppColors.borderDark : AppColors.borderLight,
-        ),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Column(
         children: [
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: SizedBox(
-              height: 12,
+              height: 16,
               child: Row(
                 children: [
-                  for (final cat in categories)
+                  for (int i = 0; i < distribution.length; i++)
                     Expanded(
-                      flex: ((cat['percentage'] as double) * 100).toInt(),
-                      child: Container(color: cat['color'] as Color),
+                      flex: distribution[i].count,
+                      child: Container(color: colors[i % colors.length]),
                     ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 24),
           Wrap(
             spacing: 16,
-            runSpacing: 8,
+            runSpacing: 12,
             children: [
-              for (final cat in categories)
+              for (int i = 0; i < distribution.length; i++)
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Container(
-                      width: 10,
-                      height: 10,
-                      decoration: BoxDecoration(
-                        color: cat['color'] as Color,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
+                    Container(width: 10, height: 10, decoration: BoxDecoration(color: colors[i % colors.length], shape: BoxShape.circle)),
+                    const SizedBox(width: 8),
                     Text(
-                      '${cat['label']} (${((cat['percentage'] as double) * 100).toInt()}%)',
+                      '${distribution[i].category} (${(distribution[i].count / total * 100).toStringAsFixed(0)}%)',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                     ),
                   ],

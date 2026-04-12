@@ -40,10 +40,22 @@ class _DashboardPageState extends State<DashboardPage> {
 
   void _fetchInitialData() {
     final ticketBloc = context.read<TicketBloc>();
+    final authState = context.read<AuthBloc>().state;
+    final user = authState.user!;
+    final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
+    final isTechnician = user.role == UserRole.technician;
+
     ticketBloc.add(const FetchTicketStatsRequested());
     ticketBloc.add(const FetchTicketsRequested(page: 0, limit: 5));
     
     context.read<NotificationBloc>().add(FetchNotificationsRequested());
+    context.read<NotificationBloc>().add(StartNotificationSubscription());
+
+    ticketBloc.add(StartTicketSubscription(
+      userId: user.id,
+      isStaff: isStaff,
+      isTechnician: isTechnician,
+    ));
   }
 
   static const _navItems = [
@@ -72,19 +84,16 @@ class _DashboardPageState extends State<DashboardPage> {
             final isStaff = state.status == AuthStatus.authenticated && 
                 (state.user.role == UserRole.admin || state.user.role == UserRole.technician);
   
-            return SingleChildScrollView(
-              child: SizedBox(
-                height: MediaQuery.of(context).size.height - kBottomNavigationBarHeight - 20,
-                child: IndexedStack(
-                  index: _currentIndex,
-                  children: [
-                    isStaff ? const StaffDashboardPage() : const _DashboardHomeTab(),
-                    const TicketListPage(),
-                    const _NotificationTab(),
-                    const _ProfileTab(),
-                  ],
-                ),
-              ),
+            return IndexedStack(
+              index: _currentIndex,
+              children: [
+                state.user.role == UserRole.admin 
+                    ? const _AdminHomeTab() 
+                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : const _DashboardHomeTab()),
+                const TicketListPage(),
+                const _NotificationTab(),
+                const _ProfileTab(),
+              ],
             );
           },
         ),
@@ -110,10 +119,36 @@ class _DashboardPageState extends State<DashboardPage> {
               }
             }
           },
-          destinations: _navItems.map((item) {
+          destinations: _navItems.asMap().entries.map((entry) {
+            final index = entry.key;
+            final item = entry.value;
+            final isNotification = index == 2;
+            
             return NavigationDestination(
-              icon: Icon(item['icon'] as IconData),
-              selectedIcon: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
+              icon: isNotification 
+                ? BlocBuilder<NotificationBloc, NotificationState>(
+                    builder: (context, state) {
+                      final unreadCount = state.notifications.where((n) => !n.isRead).length;
+                      return Badge(
+                        label: Text(unreadCount.toString()),
+                        isLabelVisible: unreadCount > 0,
+                        child: Icon(item['icon'] as IconData),
+                      );
+                    },
+                  )
+                : Icon(item['icon'] as IconData),
+              selectedIcon: isNotification
+                ? BlocBuilder<NotificationBloc, NotificationState>(
+                    builder: (context, state) {
+                      final unreadCount = state.notifications.where((n) => !n.isRead).length;
+                      return Badge(
+                        label: Text(unreadCount.toString()),
+                        isLabelVisible: unreadCount > 0,
+                        child: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
+                      );
+                    },
+                  )
+                : Icon(item['activeIcon'] as IconData, color: AppColors.primary),
               label: item['label'] as String,
             );
           }).toList(),
@@ -292,9 +327,164 @@ class _DashboardHomeTab extends StatelessWidget {
                 ],
               ),
             ),
+      },
+    );
+  }
+}
+
+// ── Admin Dashboard Home Tab ──────────────────────────────────────────────────
+
+class _AdminHomeTab extends StatelessWidget {
+  const _AdminHomeTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return BlocBuilder<TicketBloc, TicketState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Admin Console'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh_rounded),
+                onPressed: () {
+                  context.read<TicketBloc>().add(const FetchTicketStatsRequested());
+                  context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 5));
+                },
+              ),
+            ],
+          ),
+          body: RefreshIndicator(
+            onRefresh: () async {
+              context.read<TicketBloc>().add(const FetchTicketStatsRequested());
+              context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 5));
+            },
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _GreetingBanner(isDark: isDark),
+                  const SizedBox(height: 32),
+                  // Summary Bar
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary,
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppColors.primary.withValues(alpha: 0.3),
+                          blurRadius: 12,
+                          offset: const Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _AdminSummaryItem(label: 'Total', value: state.stats.total, icon: Icons.analytics),
+                        _AdminSummaryItem(label: 'Pending', value: state.stats.open + state.stats.inProgress, icon: Icons.hourglass_top),
+                        _AdminSummaryItem(label: 'Selesai', value: state.stats.resolved, icon: Icons.task_alt),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text('Statistik Sistem', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  GridView.count(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    crossAxisCount: 2,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                    childAspectRatio: 1.5,
+                    children: [
+                      _StatCard(label: 'Terbuka', value: state.stats.open.toString(), color: AppColors.statusOpen, icon: Icons.folder_open, isDark: isDark),
+                      _StatCard(label: 'Diproses', value: state.stats.inProgress.toString(), color: AppColors.statusInProgress, icon: Icons.sync, isDark: isDark),
+                      _StatCard(label: 'Selesai', value: state.stats.resolved.toString(), color: AppColors.statusResolved, icon: Icons.check_circle, isDark: isDark),
+                      _StatCard(label: 'Ditutup', value: state.stats.closed.toString(), color: Colors.grey, icon: Icons.archive, isDark: isDark),
+                    ],
+                  ),
+                  const SizedBox(height: 32),
+                  const Text('Shortcut Navigasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      _AdminShortcut(label: 'Kelola Tiket', icon: Icons.confirmation_number, color: Colors.blue, onTap: () => context.push(AppRoutes.ticketManagement)),
+                      const SizedBox(width: 12),
+                      _AdminShortcut(label: 'Laporan', icon: Icons.bar_chart, color: Colors.purple, onTap: () => context.push(AppRoutes.adminReports)),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      _AdminShortcut(label: 'Pengguna', icon: Icons.people, color: Colors.orange, onTap: () => context.push(AppRoutes.userManagement)),
+                      const SizedBox(width: 12),
+                      _AdminShortcut(label: 'Pengaturan', icon: Icons.settings, color: Colors.teal, onTap: () => context.push(AppRoutes.adminSettings)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
           ),
         );
       },
+    );
+  }
+}
+
+class _AdminSummaryItem extends StatelessWidget {
+  final String label;
+  final int value;
+  final IconData icon;
+
+  const _AdminSummaryItem({required this.label, required this.value, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Icon(icon, color: Colors.white70, size: 20),
+        const SizedBox(height: 8),
+        Text(value.toString(), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+      ],
+    );
+  }
+}
+
+class _AdminShortcut extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+
+  const _AdminShortcut({required this.label, required this.icon, required this.color, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: color.withValues(alpha: 0.2)),
+          ),
+          child: Column(
+            children: [
+              Icon(icon, color: color),
+              const SizedBox(height: 8),
+              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -581,7 +771,11 @@ class _ProfileTab extends StatelessWidget {
                             ),
                       ),
                       const SizedBox(height: 12),
-                      _Badge(label: user.role.name.toUpperCase(), color: AppColors.primary.withValues(alpha: 0.1), textColor: AppColors.primary),
+                      _Badge(
+                        label: user.role == UserRole.technician ? 'TEKNISI' : user.role.name.toUpperCase(), 
+                        color: user.role == UserRole.technician ? Colors.orange.withValues(alpha: 0.1) : AppColors.primary.withValues(alpha: 0.1), 
+                        textColor: user.role == UserRole.technician ? Colors.orange : AppColors.primary,
+                      ),
                     ],
                   ),
                 ),
@@ -589,12 +783,35 @@ class _ProfileTab extends StatelessWidget {
 
                 // Actions Group
                 _ProfileSection(
-                  title: 'Aktivitas & Keamanan',
+                  title: user.role == UserRole.admin ? 'Manajemen Sistem' : 'Aktivitas & Keamanan',
                   children: [
+                    if (user.role == UserRole.admin) ...[
+                      _ProfileTile(
+                        icon: Icons.bar_chart_rounded,
+                        title: 'Laporan & Analitik',
+                        subtitle: 'Statistik performa tim',
+                        onTap: () => context.push(AppRoutes.adminReports),
+                        isDark: isDark,
+                      ),
+                      _ProfileTile(
+                        icon: Icons.people_outline_rounded,
+                        title: 'Manajemen Pengguna',
+                        subtitle: 'Kelola peran dan akses user',
+                        onTap: () => context.push(AppRoutes.userManagement),
+                        isDark: isDark,
+                      ),
+                      _ProfileTile(
+                        icon: Icons.settings_outlined,
+                        title: 'Pengaturan Sistem',
+                        subtitle: 'Konfigurasi SLA dan kategori',
+                        onTap: () => context.push(AppRoutes.adminSettings),
+                        isDark: isDark,
+                      ),
+                    ],
                     _ProfileTile(
                       icon: Icons.history_rounded,
                       title: 'Riwayat Aktivitas',
-                      subtitle: 'Lihat log penanganan tiket',
+                      subtitle: user.role == UserRole.admin ? 'Log seluruh sistem' : 'Lihat log penanganan tiket',
                       onTap: () => context.push(AppRoutes.history),
                       isDark: isDark,
                     ),
@@ -724,7 +941,21 @@ class _NotificationTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: const Text(AppStrings.navNotifications)),
+      appBar: AppBar(
+        title: const Text(AppStrings.navNotifications),
+        actions: [
+          BlocBuilder<NotificationBloc, NotificationState>(
+            builder: (context, state) {
+              final unreadCount = state.notifications.where((n) => !n.isRead).length;
+              if (unreadCount == 0) return const SizedBox.shrink();
+              return TextButton(
+                onPressed: () => context.read<NotificationBloc>().add(MarkAllReadRequested()),
+                child: const Text('Baca Semua'),
+              );
+            },
+          ),
+        ],
+      ),
       body: BlocBuilder<NotificationBloc, NotificationState>(
         builder: (context, state) {
           if (state.isLoading) {

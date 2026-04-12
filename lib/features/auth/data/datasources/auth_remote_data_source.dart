@@ -51,7 +51,7 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       password: password,
       data: {
         'full_name': fullName,
-        'role': 'user', // Selalu role user untuk pendaftaran publik
+        'role': 3, // Role 3 = Customer (Integer based)
       },
     );
 

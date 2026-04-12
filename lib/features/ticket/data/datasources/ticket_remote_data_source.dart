@@ -17,8 +17,8 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> updateTicketStatus(String ticketId, String status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
-  Future<List<TicketHistoryModel>> getAllTicketHistory();
-  Future<Map<String, int>> getTicketStats();
+  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy});
+  Future<Map<String, int>> getTicketStats({String? assignedToId});
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId});
 }
 
@@ -29,9 +29,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   SupabaseTicketRemoteDataSourceImpl(this.supabaseClient);
 
   @override
-  Future<Map<String, int>> getTicketStats() async {
+  Future<Map<String, int>> getTicketStats({String? assignedToId}) async {
     try {
-      final List<dynamic> response = await supabaseClient.rpc('get_ticket_stats');
+      final List<dynamic> response = await supabaseClient.rpc(
+        'get_ticket_stats',
+        params: assignedToId != null ? {'for_staff_id': assignedToId} : {},
+      );
       
       final Map<String, int> stats = {
         'total': 0,
@@ -279,11 +282,17 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketHistoryModel>> getAllTicketHistory() async {
+  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy}) async {
     try {
-      final response = await supabaseClient
+      var query = supabaseClient
           .from('ticket_history')
-          .select('*, profiles:user_id(full_name)')
+          .select('*, profiles:changed_by(full_name)');
+      
+      if (changedBy != null) {
+        query = query.eq('changed_by', changedBy);
+      }
+
+      final response = await query
           .order('created_at', ascending: false)
           .limit(50);
       

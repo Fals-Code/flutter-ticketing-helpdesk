@@ -307,7 +307,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
     FetchTicketStatsRequested event,
     Emitter<TicketState> emit,
   ) async {
-    final result = await getTicketStatsUseCase(const NoParams());
+    final result = await getTicketStatsUseCase(event.assignedToId);
     
     result.fold(
       (failure) => null,
@@ -356,7 +356,7 @@ class TicketBloc extends Bloc<TicketEvent, TicketState> {
         (history) => emit(state.copyWith(history: history)),
       );
     } else {
-      final result = await getAllTicketHistoryUseCase(const NoParams());
+      final result = await getAllTicketHistoryUseCase(event.changedBy);
       result.fold(
         (failure) => emit(state.copyWith(errorMessage: failure.message)),
         (history) => emit(state.copyWith(history: history)),

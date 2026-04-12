@@ -88,16 +88,20 @@ class AddCommentRequested extends TicketEvent {
 }
 
 class FetchTicketStatsRequested extends TicketEvent {
-  const FetchTicketStatsRequested();
+  final String? assignedToId;
+  const FetchTicketStatsRequested({this.assignedToId});
+  @override
+  List<Object?> get props => [assignedToId];
 }
 
 class FetchTicketActivitiesRequested extends TicketEvent {
   final String? ticketId; // null means all activities for staff
+  final String? changedBy; // filter by technician who changed it
 
-  const FetchTicketActivitiesRequested({this.ticketId});
+  const FetchTicketActivitiesRequested({this.ticketId, this.changedBy});
 
   @override
-  List<Object?> get props => [ticketId];
+  List<Object?> get props => [ticketId, changedBy];
 }
 
 class SearchQueryChanged extends TicketEvent {

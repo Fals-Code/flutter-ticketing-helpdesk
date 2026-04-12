@@ -54,6 +54,11 @@ Future<void> main() async {
   runApp(const ETicketingApp());
 }
 
+import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
+
+// ... (existing imports)
+
 /// Root widget aplikasi E-Ticketing Helpdesk.
 class ETicketingApp extends StatelessWidget {
   const ETicketingApp({super.key});
@@ -77,6 +82,10 @@ class ETicketingApp extends StatelessWidget {
         // NotificationBloc untuk fitur notifikasi
         BlocProvider<NotificationBloc>(
           create: (_) => sl<NotificationBloc>()..add(StartNotificationSubscription()),
+        ),
+        // AdminBloc untuk manajemen sistem
+        BlocProvider<AdminBloc>(
+          create: (_) => sl<AdminBloc>(),
         ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(

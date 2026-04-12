@@ -29,6 +29,8 @@ class NotificationStreamUpdated extends NotificationEvent {
   List<Object?> get props => [notifications];
 }
 
+class MarkAllReadRequested extends NotificationEvent {}
+
 class ResetNotificationState extends NotificationEvent {}
 
 // State
@@ -75,6 +77,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<MarkReadRequested>(_onMarkRead);
     on<StartNotificationSubscription>(_onStartSubscription);
     on<NotificationStreamUpdated>(_onStreamUpdated);
+    on<MarkAllReadRequested>(_onMarkAllRead);
     on<ResetNotificationState>(_onResetState);
   }
 
@@ -138,6 +141,26 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         emit(state.copyWith(notifications: updatedList));
       },
     );
+  }
+
+  Future<void> _onMarkAllRead(
+    MarkAllReadRequested event,
+    Emitter<NotificationState> emit,
+  ) async {
+    final unreadIds = state.notifications.where((n) => !n.isRead).map((n) => n.id).toList();
+    if (unreadIds.isEmpty) return;
+
+    // Instant local feedback
+    final updatedList = state.notifications.map((n) {
+      if (!n.isRead) return n.copyWith(isRead: true);
+      return n;
+    }).toList();
+    emit(state.copyWith(notifications: updatedList));
+
+    // Persist in background
+    for (var id in unreadIds) {
+      await markNotificationAsRead(id);
+    }
   }
 
   Future<void> _onResetState(

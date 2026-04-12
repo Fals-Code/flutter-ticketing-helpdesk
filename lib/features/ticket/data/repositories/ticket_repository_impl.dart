@@ -181,9 +181,9 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory() async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy}) async {
     try {
-      final activities = await remoteDataSource.getAllTicketHistory();
+      final activities = await remoteDataSource.getAllTicketHistory(changedBy: changedBy);
       return Right(activities.map((a) => a.toEntity()).toList());
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
@@ -211,9 +211,9 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, TicketStats>> getTicketStats() async {
+  Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId}) async {
     try {
-      final statsMap = await remoteDataSource.getTicketStats();
+      final statsMap = await remoteDataSource.getTicketStats(assignedToId: assignedToId);
       return Right(TicketStats(
         total: statsMap['total'] ?? 0,
         open: statsMap['open'] ?? 0,

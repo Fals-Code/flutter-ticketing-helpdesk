@@ -76,13 +76,13 @@ class AddCommentUseCase implements UseCase<Either<Failure, CommentEntity>, AddCo
   }
 }
 
-class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, NoParams> {
+class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, String?> {
   final TicketRepository repository;
   GetTicketStatsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, TicketStats>> call(NoParams params) async {
-    return await repository.getTicketStats();
+  Future<Either<Failure, TicketStats>> call(String? assignedToId) async {
+    return await repository.getTicketStats(assignedToId: assignedToId);
   }
 }
 
@@ -96,13 +96,13 @@ class GetTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHist
   }
 }
 
-class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, NoParams> {
+class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, String?> {
   final TicketRepository repository;
   GetAllTicketHistoryUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> call(NoParams params) async {
-    return await repository.getAllTicketHistory();
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(String? changedBy) async {
+    return await repository.getAllTicketHistory(changedBy: changedBy);
   }
 }
 

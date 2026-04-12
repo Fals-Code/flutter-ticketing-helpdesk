@@ -40,24 +40,25 @@ class _TicketListPageState extends State<TicketListPage> {
   }
 
   void _fetchInitial() {
-    context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: _pageSize));
-    context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: _pageSize));
+    final authState = context.read<AuthBloc>().state;
+    if (authState.user == null) return;
     
+    final userId = authState.user!.id;
+    final isStaff = authState.user!.role == UserRole.admin || authState.user!.role == UserRole.technician;
     final isTechnician = authState.user!.role == UserRole.technician;
+
+    context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: _pageSize));
+    context.read<TicketBloc>().add(FetchAllTicketsRequested(
+      page: 0, 
+      limit: _pageSize,
+      assignedToId: isTechnician ? userId : null,
+    ));
     
     context.read<TicketBloc>().add(StartTicketSubscription(
       userId: userId, 
       isStaff: isStaff,
       isTechnician: isTechnician,
     ));
-    
-    if (isStaff) {
-      context.read<TicketBloc>().add(FetchAllTicketsRequested(
-        page: 0, 
-        limit: _pageSize,
-        assignedToId: isTechnician ? userId : null,
-      ));
-    }
   }
 
   void _onScroll(ScrollController controller, bool isMyTickets) {

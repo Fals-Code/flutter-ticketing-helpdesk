@@ -5,6 +5,9 @@ import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/core/constants/enums.dart';
+import 'package:go_router/go_router.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -17,7 +20,18 @@ class _HistoryPageState extends State<HistoryPage> {
   @override
   void initState() {
     super.initState();
-    context.read<TicketBloc>().add(const FetchTicketActivitiesRequested());
+    _fetchHistory();
+  }
+
+  void _fetchHistory() {
+    final authState = context.read<AuthBloc>().state;
+    if (authState.user.role == UserRole.admin) {
+      // Admins see everything
+      context.read<TicketBloc>().add(const FetchTicketActivitiesRequested());
+    } else {
+      // Others see their own actions
+      context.read<TicketBloc>().add(FetchTicketActivitiesRequested(changedBy: authState.user.id));
+    }
   }
 
   @override
@@ -26,11 +40,11 @@ class _HistoryPageState extends State<HistoryPage> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Riwayat Aktivitas Sistem'),
+        title: const Text('Riwayat Aktivitas'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
-            onPressed: () => context.read<TicketBloc>().add(const FetchTicketActivitiesRequested()),
+            onPressed: () => _fetchHistory(),
           ),
         ],
       ),
@@ -53,75 +67,118 @@ class _HistoryPageState extends State<HistoryPage> {
             );
           }
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(24),
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
             itemCount: state.history.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final item = state.history[index];
-              return Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: isDark ? AppColors.surfaceDark : Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                  ),
-                ),
+              final isLast = index == state.history.length - 1;
+              
+              return IntrinsicHeight(
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      width: 32,
-                      height: 32,
-                      decoration: BoxDecoration(
-                        color: _getStatusColor(item.newStatus).withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(
-                        _getStatusIcon(item.oldStatus, item.newStatus),
-                        size: 16,
-                        color: _getStatusColor(item.newStatus),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                item.changedByName ?? 'Sistem',
-                                style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
-                              ),
-                              Text(
-                                DateFormat('dd MMM, HH:mm').format(item.createdAt),
-                                style: const TextStyle(fontSize: 11, color: Colors.grey),
+                    // Timeline Axis
+                    Column(
+                      children: [
+                        Container(
+                          width: 14,
+                          height: 14,
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(item.newStatus),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: _getStatusColor(item.newStatus).withValues(alpha: 0.3),
+                                blurRadius: 4,
+                                spreadRadius: 1,
                               ),
                             ],
                           ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _getDescription(item),
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                              height: 1.4,
+                        ),
+                        if (!isLast)
+                          Expanded(
+                            child: Container(
+                              width: 2,
+                              color: isDark ? const Color(0xFF2A2A2E) : Colors.grey.shade300,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'TIKET #${item.ticketId.substring(0, 8).toUpperCase()}',
-                            style: const TextStyle(
-                              color: AppColors.primary,
-                              fontWeight: FontWeight.w700,
-                              fontSize: 10,
-                              letterSpacing: 0.5,
+                      ],
+                    ),
+                    const SizedBox(width: 16),
+                    // Content Card
+                    Expanded(
+                      child: Padding(
+                        padding: EdgeInsets.only(bottom: isLast ? 0 : 24),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: isDark ? AppColors.borderDark : AppColors.borderLight,
                             ),
                           ),
-                        ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    item.changedByName ?? 'Sistem',
+                                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                                  ),
+                                  Text(
+                                    DateFormat('dd MMM, HH:mm').format(item.createdAt),
+                                    style: const TextStyle(fontSize: 11, color: Colors.grey),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                _getDescription(item),
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                  height: 1.4,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              InkWell(
+                                onTap: () => context.push('/dashboard/tickets/${item.ticketId}'),
+                                borderRadius: BorderRadius.circular(4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      const Icon(Icons.confirmation_number_outlined, size: 14, color: AppColors.primary),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'TIKET #${item.ticketId.substring(0, 8).toUpperCase()}',
+                                        style: const TextStyle(
+                                          color: AppColors.primary,
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 10,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.chevron_right_rounded, size: 14, color: AppColors.primary),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ),
                   ],

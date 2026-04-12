@@ -363,7 +363,7 @@ class _TicketCard extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 12),
       child: InkWell(
         onTap: () =>
-            context.push('${AppRoutes.dashboard}/tickets/${ticket.id}'),
+            context.push('/tickets/${ticket.id}'),
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.all(16),

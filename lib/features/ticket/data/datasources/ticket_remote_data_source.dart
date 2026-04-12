@@ -146,7 +146,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final response = await supabaseClient
         .from('profiles')
         .select('id, full_name, email, role')
-        .eq('role', 'technician');
+        .eq('role', 2);
     
     return List<Map<String, dynamic>>.from(response);
   }

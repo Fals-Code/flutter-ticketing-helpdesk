@@ -15,7 +15,9 @@ class ProfileModel extends ProfileEntity {
       id: json['id'] ?? '',
       email: json['email'] ?? '',
       fullName: json['full_name'],
-      role: UserRole.fromString(json['role'] ?? 'user'),
+      role: json['role'] is int 
+          ? UserRole.fromInt(json['role']) 
+          : UserRole.fromString(json['role']?.toString() ?? 'user'),
       avatarUrl: json['avatar_url'],
     );
   }

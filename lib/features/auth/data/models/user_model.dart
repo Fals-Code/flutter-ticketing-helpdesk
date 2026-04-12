@@ -27,7 +27,7 @@ class UserModel extends AuthUser {
     return UserModel(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
-      fullName: json['fullName'] ?? json['user_metadata']?['full_name'],
+      fullName: json['fullName'] ?? json['full_name'] ?? json['user_metadata']?['full_name'],
       role: role,
       token: token,
     );

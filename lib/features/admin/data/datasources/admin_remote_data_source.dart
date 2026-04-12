@@ -17,8 +17,8 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   Future<List<UserModel>> getUsers() async {
     try {
       final response = await supabaseClient
-          .from('user_profiles')
-          .select('*')
+          .from('profiles')
+          .select('id, full_name, role, email')
           .order('full_name');
       
       return (response as List).map((json) => UserModel.fromJson(json)).toList();

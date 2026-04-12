@@ -148,7 +148,7 @@ class _HistoryPageState extends State<HistoryPage> {
                               ),
                               const SizedBox(height: 16),
                               InkWell(
-                                onTap: () => context.push('/dashboard/tickets/${item.ticketId}'),
+                                onTap: () => context.push(AppRoutes.ticketDetail.replaceAll(':id', item.ticketId)),
                                 borderRadius: BorderRadius.circular(4),
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),

@@ -1,4 +1,5 @@
 import '../../domain/entities/comment_entity.dart';
+import 'package:uts/core/constants/enums.dart';
 
 class CommentModel extends CommentEntity {
   const CommentModel({
@@ -17,7 +18,9 @@ class CommentModel extends CommentEntity {
       ticketId: json['ticket_id'] ?? '',
       userId: json['user_id'] ?? '',
       userName: json['profiles']?['full_name'] ?? 'Unknown',
-      userRole: json['profiles']?['role'] ?? 'user',
+      userRole: (json['profiles']?['role'] is int)
+          ? UserRole.fromInt(json['profiles']['role']).name
+          : json['profiles']?['role']?.toString() ?? 'user',
       message: json['message'] ?? '',
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
     );

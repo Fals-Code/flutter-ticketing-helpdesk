@@ -4,6 +4,7 @@ import '../data/datasources/auth_remote_data_source.dart';
 import '../data/repositories/auth_repository_impl.dart';
 import '../domain/repositories/auth_repository.dart';
 import '../domain/usecases/auth_usecases.dart';
+import '../domain/usecases/update_password_usecase.dart';
 import '../presentation/bloc/auth_bloc.dart';
 
 Future<void> initAuthDependencies(GetIt sl) async {
@@ -14,6 +15,7 @@ Future<void> initAuthDependencies(GetIt sl) async {
         logoutUseCase: sl(),
         getCurrentUserUseCase: sl(),
         resetPasswordUseCase: sl(),
+        updatePasswordUseCase: sl(),
       ));
 
   // UseCases
@@ -22,6 +24,7 @@ Future<void> initAuthDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => LogoutUseCase(sl()));
   sl.registerLazySingleton(() => GetCurrentUserUseCase(sl()));
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
+  sl.registerLazySingleton(() => UpdatePasswordUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<AuthRepository>(

@@ -77,4 +77,16 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(CacheFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, Unit>> updatePassword(String newPassword) async {
+    try {
+      await remoteDataSource.updatePassword(newPassword);
+      return const Right(unit);
+    } on sup.AuthException catch (e) {
+      return Left(ServerFailure(message: e.message, code: 400));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
 }

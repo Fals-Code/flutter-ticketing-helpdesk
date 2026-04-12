@@ -7,6 +7,7 @@ abstract class AuthRemoteDataSource {
   Future<UserModel> register(String email, String password, String fullName);
   Future<void> logout();
   Future<void> resetPassword(String email);
+  Future<void> updatePassword(String newPassword);
   Future<UserModel?> getCurrentSession();
 }
 
@@ -72,6 +73,13 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<void> resetPassword(String email) async {
     await supabaseClient.auth.resetPasswordForEmail(email);
+  }
+
+  @override
+  Future<void> updatePassword(String newPassword) async {
+    await supabaseClient.auth.updateUser(
+      sup.UserAttributes(password: newPassword),
+    );
   }
 
   @override

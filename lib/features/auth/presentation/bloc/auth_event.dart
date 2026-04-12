@@ -42,3 +42,11 @@ class ResetPasswordRequested extends AuthEvent {
   @override
   List<Object?> get props => [email];
 }
+
+/// Event untuk Ubah Kata Sandi (Saat Logged In).
+class AuthPasswordUpdateRequested extends AuthEvent {
+  final String newPassword;
+  const AuthPasswordUpdateRequested(this.newPassword);
+  @override
+  List<Object?> get props => [newPassword];
+}

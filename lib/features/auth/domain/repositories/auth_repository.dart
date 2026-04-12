@@ -25,4 +25,7 @@ abstract class AuthRepository {
 
   /// Ambil user yang saat ini tersimpan (cek sesi).
   Future<Either<Failure, AuthUser>> getCurrentUser();
+
+  /// Perbarui kata sandi user yang sedang login.
+  Future<Either<Failure, Unit>> updatePassword(String newPassword);
 }

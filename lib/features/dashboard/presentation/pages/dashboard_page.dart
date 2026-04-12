@@ -255,24 +255,49 @@ class _GreetingBanner extends StatelessWidget {
 
   const _GreetingBanner({required this.isDark});
 
+  Map<String, dynamic> _getGreetingConfig() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) {
+      return {'text': 'Selamat Pagi', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orangeAccent};
+    } else if (hour >= 11 && hour < 15) {
+      return {'text': 'Selamat Siang', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orange};
+    } else if (hour >= 15 && hour < 18) {
+      return {'text': 'Selamat Sore', 'icon': Icons.wb_twilight_rounded, 'color': Colors.deepOrangeAccent};
+    } else {
+      return {'text': 'Selamat Malam', 'icon': Icons.bedtime_rounded, 'color': Colors.indigoAccent};
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final config = _getGreetingConfig();
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        final name = state.user.fullName?.split(' ').first ?? 'Pengguna';
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Good morning, ${state.user.fullName ?? 'Name'} 👋',
-              style: const TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.w700,
-                letterSpacing: -0.5,
-              ),
+            Row(
+              children: [
+                Icon(
+                  config['icon'] as IconData,
+                  color: config['color'] as Color,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${config['text']}, $name!',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: 4),
             Text(
-              "Here's your helpdesk overview",
+              "Berikut ringkasan bantuan Anda hari ini",
               style: TextStyle(
                 fontSize: 14,
                 color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -528,7 +553,7 @@ class _ProfileTab extends StatelessWidget {
                       icon: Icons.lock_outline_rounded,
                       title: 'Ubah Kata Sandi',
                       subtitle: 'Perbarui keamanan akun Anda',
-                      onTap: () => context.push(AppRoutes.resetPassword),
+                      onTap: () => context.push(AppRoutes.changePassword),
                       isDark: isDark,
                     ),
                   ],

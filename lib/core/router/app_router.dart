@@ -16,6 +16,7 @@ import 'package:uts/features/ticket/presentation/pages/history_page.dart';
 import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
+import 'package:uts/features/auth/presentation/pages/change_password_page.dart';
 
 /// Named route constants untuk type-safe navigation.
 abstract class AppRoutes {
@@ -35,6 +36,7 @@ abstract class AppRoutes {
   static const String adminSettings = '/admin-settings';
   static const String ticketManagement = '/ticket-management';
   static const String userManagement = '/user-management';
+  static const String changePassword = '/change-password';
 }
 
 /// Konfigurasi GoRouter — navigasi deklaratif.
@@ -119,6 +121,14 @@ final GoRouter appRouter = GoRouter(
       pageBuilder: (context, state) => const CustomTransitionPage(
         child: ResetPasswordPage(),
         transitionsBuilder: _slideTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.changePassword,
+      name: 'change-password',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: ChangePasswordPage(),
+        transitionsBuilder: _slideUpTransition,
       ),
     ),
 

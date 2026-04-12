@@ -4,6 +4,7 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
 
 /// AuthBloc mengelola status autentikasi global aplikasi.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -12,6 +13,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final LogoutUseCase logoutUseCase;
   final GetCurrentUserUseCase getCurrentUserUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
+  final UpdatePasswordUseCase updatePasswordUseCase;
 
   AuthBloc({
     required this.loginUseCase,
@@ -19,12 +21,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.logoutUseCase,
     required this.getCurrentUserUseCase,
     required this.resetPasswordUseCase,
+    required this.updatePasswordUseCase,
   }) : super(const AuthState()) {
     on<AppStarted>(_onAppStarted);
     on<LoginSubmitted>(_onLoginSubmitted);
     on<RegisterSubmitted>(_onRegisterSubmitted);
     on<LogoutRequested>(_onLogoutRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
+    on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -74,6 +78,24 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       (_) => emit(state.copyWith(
         status: AuthStatus.success,
         successMessage: 'Instruksi reset password telah dikirim ke email Anda.',
+      )),
+    );
+  }
+
+  Future<void> _onAuthPasswordUpdateRequested(
+    AuthPasswordUpdateRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading));
+    final result = await updatePasswordUseCase(event.newPassword);
+    result.fold(
+      (failure) => emit(state.copyWith(
+        status: AuthStatus.error,
+        errorMessage: failure.message,
+      )),
+      (_) => emit(state.copyWith(
+        status: AuthStatus.success,
+        successMessage: 'Kata sandi berhasil diperbarui!',
       )),
     );
   }

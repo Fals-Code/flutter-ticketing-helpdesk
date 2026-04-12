@@ -5,7 +5,6 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
-import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/shared/widgets/app_text_field.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
@@ -307,10 +306,10 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                 }
               },
               selectedColor: color,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
-                side: BorderSide(color: isSelected ? Colors.transparent : color.withOpacity(0.3)),
+                side: BorderSide(color: isSelected ? Colors.transparent : color.withValues(alpha: 0.3)),
               ),
               showCheckmark: false,
             ),
@@ -332,7 +331,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
               width: 80,
               height: 80,
               decoration: BoxDecoration(
-                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: AppColors.borderLight, width: 1),
               ),

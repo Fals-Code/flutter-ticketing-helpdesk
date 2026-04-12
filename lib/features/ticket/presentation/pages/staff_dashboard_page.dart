@@ -5,6 +5,8 @@ import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 
 class StaffDashboardPage extends StatefulWidget {
@@ -53,6 +55,8 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  _GreetingBanner(isDark: isDark),
+                  const SizedBox(height: AppDimensions.spaceXXL),
                   _buildSummarySection(isDark, stats.open + stats.inProgress, stats.resolved, stats.total),
                   const SizedBox(height: AppDimensions.spaceXXL),
                   Text(
@@ -183,6 +187,66 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _GreetingBanner extends StatelessWidget {
+  final bool isDark;
+
+  const _GreetingBanner({required this.isDark});
+
+  Map<String, dynamic> _getGreetingConfig() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) {
+      return {'text': 'Selamat Pagi', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orangeAccent};
+    } else if (hour >= 11 && hour < 15) {
+      return {'text': 'Selamat Siang', 'icon': Icons.wb_sunny_rounded, 'color': Colors.orange};
+    } else if (hour >= 15 && hour < 18) {
+      return {'text': 'Selamat Sore', 'icon': Icons.wb_twilight_rounded, 'color': Colors.deepOrangeAccent};
+    } else {
+      return {'text': 'Selamat Malam', 'icon': Icons.bedtime_rounded, 'color': Colors.indigoAccent};
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final config = _getGreetingConfig();
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final name = state.user.fullName?.split(' ').first ?? 'Staff';
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  config['icon'] as IconData,
+                  color: config['color'] as Color,
+                  size: 24,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  '${config['text']}, $name!',
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: -0.5,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              "Semoga harimu produktif dalam melayani pengguna",
+              style: TextStyle(
+                fontSize: 14,
+                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

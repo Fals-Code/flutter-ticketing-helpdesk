@@ -7,7 +7,8 @@ abstract class NotificationRemoteDataSource {
   Stream<List<NotificationModel>> watchNotifications();
 }
 
-class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteDataSource {
+class SupabaseNotificationRemoteDataSourceImpl
+    implements NotificationRemoteDataSource {
   final SupabaseClient supabaseClient;
 
   SupabaseNotificationRemoteDataSourceImpl(this.supabaseClient);
@@ -20,26 +21,36 @@ class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteData
           .select('*')
           .eq('user_id', supabaseClient.auth.currentUser!.id)
           .order('created_at', ascending: false);
-      
-      return (response as List).map((json) => NotificationModel.fromJson(json)).toList();
+
+      return (response as List)
+          .map((json) => NotificationModel.fromJson(json))
+          .toList();
     } on PostgrestException catch (e) {
       if (e.code == '42P01') {
-        // Table doesn't exist yet, return empty list gracefully
         return [];
       }
       throw Exception('Database error: ${e.message}');
     } catch (e) {
-      return []; // Fallback for any other unexpected errors during initial setup
+      return [];
     }
   }
 
   @override
   Future<void> markAsRead(String notificationId) async {
     try {
-      await supabaseClient
+      final response = await supabaseClient
           .from('notifications')
           .update({'is_read': true})
-          .eq('id', notificationId);
+          .eq('id', notificationId)
+          .select();
+
+      // If no rows were updated, it might be a permissions issue
+      if (response == null || (response as List).isEmpty) {
+        throw Exception(
+            'No rows updated. Check RLS policies for notifications table.');
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Database error marking read: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to mark notification as read: $e');
     }
@@ -53,9 +64,10 @@ class SupabaseNotificationRemoteDataSourceImpl implements NotificationRemoteData
           .stream(primaryKey: ['id'])
           .eq('user_id', supabaseClient.auth.currentUser!.id)
           .order('created_at', ascending: false)
-          .map((data) => data.map((json) => NotificationModel.fromJson(json)).toList());
+          .map((data) => data
+              .map((json) => NotificationModel.fromJson(json))
+              .toList());
     } catch (e) {
-      // Return empty stream if table missing or subscription fails
       return Stream.value([]);
     }
   }

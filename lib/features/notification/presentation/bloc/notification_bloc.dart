@@ -100,10 +100,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     // Detect new unread notifications to show popup
     final currentIds = state.notifications.map((n) => n.id).toSet();
-    
+
     for (var notification in event.notifications) {
       if (!notification.isRead && !currentIds.contains(notification.id)) {
-        // This is a new unread notification
         localNotificationService.showNotification(
           id: notification.id.hashCode,
           title: notification.title,
@@ -129,8 +128,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(isLoading: true));
     final result = await getNotifications();
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: 'Gagal mengambil notifikasi')),
-      (notifications) => emit(state.copyWith(isLoading: false, notifications: notifications)),
+      (failure) => emit(state.copyWith(
+          isLoading: false,
+          errorMessage: 'Gagal mengambil notifikasi')),
+      (notifications) =>
+          emit(state.copyWith(isLoading: false, notifications: notifications)),
     );
   }
 
@@ -138,25 +140,24 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkReadRequested event,
     Emitter<NotificationState> emit,
   ) async {
+    // Optimistic local update first
+    final updatedList = state.notifications.map((n) {
+      if (n.id == event.notificationId) {
+        return n.copyWith(isRead: true);
+      }
+      return n;
+    }).toList();
+    emit(state.copyWith(notifications: updatedList));
+
+    // Persist to database
     final result = await markNotificationAsRead(event.notificationId);
     result.fold(
-      (failure) => null, // Silently fail or handle error
+      (failure) {
+        // Revert on failure
+        emit(state.copyWith(notifications: state.notifications));
+      },
       (_) {
-        final updatedList = state.notifications.map((n) {
-          if (n.id == event.notificationId) {
-            return NotificationEntity(
-              id: n.id,
-              userId: n.userId,
-              title: n.title,
-              message: n.message,
-              ticketId: n.ticketId,
-              isRead: true,
-              createdAt: n.createdAt,
-            );
-          }
-          return n;
-        }).toList();
-        emit(state.copyWith(notifications: updatedList));
+        // Already updated optimistically, nothing else needed
       },
     );
   }
@@ -165,7 +166,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkAllReadRequested event,
     Emitter<NotificationState> emit,
   ) async {
-    final unreadIds = state.notifications.where((n) => !n.isRead).map((n) => n.id).toList();
+    final unreadIds = state.notifications
+        .where((n) => !n.isRead)
+        .map((n) => n.id)
+        .toList();
     if (unreadIds.isEmpty) return;
 
     // Instant local feedback
@@ -175,10 +179,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     }).toList();
     emit(state.copyWith(notifications: updatedList));
 
-    // Persist in background
-    for (var id in unreadIds) {
-      await markNotificationAsRead(id);
-    }
+    // Persist ALL unread to database concurrently
+    await Future.wait(
+      unreadIds.map((id) => markNotificationAsRead(id)),
+    );
   }
 
   Future<void> _onResetState(

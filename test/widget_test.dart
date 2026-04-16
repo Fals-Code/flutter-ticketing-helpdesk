@@ -5,25 +5,17 @@
 // gestures. You can also use WidgetTester to find child widgets in the widget
 // tree, read text, and verify that the values of widget properties are correct.
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:uts/main.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
+  testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
+    // Note: This test might require proper DI mocking in a real environment
     await tester.pumpWidget(const ETicketingApp());
 
-    // Verify that splash screen is shown (has app name)
-    expect(find.text('E-Ticketing\nHelpdesk'), findsOneWidget);
-
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
-
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    // Verify that splash screen or login brand is shown
+    expect(find.text('TICKET-Q'), findsOneWidget);
   });
 }

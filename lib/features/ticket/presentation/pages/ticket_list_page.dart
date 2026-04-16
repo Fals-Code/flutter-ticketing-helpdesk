@@ -245,7 +245,14 @@ class _TicketListPageState extends State<TicketListPage> {
     bool isDark,
   ) {
     if (tickets.isEmpty && isLoading) {
-      return const Center(child: LoadingWidget());
+      return ListView.builder(
+        padding: const EdgeInsets.all(AppDimensions.spaceLG),
+        itemCount: 5,
+        itemBuilder: (context, index) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: ShimmerCard(height: 140),
+        ),
+      );
     }
 
     if (tickets.isEmpty) {

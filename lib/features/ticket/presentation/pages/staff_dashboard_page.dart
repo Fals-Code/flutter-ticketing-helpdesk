@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart' as stats_state;
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
@@ -22,17 +24,13 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<TicketBloc, TicketState>(
+    return BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
       builder: (context, state) {
-        if (state.isLoading && state.allTickets.isEmpty) {
+        if (state.isLoading && state.stats.total == 0) {
           return const Center(child: LoadingWidget());
         }
 
         final stats = state.stats;
-        final openCount = stats.open;
-        final inProgressCount = stats.inProgress;
-        final resolvedCount = stats.resolved;
-        final closedCount = stats.closed;
 
         return Scaffold(
           appBar: AppBar(
@@ -47,13 +45,14 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                 onPressed: () {
                   final authState = context.read<AuthBloc>().state;
                   final user = authState.user;
-                  context.read<TicketBloc>().add(
-                        FetchAllTicketsRequested(
-                          page: 0, 
-                          limit: 100,
-                          assignedToId: user.role == UserRole.technician ? user.id : null,
-                        ),
-                      );
+                  context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested(
+                        assignedToId: user.role == UserRole.technician ? user.id : null,
+                      ));
+                  context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
+                        page: 0,
+                        limit: 10,
+                        assignedToId: user.role == UserRole.technician ? user.id : null,
+                      ));
                 },
               ),
             ],
@@ -62,13 +61,14 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
             onRefresh: () async {
               final authState = context.read<AuthBloc>().state;
               final user = authState.user;
-              context.read<TicketBloc>().add(
-                    FetchAllTicketsRequested(
-                      page: 0, 
-                      limit: 100,
-                      assignedToId: user.role == UserRole.technician ? user.id : null,
-                    ),
-                  );
+              context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested(
+                    assignedToId: user.role == UserRole.technician ? user.id : null,
+                  ));
+              context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
+                    page: 0,
+                    limit: 10,
+                    assignedToId: user.role == UserRole.technician ? user.id : null,
+                  ));
             },
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(AppDimensions.spaceLG),
@@ -85,12 +85,11 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: AppDimensions.spaceLG),
-                  _buildStatusGrid(context, openCount, inProgressCount, resolvedCount, closedCount),
+                  _buildStatusGrid(context, stats.open, stats.inProgress, stats.resolved, stats.closed),
                   const SizedBox(height: AppDimensions.spaceXXL),
-                  // Removed recent tickets section as per user request to use stats only
                   _buildTotalSection(context, stats.total, isDark),
                 ],
-              ),
+               ),
             ),
           ),
         );

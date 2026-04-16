@@ -7,9 +7,11 @@ import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/shared/widgets/app_text_field.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dart' as list_state;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
 import 'package:uts/core/router/app_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -110,7 +112,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocListener<TicketBloc, TicketState>(
+    return BlocListener<TicketListBloc, list_state.TicketListState>(
       listener: (context, state) {
         if (state.successMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -119,6 +121,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
               backgroundColor: AppColors.statusResolved,
             ),
           );
+          // Refresh stats
+          context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
           context.go(AppRoutes.dashboard);
         }
         if (state.errorMessage != null) {
@@ -139,7 +143,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
             onPressed: () => context.pop(),
           ),
         ),
-        body: BlocBuilder<TicketBloc, TicketState>(
+        body: BlocBuilder<TicketListBloc, list_state.TicketListState>(
           builder: (context, state) {
             return Stack(
               children: [
@@ -160,6 +164,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                             letterSpacing: -0.5,
                           ),
                         ),
+                        // ... (rest of the fields unchanged)
                         const SizedBox(height: 8),
                         Text(
                           'Berikan detail masalah Anda agar tim kami dapat membantu dengan cepat.',
@@ -276,7 +281,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                                 return;
                               }
 
-                              context.read<TicketBloc>().add(CreateTicketRequested(
+                              context.read<TicketListBloc>().add(list_event.CreateTicketRequested(
                                     userId: currentUser.id,
                                     title: _subjectController.text,
                                     description: _descController.text,

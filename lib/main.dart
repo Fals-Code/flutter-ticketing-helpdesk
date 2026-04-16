@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/constants/env_constants.dart';
@@ -10,15 +11,28 @@ import 'package:uts/core/di/injection_container.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:uts/shared/widgets/global_error_boundary.dart';
 import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 import 'package:uts/core/storage/secure_local_storage.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 import 'package:uts/core/services/local_notification_service.dart';
+import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/shared/widgets/connectivity_banner_widget.dart';
+import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+
+// Top-level function for background FCM handling
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint("Handling a background message: ${message.messageId}");
+}
 
 Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
@@ -26,6 +40,7 @@ Future<void> main() async {
 
   // 0. Initialize Firebase
   await Firebase.initializeApp();
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // Load environment variables
   try {
@@ -61,6 +76,9 @@ Future<void> main() async {
   // 3. Inisialisasi Local Notification Service
   await sl<LocalNotificationService>().initialize();
 
+  // 4. Inisialisasi FCM Service
+  await sl<FCMService>().initialize();
+
   runApp(const ETicketingApp());
 }
 
@@ -81,9 +99,15 @@ class ETicketingApp extends StatelessWidget {
         BlocProvider<AuthBloc>(
           create: (_) => sl<AuthBloc>()..add(AppStarted()),
         ),
-        // TicketBloc untuk fitur tiket
-        BlocProvider<TicketBloc>(
-          create: (_) => sl<TicketBloc>()..add(StartTicketSubscription()),
+        // BLoCs untuk fitur tiket
+        BlocProvider<TicketListBloc>(
+          create: (_) => sl<TicketListBloc>()..add(const list_event.StartTicketListSubscription()),
+        ),
+        BlocProvider<TicketDetailBloc>(
+          create: (_) => sl<TicketDetailBloc>(),
+        ),
+        BlocProvider<TicketStatsBloc>(
+          create: (_) => sl<TicketStatsBloc>(),
         ),
         // NotificationBloc untuk fitur notifikasi
         BlocProvider<NotificationBloc>(
@@ -112,19 +136,48 @@ class ETicketingApp extends StatelessWidget {
             builder: (context, child) {
               // Clamp text scale factor untuk mencegah overflow di berbagai device
               final mediaQuery = MediaQuery.of(context);
-              final constrainedTextScaleFactor =
-                  mediaQuery.textScaler.clamp(
+              final constrainedTextScaleFactor = mediaQuery.textScaler.clamp(
                 minScaleFactor: 0.85,
                 maxScaleFactor: 1.2,
               );
-              final connectivityWrapped = ConnectivityBannerWidget(child: child!);
-              return MediaQuery(
-                data: mediaQuery.copyWith(textScaler: constrainedTextScaleFactor),
-                child: connectivityWrapped,
+
+              final errorWrapped = GlobalErrorBoundary(child: child!);
+              final connectivityWrapped = ConnectivityBannerWidget(child: errorWrapped);
+
+              return BlocListener<AuthBloc, AuthState>(
+                listener: (context, state) {
+                  if (state.status == AuthStatus.sessionExpired) {
+                    _showSessionExpiredDialog(context);
+                  }
+                },
+                child: MediaQuery(
+                  data: mediaQuery.copyWith(textScaler: constrainedTextScaleFactor),
+                  child: connectivityWrapped,
+                ),
               );
             },
           );
         },
+      ),
+    );
+  }
+
+  void _showSessionExpiredDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Sesi Habis'),
+        content: const Text('Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.'),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              context.read<AuthBloc>().add(LogoutRequested());
+            },
+            child: const Text('Masuk Kembali'),
+          ),
+        ],
       ),
     );
   }

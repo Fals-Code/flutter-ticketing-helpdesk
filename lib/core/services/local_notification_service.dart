@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter/foundation.dart';
+import 'package:uts/core/router/app_router.dart';
 
 class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -35,8 +36,13 @@ class LocalNotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        // Handle notification tap logic here if needed
-        debugPrint('Notification tapped: ${response.payload}');
+        // Handle notification tap logic here
+        final String? payload = response.payload;
+        if (payload != null && payload.isNotEmpty) {
+          debugPrint('Notification tapped with payload: $payload');
+          // Navigate to ticket detail: /tickets/:id
+          appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', payload));
+        }
       },
     );
 

@@ -6,9 +6,12 @@ import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_event.dart' as detail_event;
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_state.dart' as detail_state;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart' as stats_state;
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
@@ -30,18 +33,19 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   @override
   void initState() {
-    context.read<TicketBloc>().add(FetchTicketDetailRequested(widget.ticketId));
-    context.read<TicketBloc>().add(StartTicketCommentsSubscription(widget.ticketId));
+    final detailBloc = context.read<TicketDetailBloc>();
+    detailBloc.add(detail_event.FetchTicketDetailRequested(widget.ticketId));
+    detailBloc.add(detail_event.StartTicketCommentsSubscription(widget.ticketId));
     
     // Fetch staff users if role is technician/admin
     final authState = context.read<AuthBloc>().state;
     if (authState.status == AuthStatus.authenticated && 
         (authState.user.role == UserRole.admin || authState.user.role == UserRole.technician)) {
-      context.read<TicketBloc>().add(const FetchStaffUsersRequested());
+      context.read<TicketStatsBloc>().add(stats_event.FetchStaffUsersRequested());
     }
     
     // Fetch activities for timeline
-    context.read<TicketBloc>().add(FetchTicketActivitiesRequested(ticketId: widget.ticketId));
+    detailBloc.add(detail_event.FetchTicketActivitiesRequested(widget.ticketId));
     super.initState();
   }
 
@@ -55,7 +59,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocConsumer<TicketBloc, TicketState>(
+    return BlocConsumer<TicketDetailBloc, detail_state.TicketDetailState>(
       listener: (context, state) {
         if (state.successMessage == 'Tanggapan berhasil dikirim') {
           _commentController.clear();
@@ -72,7 +76,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         }
       },
       builder: (context, state) {
-        final ticket = state.selectedTicket;
+        final ticket = state.ticket;
 
         return Scaffold(
           appBar: AppBar(
@@ -96,7 +100,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             Icon(
                               Icons.search_off_rounded,
                               size: 80,
-                              color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.05),
+                              color: isDark ? Colors.white.withAlpha(25) : Colors.black.withAlpha(15),
                             ),
                             const SizedBox(height: 24),
                             Text(
@@ -220,8 +224,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  Widget _buildStaffActions(BuildContext context, TicketState state) {
-    final ticket = state.selectedTicket!;
+  Widget _buildStaffActions(BuildContext context, detail_state.TicketDetailState state) {
+    final ticket = state.ticket!;
     final authState = context.read<AuthBloc>().state;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
@@ -241,11 +245,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.1),
+          color: AppColors.primary.withAlpha(25),
           width: 1.5,
         ),
         boxShadow: [
-          if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.03), blurRadius: 20, offset: const Offset(0, 4)),
+          if (!isDark) BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 20, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -254,7 +258,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.05),
+              color: AppColors.primary.withAlpha(15),
               borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
             ),
             child: Row(
@@ -290,8 +294,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             label: 'Mulai Kerjakan',
                             icon: Icons.play_arrow_rounded,
                             backgroundColor: AppColors.statusInProgress,
-                            onPressed: () => context.read<TicketBloc>().add(
-                              UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.inProgress),
+                            onPressed: () => context.read<TicketDetailBloc>().add(
+                              detail_event.UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.inProgress),
                             ),
                           ),
                         ),
@@ -301,8 +305,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             label: 'Tandai Selesai',
                             icon: Icons.check_circle_outline_rounded,
                             backgroundColor: AppColors.statusResolved,
-                            onPressed: () => context.read<TicketBloc>().add(
-                              UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.resolved),
+                            onPressed: () => context.read<TicketDetailBloc>().add(
+                              detail_event.UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.resolved),
                             ),
                           ),
                         ),
@@ -311,9 +315,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 12),
                             decoration: BoxDecoration(
-                              color: Colors.green.withValues(alpha: 0.1),
+                              color: Colors.green.withAlpha(25),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.green.withValues(alpha: 0.2)),
+                              border: Border.all(color: Colors.green.withAlpha(50)),
                             ),
                             child: const Row(
                               mainAxisAlignment: MainAxisAlignment.center,
@@ -336,42 +340,46 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   const SizedBox(height: 20),
                   const Text('Delegasikan Ke Teknisi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
-                  DropdownButtonFormField<String>(
-                    initialValue: ticket.assignedTo,
-                    isExpanded: true,
-                    hint: const Text('Pilih Teknisi', style: TextStyle(fontSize: 14)),
-                    decoration: InputDecoration(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                      fillColor: isDark ? Colors.black12 : Colors.grey.shade50,
-                      filled: true,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
-                      ),
-                    ),
-                    items: state.staffUsers.map((user) {
-                      return DropdownMenuItem<String>(
-                        value: user.id,
-                        child: Row(
-                          children: [
-                            const Icon(Icons.person_pin_rounded, size: 18, color: AppColors.primary),
-                            const SizedBox(width: 10),
-                            Expanded(child: Text(user.fullName ?? user.email, 
-                              style: const TextStyle(fontSize: 14, overflow: TextOverflow.ellipsis))),
-                          ],
+                  BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
+                    builder: (context, statsState) {
+                      return DropdownButtonFormField<String>(
+                        value: ticket.assignedTo,
+                        isExpanded: true,
+                        hint: const Text('Pilih Teknisi', style: TextStyle(fontSize: 14)),
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                          fillColor: isDark ? Colors.black12 : Colors.grey.shade50,
+                          filled: true,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.grey.shade300),
+                          ),
                         ),
+                        items: statsState.staffUsers.map((user) {
+                          return DropdownMenuItem<String>(
+                            value: user.id,
+                            child: Row(
+                              children: [
+                                const Icon(Icons.person_pin_rounded, size: 18, color: AppColors.primary),
+                                const SizedBox(width: 10),
+                                Expanded(child: Text(user.fullName ?? user.email, 
+                                  style: const TextStyle(fontSize: 14, overflow: TextOverflow.ellipsis))),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null && val != ticket.assignedTo) {
+                            context.read<TicketDetailBloc>().add(
+                              detail_event.AssignTicketRequested(ticketId: ticket.id, technicianId: val),
+                            );
+                          }
+                        },
                       );
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null && val != ticket.assignedTo) {
-                        context.read<TicketBloc>().add(
-                          AssignTicketRequested(ticketId: ticket.id, technicianId: val),
-                        );
-                      }
                     },
                   ),
                 ],
@@ -383,6 +391,63 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
+  Widget _buildCommentInput(BuildContext context, detail_state.TicketDetailState state) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: EdgeInsets.fromLTRB(
+        24,
+        12,
+        24,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        border: Border(
+          top: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _commentController,
+              decoration: InputDecoration(
+                hintText: 'Tulis tanggapan...',
+                hintStyle: const TextStyle(fontSize: 14),
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                fillColor: isDark ? const Color(0xFF232329) : const Color(0xFFF1F1F4),
+                filled: true,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+              style: const TextStyle(fontSize: 14),
+              maxLines: null,
+            ),
+          ),
+          const SizedBox(width: 12),
+          IconButton.filled(
+            onPressed: () {
+              if (_commentController.text.trim().isEmpty) return;
+              context.read<TicketDetailBloc>().add(detail_event.AddCommentRequested(
+                    ticketId: widget.ticketId,
+                    message: _commentController.text,
+                  ));
+            },
+            icon: const Icon(Icons.send_rounded, size: 20),
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeader(BuildContext context, TicketEntity ticket) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -394,7 +459,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
-                color: ticket.status.color.withValues(alpha: 0.1),
+                color: ticket.status.color.withAlpha(25),
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
@@ -524,7 +589,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   void _showImagePreview(BuildContext context, String imageUrl) {
     showDialog(
       context: context,
-      barrierColor: Colors.black.withValues(alpha: 0.9),
+      barrierColor: Colors.black.withAlpha(230),
       builder: (context) => Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(
@@ -646,10 +711,10 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       width: 32,
       height: 32,
       decoration: BoxDecoration(
-        color: isStaff ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+        color: isStaff ? AppColors.primary.withAlpha(25) : Colors.grey.withAlpha(25),
         shape: BoxShape.circle,
         border: Border.all(
-          color: isStaff ? AppColors.primary.withValues(alpha: 0.2) : Colors.transparent,
+          color: isStaff ? AppColors.primary.withAlpha(50) : Colors.transparent,
         ),
       ),
       child: Center(
@@ -664,66 +729,4 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       ),
     );
   }
-
-
-  Widget _buildCommentInput(BuildContext context, TicketState state) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      padding: EdgeInsets.fromLTRB(
-        24,
-        12,
-        24,
-        MediaQuery.of(context).padding.bottom + 12,
-      ),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        border: Border(
-          top: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
-        ),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: TextField(
-              controller: _commentController,
-              decoration: InputDecoration(
-                hintText: 'Tulis tanggapan...',
-                hintStyle: const TextStyle(fontSize: 14),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                fillColor: isDark ? const Color(0xFF232329) : const Color(0xFFF1F1F4),
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(24),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-              style: const TextStyle(fontSize: 14),
-              maxLines: null,
-            ),
-          ),
-          const SizedBox(width: 12),
-          IconButton.filled(
-            onPressed: () {
-              if (_commentController.text.trim().isEmpty) return;
-              context.read<TicketBloc>().add(AddCommentRequested(
-                    ticketId: widget.ticketId,
-                    message: _commentController.text,
-                  ));
-            },
-            icon: const Icon(Icons.send_rounded, size: 20),
-            style: IconButton.styleFrom(
-              backgroundColor: AppColors.primary,
-              foregroundColor: Colors.white,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
 }
-
-

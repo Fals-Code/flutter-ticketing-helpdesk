@@ -6,25 +6,33 @@ import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
-  // BLoC
-  sl.registerLazySingleton(() => TicketBloc(
+  // BLoCs
+  sl.registerFactory(() => TicketListBloc(
         getTicketsUseCase: sl(),
+        getAllTicketsUseCase: sl(),
+        watchTicketsUseCase: sl(),
         createTicketUseCase: sl(),
+      ));
+
+  sl.registerFactory(() => TicketDetailBloc(
         getTicketDetailUseCase: sl(),
         getTicketCommentsUseCase: sl(),
         addCommentUseCase: sl(),
-        getAllTicketsUseCase: sl(),
-        getStaffUsersUseCase: sl(),
         updateTicketStatusUseCase: sl(),
         assignTicketUseCase: sl(),
         getTicketHistoryUseCase: sl(),
-        getAllTicketHistoryUseCase: sl(),
-        getTicketStatsUseCase: sl(),
-        watchTicketsUseCase: sl(),
         watchTicketCommentsUseCase: sl(),
+      ));
+
+  sl.registerFactory(() => TicketStatsBloc(
+        getTicketStatsUseCase: sl(),
+        getStaffUsersUseCase: sl(),
+        getAllTicketHistoryUseCase: sl(),
       ));
 
   // UseCases

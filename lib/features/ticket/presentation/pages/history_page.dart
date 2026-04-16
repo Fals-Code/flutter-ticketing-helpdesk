@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart' as stats_state;
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:go_router/go_router.dart';
@@ -28,10 +28,10 @@ class _HistoryPageState extends State<HistoryPage> {
     final authState = context.read<AuthBloc>().state;
     if (authState.user.role == UserRole.admin) {
       // Admins see everything
-      context.read<TicketBloc>().add(const FetchTicketActivitiesRequested());
+      context.read<TicketStatsBloc>().add(const stats_event.FetchAllHistoryRequested());
     } else {
       // Others see their own actions
-      context.read<TicketBloc>().add(FetchTicketActivitiesRequested(changedBy: authState.user.id));
+      context.read<TicketStatsBloc>().add(stats_event.FetchAllHistoryRequested(changedBy: authState.user.id));
     }
   }
 
@@ -49,7 +49,7 @@ class _HistoryPageState extends State<HistoryPage> {
           ),
         ],
       ),
-      body: BlocBuilder<TicketBloc, TicketState>(
+      body: BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
         builder: (context, state) {
           if (state.isLoading && state.history.isEmpty) {
             return const Center(child: CircularProgressIndicator());
@@ -60,7 +60,7 @@ class _HistoryPageState extends State<HistoryPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.history_rounded, size: 64, color: AppColors.primary.withValues(alpha: 0.3)),
+                  Icon(Icons.history_rounded, size: 64, color: AppColors.primary.withAlpha(25)),
                   const SizedBox(height: 16),
                   const Text('Belum ada riwayat aktivitas.'),
                 ],
@@ -91,7 +91,7 @@ class _HistoryPageState extends State<HistoryPage> {
                             border: Border.all(color: Colors.white, width: 2),
                             boxShadow: [
                               BoxShadow(
-                                color: _getStatusColor(item.newStatus).withValues(alpha: 0.3),
+                                color: _getStatusColor(item.newStatus).withAlpha(30),
                                 blurRadius: 4,
                                 spreadRadius: 1,
                               ),
@@ -153,9 +153,9 @@ class _HistoryPageState extends State<HistoryPage> {
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                   decoration: BoxDecoration(
-                                    color: AppColors.primary.withValues(alpha: 0.1),
+                                    color: AppColors.primary.withAlpha(25),
                                     borderRadius: BorderRadius.circular(4),
-                                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+                                    border: Border.all(color: AppColors.primary.withAlpha(50)),
                                   ),
                                   child: Row(
                                     mainAxisSize: MainAxisSize.min,

@@ -53,3 +53,6 @@ class AuthPasswordUpdateRequested extends AuthEvent {
 
 /// Event untuk membersihkan status pesan (setelah sukses/error).
 class ClearAuthStatus extends AuthEvent {}
+
+/// Event saat sesi berakhir (401 Unauthorized).
+class SessionExpiredDetected extends AuthEvent {}

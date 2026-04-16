@@ -7,8 +7,10 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
 import 'package:uts/features/ticket/presentation/pages/staff_dashboard_page.dart';
@@ -37,22 +39,21 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   void _fetchInitialData() {
-    final ticketBloc = context.read<TicketBloc>();
+    final listBloc = context.read<TicketListBloc>();
+    final statsBloc = context.read<TicketStatsBloc>();
     final authState = context.read<AuthBloc>().state;
     final user = authState.user;
-    final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
     final isTechnician = user.role == UserRole.technician;
 
-    ticketBloc.add(const FetchTicketStatsRequested());
-    ticketBloc.add(const FetchTicketsRequested(page: 0, limit: 5));
+    statsBloc.add(const stats_event.FetchTicketStatsRequested());
+    listBloc.add(const list_event.FetchTicketsRequested(page: 0, limit: 5));
     
     context.read<NotificationBloc>().add(FetchNotificationsRequested());
     context.read<NotificationBloc>().add(StartNotificationSubscription());
 
-    ticketBloc.add(StartTicketSubscription(
+    listBloc.add(list_event.StartTicketListSubscription(
       userId: user.id,
-      isStaff: isStaff,
-      isTechnician: isTechnician,
+      assignedToId: isTechnician ? user.id : null,
     ));
   }
 
@@ -69,7 +70,8 @@ class _DashboardPageState extends State<DashboardPage> {
       listener: (context, state) {
         if (state.status == AuthStatus.unauthenticated) {
           // Clear states of other blocs
-          context.read<TicketBloc>().add(ResetTicketState());
+          context.read<TicketListBloc>().add(list_event.ResetTicketListState());
+          context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
           context.read<NotificationBloc>().add(ResetNotificationState());
           
           // Redirect to login
@@ -106,10 +108,10 @@ class _DashboardPageState extends State<DashboardPage> {
               final isTechnician = user.role == UserRole.technician;
               
               // Refresh tickets when switching to Tickets tab
-              context.read<TicketBloc>().add(FetchTicketsRequested(page: 0, limit: 10));
+              context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 10));
               
               if (isStaff) {
-                context.read<TicketBloc>().add(FetchAllTicketsRequested(
+                context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
                   page: 0, 
                   limit: 10,
                   assignedToId: isTechnician ? user.id : null,

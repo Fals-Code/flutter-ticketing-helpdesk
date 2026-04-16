@@ -6,9 +6,9 @@ import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_state.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart' as stats_state;
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
 
@@ -27,7 +27,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   }
 
   void _refreshData() {
-    context.read<TicketBloc>().add(const FetchTicketStatsRequested());
+    context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
     context.read<AdminBloc>().add(const FetchAdminReportsRequested());
   }
 
@@ -47,8 +47,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       ),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, adminState) {
-          return BlocBuilder<TicketBloc, TicketState>(
-            builder: (context, ticketState) {
+          return BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
+            builder: (context, statsState) {
               if (adminState.status == AdminStatus.loading && adminState.report == null) {
                 return const Center(child: LoadingWidget());
               }
@@ -62,12 +62,12 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     children: [
                       _buildSectionTitle('Ringkasan Tiket', isDark),
                       const SizedBox(height: 16),
-                      _buildStatsGrid(ticketState),
+                      _buildStatsGrid(statsState),
                       const SizedBox(height: 32),
                       _buildSectionTitle('Performa Tim (Resolved)', isDark),
                       const SizedBox(height: 16),
                       if (adminState.report != null) 
-                        _buildPerformanceList(adminState.report!.teamPerformance, isDark)
+                         _buildPerformanceList(adminState.report!.teamPerformance, isDark)
                       else
                         const Center(child: Text('Data tidak tersedia')),
                       const SizedBox(height: 32),
@@ -100,7 +100,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
   }
 
-  Widget _buildStatsGrid(TicketState state) {
+  Widget _buildStatsGrid(stats_state.TicketStatsState state) {
     return GridView.count(
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
@@ -126,7 +126,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
         boxShadow: [
-          if (!isDark) BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 10, offset: const Offset(0, 4)),
+          if (!isDark) BoxShadow(color: Colors.black.withAlpha(10), blurRadius: 10, offset: const Offset(0, 4)),
         ],
       ),
       child: Column(
@@ -167,7 +167,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
           final item = performance[index];
           return ListTile(
             leading: CircleAvatar(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+              backgroundColor: AppColors.primary.withAlpha(25),
               child: Text(item.fullName.isNotEmpty ? item.fullName[0].toUpperCase() : 'T', 
                 style: const TextStyle(color: AppColors.primary, fontWeight: FontWeight.bold)),
             ),
@@ -190,7 +190,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   Widget _buildCategoryChart(List<CategoryDistribution> distribution, bool isDark) {
     if (distribution.isEmpty) return const Center(child: Padding(padding: EdgeInsets.all(20), child: Text('Belum ada data tiket.')));
 
-    final total = distribution.fold<int>(0, (sum, item) => sum + item.count);
+    final totalValue = distribution.fold<int>(0, (sum, item) => sum + item.count);
     final List<Color> colors = [Colors.blue, Colors.purple, Colors.orange, Colors.teal, Colors.pink, Colors.amber];
 
     return Container(
@@ -229,7 +229,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     Container(width: 10, height: 10, decoration: BoxDecoration(color: colors[i % colors.length], shape: BoxShape.circle)),
                     const SizedBox(width: 8),
                     Text(
-                      '${distribution[i].category} (${(distribution[i].count / total * 100).toStringAsFixed(0)}%)',
+                      '${distribution[i].category} (${(distribution[i].count / totalValue * 100).toStringAsFixed(0)}%)',
                       style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
                     ),
                   ],

@@ -10,9 +10,11 @@ import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/shared/widgets/empty_state_widget.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/core/constants/enums.dart';
 
@@ -43,37 +45,37 @@ class _TicketListPageState extends State<TicketListPage> {
     if (authState.user.isEmpty) return;
     
     final userId = authState.user.id;
-    final isStaff = authState.user.role == UserRole.admin || authState.user.role == UserRole.technician;
     final isTechnician = authState.user.role == UserRole.technician;
 
-    context.read<TicketBloc>().add(const FetchTicketsRequested(page: 0, limit: _pageSize));
-    context.read<TicketBloc>().add(FetchAllTicketsRequested(
+    final listBloc = context.read<TicketListBloc>();
+    listBloc.add(const list_event.FetchTicketsRequested(page: 0, limit: _pageSize));
+    listBloc.add(list_event.FetchAllTicketsRequested(
       page: 0, 
       limit: _pageSize,
       assignedToId: isTechnician ? userId : null,
     ));
     
-    context.read<TicketBloc>().add(StartTicketSubscription(
+    listBloc.add(list_event.StartTicketListSubscription(
       userId: userId, 
-      isStaff: isStaff,
-      isTechnician: isTechnician,
+      assignedToId: isTechnician ? userId : null,
     ));
   }
 
   void _onScroll(ScrollController controller, bool isMyTickets) {
     if (controller.position.pixels >= controller.position.maxScrollExtent - 200) {
-      final state = context.read<TicketBloc>().state;
+      final listBloc = context.read<TicketListBloc>();
+      final state = listBloc.state;
       if (state.isLoading) return;
 
       if (isMyTickets) {
         if (!state.isLastPage) {
           _myTicketsPage++;
-          context.read<TicketBloc>().add(FetchTicketsRequested(page: _myTicketsPage, limit: _pageSize));
+          listBloc.add(list_event.FetchTicketsRequested(page: _myTicketsPage, limit: _pageSize));
         }
       } else {
         if (!state.isLastPageAll) {
           _allTicketsPage++;
-          context.read<TicketBloc>().add(FetchAllTicketsRequested(page: _allTicketsPage, limit: _pageSize));
+          listBloc.add(list_event.FetchAllTicketsRequested(page: _allTicketsPage, limit: _pageSize));
         }
       }
     }
@@ -119,20 +121,24 @@ class _TicketListPageState extends State<TicketListPage> {
               ),
             ],
           ),
-          body: BlocBuilder<TicketBloc, TicketState>(
-            builder: (context, state) {
+          body: BlocBuilder<TicketListBloc, TicketListState>(
+            builder: (context, listState) {
               return Column(
                 children: [
-                  _buildFilters(context, state, isDark),
-                  if (user.role == UserRole.admin) _buildAdminStatsBar(state, isDark),
+                  _buildFilters(context, listState, isDark),
+                  if (user.role == UserRole.admin)
+                    BlocBuilder<TicketStatsBloc, TicketStatsState>(
+                      builder: (context, statsState) {
+                        return _buildAdminStatsBar(statsState, isDark);
+                      },
+                    ),
                   Expanded(
                     child: _buildTicketList(
-                      isStaff ? state.allTickets : state.tickets, 
-                      state.isLoading, 
-                      state.errorMessage, 
-                      isStaff ? _allTicketsScrollController : _myTicketsScrollController, 
-                      isDark
-                    ),
+                        isStaff ? listState.allTickets : listState.tickets,
+                        listState.isLoading,
+                        listState.errorMessage,
+                        isStaff ? _allTicketsScrollController : _myTicketsScrollController,
+                        isDark),
                   ),
                 ],
               );
@@ -148,7 +154,7 @@ class _TicketListPageState extends State<TicketListPage> {
     );
   }
 
-  Widget _buildFilters(BuildContext context, TicketState state, bool isDark) {
+  Widget _buildFilters(BuildContext context, TicketListState state, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.spaceLG),
       decoration: BoxDecoration(
@@ -162,7 +168,7 @@ class _TicketListPageState extends State<TicketListPage> {
       child: Column(
         children: [
           TextField(
-            onChanged: (val) => context.read<TicketBloc>().add(SearchQueryChanged(val)),
+            onChanged: (val) => context.read<TicketListBloc>().add(list_event.SearchTicketsRequested(val)),
             decoration: InputDecoration(
               hintText: 'Cari tiket...',
               prefixIcon: const Icon(Icons.search_rounded, size: 20),
@@ -185,16 +191,19 @@ class _TicketListPageState extends State<TicketListPage> {
                   context,
                   label: 'Semua',
                   isSelected: state.statusFilter == TicketStatusFilter.all,
-                  onTap: () => context.read<TicketBloc>().add(const FilterStatusChanged(null)),
+                  onTap: () => context.read<TicketListBloc>().add(const list_event.FilterStatusChanged(TicketStatusFilter.all)),
                   isDark: isDark,
                 ),
-                ...TicketStatus.values.map((status) => _buildFilterChip(
-                      context,
-                      label: status.label,
-                      isSelected: state.statusFilter.name == status.name,
-                      onTap: () => context.read<TicketBloc>().add(FilterStatusChanged(status)),
-                      isDark: isDark,
-                    )),
+                ...TicketStatus.values.map((status) {
+                  final mappedFilter = TicketStatusFilter.values.firstWhere((e) => e.name == status.name);
+                  return _buildFilterChip(
+                    context,
+                    label: status.label,
+                    isSelected: state.statusFilter == mappedFilter,
+                    onTap: () => context.read<TicketListBloc>().add(list_event.FilterStatusChanged(mappedFilter)),
+                    isDark: isDark,
+                  );
+                }),
               ],
             ),
           ),
@@ -294,7 +303,7 @@ class _TicketListPageState extends State<TicketListPage> {
     );
   }
 
-  Widget _buildAdminStatsBar(TicketState state, bool isDark) {
+  Widget _buildAdminStatsBar(TicketStatsState state, bool isDark) {
     final stats = state.stats;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),

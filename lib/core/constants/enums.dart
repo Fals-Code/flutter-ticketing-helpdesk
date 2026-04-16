@@ -9,6 +9,7 @@ enum AuthStatus {
   unauthenticated,
   error,
   success,
+  sessionExpired,
 }
 
 /// Role pengguna dalam sistem.

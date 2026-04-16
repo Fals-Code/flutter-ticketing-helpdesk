@@ -3,9 +3,11 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/ticket_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart';
 import 'package:uts/features/dashboard/presentation/pages/tabs/widgets/dashboard_widgets.dart';
 
 class AdminHomeTab extends StatelessWidget {
@@ -15,7 +17,7 @@ class AdminHomeTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<TicketBloc, TicketState>(
+    return BlocBuilder<TicketStatsBloc, TicketStatsState>(
       builder: (context, state) {
         return Scaffold(
           appBar: AppBar(
@@ -24,16 +26,16 @@ class AdminHomeTab extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.refresh_rounded),
                 onPressed: () {
-                  context.read<TicketBloc>().add(const FetchTicketStatsRequested());
-                  context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 5));
+                  context.read<TicketStatsBloc>().add(const stats_event.FetchTicketStatsRequested());
+                  context.read<TicketListBloc>().add(const list_event.FetchAllTicketsRequested(page: 0, limit: 5));
                 },
               ),
             ],
           ),
           body: RefreshIndicator(
             onRefresh: () async {
-              context.read<TicketBloc>().add(const FetchTicketStatsRequested());
-              context.read<TicketBloc>().add(const FetchAllTicketsRequested(page: 0, limit: 5));
+              context.read<TicketStatsBloc>().add(const stats_event.FetchTicketStatsRequested());
+              context.read<TicketListBloc>().add(const list_event.FetchAllTicketsRequested(page: 0, limit: 5));
             },
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),

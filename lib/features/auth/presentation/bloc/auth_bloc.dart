@@ -30,6 +30,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
     on<ClearAuthStatus>(_onClearStatus);
+    on<SessionExpiredDetected>(_onSessionExpiredDetected);
+  }
+
+  void _onSessionExpiredDetected(SessionExpiredDetected event, Emitter<AuthState> emit) {
+    emit(state.copyWith(
+      status: AuthStatus.sessionExpired,
+      errorMessage: 'Sesi Anda telah berakhir. Silakan masuk kembali.',
+    ));
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {

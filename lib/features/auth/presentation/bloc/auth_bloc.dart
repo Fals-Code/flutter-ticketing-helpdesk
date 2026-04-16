@@ -29,6 +29,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
+    on<ClearAuthStatus>(_onClearStatus);
   }
 
   Future<void> _onAppStarted(AppStarted event, Emitter<AuthState> emit) async {
@@ -98,5 +99,9 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         successMessage: 'Kata sandi berhasil diperbarui!',
       )),
     );
+  }
+
+  void _onClearStatus(ClearAuthStatus event, Emitter<AuthState> emit) {
+    emit(state.copyWith(successMessage: null, errorMessage: null));
   }
 }

@@ -50,3 +50,6 @@ class AuthPasswordUpdateRequested extends AuthEvent {
   @override
   List<Object?> get props => [newPassword];
 }
+
+/// Event untuk membersihkan status pesan (setelah sukses/error).
+class ClearAuthStatus extends AuthEvent {}

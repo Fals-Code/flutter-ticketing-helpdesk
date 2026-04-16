@@ -42,6 +42,17 @@ enum UserRole {
   }
 
   String get name => toString().split('.').last;
+
+  int get toInt {
+    switch (this) {
+      case UserRole.admin:
+        return 1;
+      case UserRole.technician:
+        return 2;
+      case UserRole.user:
+        return 3;
+    }
+  }
 }
 
 /// Status tiket dalam siklus hidup pengerjaan.

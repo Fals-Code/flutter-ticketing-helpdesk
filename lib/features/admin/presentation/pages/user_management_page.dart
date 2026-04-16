@@ -195,8 +195,7 @@ class _UserManagementPageState extends State<UserManagementPage> {
       trailing: isSelected ? const Icon(Icons.check_circle, color: AppColors.primary) : null,
       onTap: isSelected ? null : () {
         Navigator.pop(context);
-        final roleInt = role == UserRole.admin ? 1 : (role == UserRole.technician ? 2 : 3);
-        context.read<AdminBloc>().add(UpdateUserRoleRequested(userId: user.id, newRole: roleInt));
+        context.read<AdminBloc>().add(UpdateUserRoleRequested(userId: user.id, newRole: role.toInt));
       },
     );
   }

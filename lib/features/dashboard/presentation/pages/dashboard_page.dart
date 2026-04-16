@@ -851,7 +851,6 @@ class _ProfileTab extends StatelessWidget {
                   icon: Icons.logout_rounded,
                   onPressed: () {
                     context.read<AuthBloc>().add(LogoutRequested());
-                    context.go('/login');
                   },
                 ),
                 const SizedBox(height: AppDimensions.spaceXXL),

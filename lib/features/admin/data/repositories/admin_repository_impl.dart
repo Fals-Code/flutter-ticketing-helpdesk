@@ -31,9 +31,12 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
-  Future<Either<Failure, AdminReport>> getAdminReports() async {
+  Future<Either<Failure, AdminReport>> getAdminReports({DateTime? startDate, DateTime? endDate}) async {
     try {
-      final report = await remoteDataSource.getAdminReports();
+      final report = await remoteDataSource.getAdminReports(
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(report.toEntity());
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));

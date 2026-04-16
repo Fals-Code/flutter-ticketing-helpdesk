@@ -1,5 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_remote_data_source.dart';
 import 'package:uts/features/ticket/data/repositories/ticket_repository_impl.dart';
 import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
@@ -17,6 +19,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
         getAllTicketsUseCase: sl(),
         watchTicketsUseCase: sl(),
         createTicketUseCase: sl(),
+        localDataSource: sl(),
       ));
 
   sl.registerFactory(() => TicketDetailBloc(
@@ -27,6 +30,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
         assignTicketUseCase: sl(),
         getTicketHistoryUseCase: sl(),
         watchTicketCommentsUseCase: sl(),
+        submitRatingUseCase: sl(),
       ));
 
   sl.registerFactory(() => TicketStatsBloc(
@@ -46,6 +50,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => GetAllTicketHistoryUseCase(sl()));
   sl.registerLazySingleton(() => WatchTicketsUseCase(sl()));
   sl.registerLazySingleton(() => WatchTicketCommentsUseCase(sl()));
+  sl.registerLazySingleton(() => SubmitRatingUseCase(sl()));
   
   // Admin UseCases
   sl.registerLazySingleton(() => GetAllTicketsUseCase(sl()));
@@ -59,9 +64,18 @@ Future<void> initTicketDependencies(GetIt sl) async {
   );
 
   // Data Sources
+  if (!sl.isRegistered<SharedPreferences>()) {
+    final sharedPrefs = await SharedPreferences.getInstance();
+    sl.registerLazySingleton<SharedPreferences>(() => sharedPrefs);
+  }
+
   if (!sl.isRegistered<SupabaseClient>()) {
     sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
   }
+
+  sl.registerLazySingleton<TicketLocalDataSource>(
+    () => SharedPrefsTicketLocalDataSource(sl<SharedPreferences>()),
+  );
 
   sl.registerLazySingleton<TicketRemoteDataSource>(
     () => SupabaseTicketRemoteDataSourceImpl(sl<SupabaseClient>()),

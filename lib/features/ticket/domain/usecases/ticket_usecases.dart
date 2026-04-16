@@ -21,6 +21,8 @@ class GetTicketsUseCase
       searchQuery: params.searchQuery,
       category: params.category,
       status: params.status,
+      startDate: params.startDate,
+      endDate: params.endDate,
     );
   }
 }
@@ -96,13 +98,31 @@ class GetTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHist
   }
 }
 
-class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, String?> {
+class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, GetHistoryParams> {
   final TicketRepository repository;
   GetAllTicketHistoryUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> call(String? changedBy) async {
-    return await repository.getAllTicketHistory(changedBy: changedBy);
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(GetHistoryParams params) async {
+    return await repository.getAllTicketHistory(
+      changedBy: params.changedBy,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    );
+  }
+}
+
+class SubmitRatingUseCase implements UseCase<Either<Failure, TicketEntity>, SubmitRatingParams> {
+  final TicketRepository repository;
+  SubmitRatingUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, TicketEntity>> call(SubmitRatingParams params) async {
+    return await repository.submitRating(
+      ticketId: params.ticketId,
+      rating: params.rating,
+      feedback: params.feedback,
+    );
   }
 }
 
@@ -121,6 +141,8 @@ class GetTicketsParams extends Equatable {
   final String? status;
   final String? searchQuery;
   final String? category;
+  final DateTime? startDate;
+  final DateTime? endDate;
 
   const GetTicketsParams({
     required this.page,
@@ -129,12 +151,14 @@ class GetTicketsParams extends Equatable {
     this.searchQuery,
     this.category,
     this.assignedToId,
+    this.startDate,
+    this.endDate,
   });
 
   final String? assignedToId;
 
   @override
-  List<Object?> get props => [page, limit, status, searchQuery, category, assignedToId];
+  List<Object?> get props => [page, limit, status, searchQuery, category, assignedToId, startDate, endDate];
 }
 
 class CreateTicketParams extends Equatable {
@@ -166,4 +190,34 @@ class AddCommentParams extends Equatable {
 
   @override
   List<Object?> get props => [ticketId, message];
+}
+
+class SubmitRatingParams extends Equatable {
+  final String ticketId;
+  final int rating;
+  final String feedback;
+
+  const SubmitRatingParams({
+    required this.ticketId,
+    required this.rating,
+    required this.feedback,
+  });
+
+  @override
+  List<Object?> get props => [ticketId, rating, feedback];
+}
+
+class GetHistoryParams extends Equatable {
+  final String? changedBy;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const GetHistoryParams({
+    this.changedBy,
+    this.startDate,
+    this.endDate,
+  });
+
+  @override
+  List<Object?> get props => [changedBy, startDate, endDate];
 }

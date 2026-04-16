@@ -16,7 +16,29 @@ class TicketModel extends TicketEntity {
     super.assignedTo,
     super.assignedToName,
     super.imageUrls,
+    super.rating,
+    super.ratingFeedback,
   });
+
+  factory TicketModel.fromEntity(TicketEntity entity) {
+    return TicketModel(
+      id: entity.id,
+      title: entity.title,
+      description: entity.description,
+      status: entity.status,
+      priority: entity.priority,
+      category: entity.category,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
+      userId: entity.userId,
+      userName: entity.userName,
+      assignedTo: entity.assignedTo,
+      assignedToName: entity.assignedToName,
+      imageUrls: entity.imageUrls,
+      rating: entity.rating,
+      ratingFeedback: entity.ratingFeedback,
+    );
+  }
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
     // 1. Parse Creator/Reporter Profile (join via profiles:user_id)
@@ -53,26 +75,11 @@ class TicketModel extends TicketEntity {
       assignedTo: json['assigned_to'],
       assignedToName: assignedToName,
       imageUrls: List<String>.from(json['images'] ?? []),
+      rating: json['rating'],
+      ratingFeedback: json['rating_feedback'],
     );
   }
 
-  factory TicketModel.fromEntity(TicketEntity entity) {
-    return TicketModel(
-      id: entity.id,
-      title: entity.title,
-      description: entity.description,
-      status: entity.status,
-      priority: entity.priority,
-      category: entity.category,
-      createdAt: entity.createdAt,
-      updatedAt: entity.updatedAt,
-      userId: entity.userId,
-      userName: entity.userName,
-      assignedTo: entity.assignedTo,
-      assignedToName: entity.assignedToName,
-      imageUrls: entity.imageUrls,
-    );
-  }
 
   Map<String, dynamic> toJson() {
     return {
@@ -85,6 +92,8 @@ class TicketModel extends TicketEntity {
       'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
       'images': super.imageUrls,
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
+      if (rating != null) 'rating': rating,
+      if (ratingFeedback != null) 'rating_feedback': ratingFeedback,
     };
   }
 
@@ -103,6 +112,8 @@ class TicketModel extends TicketEntity {
       assignedTo: assignedTo,
       assignedToName: assignedToName,
       imageUrls: imageUrls,
+      rating: rating,
+      ratingFeedback: ratingFeedback,
     );
   }
 }

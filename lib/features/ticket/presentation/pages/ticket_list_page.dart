@@ -126,6 +126,17 @@ class _TicketListPageState extends State<TicketListPage> {
               return Column(
                 children: [
                   _buildFilters(context, listState, isDark),
+                  if (listState.isOffline)
+                    Container(
+                      width: double.infinity,
+                      color: Colors.orange.shade700,
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: const Text(
+                        'Sedang offline. Menampilkan data tersimpan.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
                   if (user.role == UserRole.admin)
                     BlocBuilder<TicketStatsBloc, TicketStatsState>(
                       builder: (context, statsState) {
@@ -167,19 +178,27 @@ class _TicketListPageState extends State<TicketListPage> {
       ),
       child: Column(
         children: [
-          TextField(
-            onChanged: (val) => context.read<TicketListBloc>().add(list_event.SearchTicketsRequested(val)),
-            decoration: InputDecoration(
-              hintText: 'Cari tiket...',
-              prefixIcon: const Icon(Icons.search_rounded, size: 20),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              fillColor: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF5F5F7),
-              filled: true,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+          Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  onChanged: (val) => context.read<TicketListBloc>().add(list_event.SearchTicketsRequested(val)),
+                  decoration: InputDecoration(
+                    hintText: 'Cari tiket...',
+                    prefixIcon: const Icon(Icons.search_rounded, size: 20),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    fillColor: isDark ? const Color(0xFF1E1E22) : const Color(0xFFF5F5F7),
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              _buildDateFilterIcon(context, state, isDark),
+            ],
           ),
           const SizedBox(height: 12),
           SizedBox(
@@ -187,9 +206,11 @@ class _TicketListPageState extends State<TicketListPage> {
             child: ListView(
               scrollDirection: Axis.horizontal,
               children: [
+                _buildQuickDateChips(context, state, isDark),
+                VerticalDivider(width: 20, thickness: 1, color: isDark ? AppColors.borderDark : AppColors.borderLight),
                 _buildFilterChip(
                   context,
-                  label: 'Semua',
+                  label: 'Semua Status',
                   isSelected: state.statusFilter == TicketStatusFilter.all,
                   onTap: () => context.read<TicketListBloc>().add(const list_event.FilterStatusChanged(TicketStatusFilter.all)),
                   isDark: isDark,
@@ -212,12 +233,103 @@ class _TicketListPageState extends State<TicketListPage> {
     );
   }
 
+  Widget _buildDateFilterIcon(BuildContext context, TicketListState state, bool isDark) {
+    final hasDateFilter = state.startDate != null || state.endDate != null;
+    return InkWell(
+      onTap: () async {
+        final bloc = context.read<TicketListBloc>();
+        final DateTimeRange? picked = await showDateRangePicker(
+          context: context,
+          firstDate: DateTime(2020),
+          lastDate: DateTime.now().add(const Duration(days: 1)),
+          initialDateRange: state.startDate != null && state.endDate != null
+              ? DateTimeRange(start: state.startDate!, end: state.endDate!)
+              : null,
+          builder: (context, child) {
+            return Theme(
+              data: Theme.of(context).copyWith(
+                colorScheme: isDark
+                    ? const ColorScheme.dark(primary: AppColors.primary, onPrimary: Colors.white, surface: AppColors.surfaceDark, onSurface: Colors.white)
+                    : const ColorScheme.light(primary: AppColors.primary, onPrimary: Colors.white, surface: Colors.white, onSurface: Colors.black87),
+              ),
+              child: child!,
+            );
+          },
+        );
+        if (picked != null) {
+          bloc.add(list_event.FilterDateRangeChanged(picked.start, picked.end));
+        }
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        height: 48,
+        width: 48,
+        decoration: BoxDecoration(
+          color: hasDateFilter ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? const Color(0xFF1E1E22) : const Color(0xFFF5F5F7)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: hasDateFilter ? AppColors.primary : Colors.transparent),
+        ),
+        child: Icon(
+          Icons.calendar_month_rounded,
+          color: hasDateFilter ? AppColors.primary : (isDark ? Colors.white70 : Colors.black54),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickDateChips(BuildContext context, TicketListState state, bool isDark) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    
+    // Check if current state matches any quick filter
+    bool isToday = state.startDate != null && state.startDate == today && state.endDate == null;
+    bool isThisWeek = state.startDate != null && state.startDate == today.subtract(const Duration(days: 7)) && state.endDate == null;
+    bool isThisMonth = state.startDate != null && state.startDate == DateTime(now.year, now.month, 1) && state.endDate == null;
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        _buildFilterChip(
+          context,
+          label: 'Hari Ini',
+          isSelected: isToday,
+          onTap: () => context.read<TicketListBloc>().add(list_event.FilterDateRangeChanged(today, null)),
+          isDark: isDark,
+        ),
+        _buildFilterChip(
+          context,
+          label: 'Minggu Ini',
+          isSelected: isThisWeek,
+          onTap: () => context.read<TicketListBloc>().add(list_event.FilterDateRangeChanged(today.subtract(const Duration(days: 7)), null)),
+          isDark: isDark,
+        ),
+        _buildFilterChip(
+          context,
+          label: 'Bulan Ini',
+          isSelected: isThisMonth,
+          onTap: () => context.read<TicketListBloc>().add(list_event.FilterDateRangeChanged(DateTime(now.year, now.month, 1), null)),
+          isDark: isDark,
+        ),
+        if (state.startDate != null || state.endDate != null)
+          _buildFilterChip(
+            context,
+            label: 'Hapus Filter Tgl',
+            isSelected: false,
+            onTap: () => context.read<TicketListBloc>().add(const list_event.FilterDateRangeChanged(null, null)),
+            isDark: isDark,
+            icon: Icons.close_rounded,
+          ),
+      ],
+    );
+  }
+
   Widget _buildFilterChip(
     BuildContext context, {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
     required bool isDark,
+    IconData? icon,
   }) {
     return Padding(
       padding: const EdgeInsets.only(right: 8),
@@ -233,13 +345,22 @@ class _TicketListPageState extends State<TicketListPage> {
                 : (isDark ? const Color(0xFF2A2A2E) : Colors.grey.shade200),
             borderRadius: BorderRadius.circular(20),
           ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
-              color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
-            ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (icon != null) ...[
+                Icon(icon, size: 14, color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87)),
+                const SizedBox(width: 4),
+              ],
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+                  color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+                ),
+              ),
+            ],
           ),
         ),
       ),

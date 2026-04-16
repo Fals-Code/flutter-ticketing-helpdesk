@@ -25,6 +25,8 @@ class TicketRepositoryImpl implements TicketRepository {
     String? searchQuery,
     String? category,
     String? status,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final tickets = await remoteDataSource.getTickets(
@@ -33,6 +35,8 @@ class TicketRepositoryImpl implements TicketRepository {
         searchQuery: searchQuery,
         category: category,
         status: status,
+        startDate: startDate,
+        endDate: endDate,
       );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } on sup.AuthException catch (e) {
@@ -50,6 +54,8 @@ class TicketRepositoryImpl implements TicketRepository {
     String? searchQuery,
     String? category,
     String? assignedToId,
+    DateTime? startDate,
+    DateTime? endDate,
   }) async {
     try {
       final tickets = await remoteDataSource.getAllTickets(
@@ -59,6 +65,8 @@ class TicketRepositoryImpl implements TicketRepository {
         searchQuery: searchQuery,
         category: category,
         assignedToId: assignedToId,
+        startDate: startDate,
+        endDate: endDate,
       );
       return Right(tickets.map((t) => t.toEntity()).toList());
     } catch (e) {
@@ -181,12 +189,30 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy}) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate}) async {
     try {
-      final activities = await remoteDataSource.getAllTicketHistory(changedBy: changedBy);
+      final activities = await remoteDataSource.getAllTicketHistory(
+        changedBy: changedBy,
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(activities.map((a) => a.toEntity()).toList());
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, TicketEntity>> submitRating({
+    required String ticketId,
+    required int rating,
+    required String feedback,
+  }) async {
+    try {
+      final ticket = await remoteDataSource.submitRating(ticketId, rating, feedback);
+      return Right(ticket.toEntity());
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
     }
   }
 

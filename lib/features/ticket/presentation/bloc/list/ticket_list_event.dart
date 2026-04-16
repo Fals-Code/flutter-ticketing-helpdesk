@@ -45,6 +45,14 @@ class FilterCategoryChanged extends TicketListEvent {
   List<Object?> get props => [category];
 }
 
+class FilterDateRangeChanged extends TicketListEvent {
+  final DateTime? startDate;
+  final DateTime? endDate;
+  const FilterDateRangeChanged(this.startDate, this.endDate);
+  @override
+  List<Object?> get props => [startDate, endDate];
+}
+
 class CreateTicketRequested extends TicketListEvent {
   final String userId;
   final String title;

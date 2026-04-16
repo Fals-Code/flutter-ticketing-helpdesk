@@ -10,6 +10,7 @@ class TicketDetailState extends Equatable {
   final List<TicketHistoryEntity> history;
   final String? errorMessage;
   final String? successMessage;
+  final bool isRatingSubmitting;
 
   const TicketDetailState({
     this.isLoading = false,
@@ -18,6 +19,7 @@ class TicketDetailState extends Equatable {
     this.history = const [],
     this.errorMessage,
     this.successMessage,
+    this.isRatingSubmitting = false,
   });
 
   TicketDetailState copyWith({
@@ -27,6 +29,7 @@ class TicketDetailState extends Equatable {
     List<TicketHistoryEntity>? history,
     String? errorMessage,
     String? successMessage,
+    bool? isRatingSubmitting,
   }) {
     return TicketDetailState(
       isLoading: isLoading ?? this.isLoading,
@@ -35,6 +38,7 @@ class TicketDetailState extends Equatable {
       history: history ?? this.history,
       errorMessage: errorMessage,
       successMessage: successMessage,
+      isRatingSubmitting: isRatingSubmitting ?? this.isRatingSubmitting,
     );
   }
 
@@ -46,5 +50,6 @@ class TicketDetailState extends Equatable {
         history,
         errorMessage,
         successMessage,
+        isRatingSubmitting,
       ];
 }

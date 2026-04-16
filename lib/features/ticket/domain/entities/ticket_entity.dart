@@ -16,6 +16,8 @@ class TicketEntity extends Equatable {
   final String? assignedTo;
   final String? assignedToName;
   final List<String> imageUrls;
+  final int? rating;
+  final String? ratingFeedback;
 
   const TicketEntity({
     required this.id,
@@ -31,6 +33,8 @@ class TicketEntity extends Equatable {
     this.assignedTo,
     this.assignedToName,
     this.imageUrls = const [],
+    this.rating,
+    this.ratingFeedback,
   });
 
   @override
@@ -48,5 +52,7 @@ class TicketEntity extends Equatable {
         assignedTo,
         assignedToName,
         imageUrls,
+        rating,
+        ratingFeedback,
       ];
 }

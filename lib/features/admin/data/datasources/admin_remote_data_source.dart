@@ -5,7 +5,7 @@ import '../../../auth/data/models/user_model.dart';
 abstract class AdminRemoteDataSource {
   Future<List<UserModel>> getUsers();
   Future<void> updateUserRole(String userId, int newRole);
-  Future<AdminReportModel> getAdminReports();
+  Future<AdminReportModel> getAdminReports({DateTime? startDate, DateTime? endDate});
 }
 
 class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
@@ -40,9 +40,15 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   }
 
   @override
-  Future<AdminReportModel> getAdminReports() async {
+  Future<AdminReportModel> getAdminReports({DateTime? startDate, DateTime? endDate}) async {
     try {
-      final response = await supabaseClient.rpc('get_admin_reports');
+      final response = await supabaseClient.rpc(
+        'get_admin_reports',
+        params: {
+          if (startDate != null) 'p_start_date': startDate.toIso8601String(),
+          if (endDate != null) 'p_end_date': endDate.toIso8601String(),
+        },
+      );
       return AdminReportModel.fromJson(response);
     } catch (e) {
       throw Exception('Gagal mengambil laporan admin: $e');

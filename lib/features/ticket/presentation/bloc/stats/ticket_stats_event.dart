@@ -8,18 +8,28 @@ abstract class TicketStatsEvent extends Equatable {
 
 class FetchTicketStatsRequested extends TicketStatsEvent {
   final String? assignedToId;
-  const FetchTicketStatsRequested({this.assignedToId});
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const FetchTicketStatsRequested({
+    this.assignedToId,
+    this.startDate,
+    this.endDate,
+  });
+
   @override
-  List<Object?> get props => [assignedToId];
+  List<Object?> get props => [assignedToId, startDate, endDate];
 }
 
 class FetchStaffUsersRequested extends TicketStatsEvent {}
 
 class FetchAllHistoryRequested extends TicketStatsEvent {
   final String? changedBy;
-  const FetchAllHistoryRequested({this.changedBy});
+  final DateTime? startDate;
+  final DateTime? endDate;
+  const FetchAllHistoryRequested({this.changedBy, this.startDate, this.endDate});
   @override
-  List<Object?> get props => [changedBy];
+  List<Object?> get props => [changedBy, startDate, endDate];
 }
 
 class ResetTicketStatsState extends TicketStatsEvent {}

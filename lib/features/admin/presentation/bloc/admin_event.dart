@@ -25,5 +25,11 @@ class UpdateUserRoleRequested extends AdminEvent {
 }
 
 class FetchAdminReportsRequested extends AdminEvent {
-  const FetchAdminReportsRequested();
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  const FetchAdminReportsRequested({this.startDate, this.endDate});
+
+  @override
+  List<Object?> get props => [startDate, endDate];
 }

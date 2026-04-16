@@ -6,5 +6,5 @@ import '../entities/admin_report_entity.dart';
 abstract class AdminRepository {
   Future<Either<Failure, List<AuthUser>>> getUsers();
   Future<Either<Failure, void>> updateUserRole(String userId, int newRole);
-  Future<Either<Failure, AdminReport>> getAdminReports();
+  Future<Either<Failure, AdminReport>> getAdminReports({DateTime? startDate, DateTime? endDate});
 }

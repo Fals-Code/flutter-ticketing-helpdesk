@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
+import 'package:uts/core/services/report_export_service.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_state.dart';
@@ -20,6 +21,11 @@ class AdminReportsPage extends StatefulWidget {
 }
 
 class _AdminReportsPageState extends State<AdminReportsPage> {
+  DateTime? _startDate;
+  DateTime? _endDate;
+  bool _isExporting = false;
+  final _exportService = ReportExportService();
+
   @override
   void initState() {
     super.initState();
@@ -27,8 +33,63 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   }
 
   void _refreshData() {
-    context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
-    context.read<AdminBloc>().add(const FetchAdminReportsRequested());
+    context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested(
+      startDate: _startDate,
+      endDate: _endDate,
+    ));
+    context.read<AdminBloc>().add(FetchAdminReportsRequested(
+      startDate: _startDate,
+      endDate: _endDate,
+    ));
+  }
+
+  Future<void> _exportReport(AdminReport report, {required bool asPdf}) async {
+    setState(() => _isExporting = true);
+    try {
+      if (asPdf) {
+        await _exportService.exportToPdf(report, startDate: _startDate, endDate: _endDate);
+      } else {
+        await _exportService.exportToCsv(report, startDate: _startDate, endDate: _endDate);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal export: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isExporting = false);
+    }
+  }
+
+  Future<void> _selectDateRange() async {
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
+      builder: (context, child) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark
+                ? const ColorScheme.dark(primary: AppColors.primary, onPrimary: Colors.white, surface: AppColors.surfaceDark, onSurface: Colors.white)
+                : const ColorScheme.light(primary: AppColors.primary, onPrimary: Colors.white, surface: Colors.white, onSurface: Colors.black87),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
+      _refreshData();
+    }
   }
 
   @override
@@ -39,6 +100,30 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       appBar: AppBar(
         title: const Text('Laporan & Analitik'),
         actions: [
+          BlocBuilder<AdminBloc, AdminState>(
+            builder: (context, adminState) {
+              final report = adminState.report;
+              if (_isExporting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+                );
+              }
+              return PopupMenuButton<String>(
+                icon: const Icon(Icons.download_rounded),
+                tooltip: 'Export Laporan',
+                enabled: report != null,
+                onSelected: (value) {
+                  if (report == null) return;
+                  _exportReport(report, asPdf: value == 'pdf');
+                },
+                itemBuilder: (_) => const [
+                  PopupMenuItem(value: 'pdf', child: Row(children: [Icon(Icons.picture_as_pdf_rounded, color: Colors.red, size: 20), SizedBox(width: 10), Text('Export PDF')])),
+                  PopupMenuItem(value: 'csv', child: Row(children: [Icon(Icons.table_chart_rounded, color: Colors.green, size: 20), SizedBox(width: 10), Text('Export CSV')])),
+                ],
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded),
             onPressed: _refreshData,
@@ -60,6 +145,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildDateFilterHeader(isDark),
+                      const SizedBox(height: 24),
                       _buildSectionTitle('Ringkasan Tiket', isDark),
                       const SizedBox(height: 16),
                       _buildStatsGrid(statsState),
@@ -235,6 +322,56 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                   ],
                 ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateFilterHeader(bool isDark) {
+    final hasFilter = _startDate != null || _endDate != null;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: hasFilter ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? AppColors.surfaceDark : Colors.grey.shade100),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: hasFilter ? AppColors.primary : Colors.transparent),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.calendar_today_rounded, size: 20, color: hasFilter ? AppColors.primary : (isDark ? Colors.white70 : Colors.black54)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Rentang Waktu',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: isDark ? Colors.white70 : Colors.black54),
+                ),
+                Text(
+                  hasFilter 
+                      ? '${_startDate!.day}/${_startDate!.month}/${_startDate!.year} - ${_endDate!.day}/${_endDate!.month}/${_endDate!.year}'
+                      : 'Semua Waktu',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                ),
+              ],
+            ),
+          ),
+          if (hasFilter)
+            IconButton(
+              icon: const Icon(Icons.close_rounded, size: 20),
+              onPressed: () {
+                setState(() {
+                  _startDate = null;
+                  _endDate = null;
+                });
+                _refreshData();
+              },
+            ),
+          TextButton(
+            onPressed: _selectDateRange,
+            child: Text(hasFilter ? 'Ubah' : 'Pilih'),
           ),
         ],
       ),

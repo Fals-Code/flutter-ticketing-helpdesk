@@ -343,7 +343,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
                     builder: (context, statsState) {
                       return DropdownButtonFormField<String>(
-                        value: ticket.assignedTo,
+                        initialValue: ticket.assignedTo,
                         isExpanded: true,
                         hint: const Text('Pilih Teknisi', style: TextStyle(fontSize: 14)),
                         decoration: InputDecoration(

@@ -5,12 +5,15 @@ import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:uts/features/ticket/data/models/ticket_model.dart';
 
 class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final GetTicketsUseCase getTicketsUseCase;
   final GetAllTicketsUseCase getAllTicketsUseCase;
   final WatchTicketsUseCase watchTicketsUseCase;
   final CreateTicketUseCase createTicketUseCase;
+  final TicketLocalDataSource localDataSource;
   StreamSubscription? _ticketSubscription;
 
   TicketListBloc({
@@ -18,12 +21,14 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     required this.getAllTicketsUseCase,
     required this.watchTicketsUseCase,
     required this.createTicketUseCase,
+    required this.localDataSource,
   }) : super(const TicketListState()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
     on<SearchTicketsRequested>(_onSearchQueryChanged);
     on<FilterStatusChanged>(_onFilterStatusChanged);
     on<FilterCategoryChanged>(_onFilterCategoryChanged);
+    on<FilterDateRangeChanged>(_onFilterDateRangeChanged);
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
     on<ResetTicketListState>(_onResetState);
@@ -85,17 +90,40 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         status: state.statusFilter == TicketStatusFilter.all 
             ? null 
             : _mapStatusFilter(state.statusFilter),
+        startDate: state.startDate,
+        endDate: state.endDate,
       ),
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) async {
+        // Fallback to cache on error if fetching the first page
+        if (event.page == 0) {
+          try {
+            final cached = await localDataSource.getCachedTickets();
+            emit(state.copyWith(
+              isLoading: false,
+              tickets: cached.map((m) => m.toEntity()).toList(),
+              isOffline: true,
+            ));
+            return;
+          } catch (_) {
+             // If cache is empty, fall through and emit the error message
+          }
+        }
+        emit(state.copyWith(isLoading: false, errorMessage: failure.message));
+      },
       (newTickets) {
+        if (event.page == 0) {
+          // Cache the first page tickets
+          localDataSource.cacheTickets(newTickets.map((t) => TicketModel.fromEntity(t)).toList());
+        }
         final allTickets = event.page == 0 ? newTickets : [...state.tickets, ...newTickets];
         emit(state.copyWith(
           isLoading: false,
           tickets: allTickets,
           isLastPage: newTickets.length < event.limit,
+          isOffline: false,
         ));
       },
     );
@@ -119,6 +147,8 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         searchQuery: state.searchQuery,
         category: state.categoryFilter,
         assignedToId: event.assignedToId,
+        startDate: state.startDate,
+        endDate: state.endDate,
       ),
     );
 
@@ -162,6 +192,15 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     add(const FetchAllTicketsRequested(page: 0));
   }
 
+  Future<void> _onFilterDateRangeChanged(
+    FilterDateRangeChanged event,
+    Emitter<TicketListState> emit,
+  ) async {
+    emit(state.copyWith(startDate: event.startDate, endDate: event.endDate));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
+  }
+
   void _onResetState(ResetTicketListState event, Emitter<TicketListState> emit) {
     _ticketSubscription?.cancel();
     emit(const TicketListState());
@@ -191,6 +230,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       final query = state.searchQuery.toLowerCase();
       if (query.isNotEmpty) {
         if (!ticket.title.toLowerCase().contains(query) && !ticket.description.toLowerCase().contains(query)) return false;
+      }
+      if (state.startDate != null) {
+        if (ticket.createdAt.isBefore(state.startDate!)) return false;
+      }
+      if (state.endDate != null) {
+        if (ticket.createdAt.isAfter(state.endDate!)) return false;
       }
       return true;
     }).toList();

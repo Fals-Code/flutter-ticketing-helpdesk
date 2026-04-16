@@ -13,6 +13,11 @@ abstract class AppDimensions {
   static const double space5XL = 48.0;
   static const double space6XL = 64.0;
 
+  static const double paddingL = spaceLG;
+  static const double marginXS = spaceXS;
+  static const double marginM = spaceMD;
+  static const double marginL = spaceLG;
+
   // ── Border Radius ───────────────────────────────────────────────────────────
   static const double radiusXS = 4.0;
   static const double radiusSM = 8.0;
@@ -20,6 +25,8 @@ abstract class AppDimensions {
   static const double radiusLG = 16.0;
   static const double radiusXL = 20.0;
   static const double radiusXXL = 24.0;
+  static const double radiusL = radiusLG;
+  static const double radiusM = radiusMD;
   static const double radiusFull = 999.0;
 
   // ── Icon sizes ───────────────────────────────────────────────────────────────

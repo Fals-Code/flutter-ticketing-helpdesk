@@ -59,4 +59,19 @@ class CommentStreamUpdated extends TicketDetailEvent {
   List<Object?> get props => [comments];
 }
 
+class SubmitRatingRequested extends TicketDetailEvent {
+  final String ticketId;
+  final int rating;
+  final String feedback;
+
+  const SubmitRatingRequested({
+    required this.ticketId,
+    required this.rating,
+    required this.feedback,
+  });
+
+  @override
+  List<Object?> get props => [ticketId, rating, feedback];
+}
+
 class ResetTicketDetailState extends TicketDetailEvent {}

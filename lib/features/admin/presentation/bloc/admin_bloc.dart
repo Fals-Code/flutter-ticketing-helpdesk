@@ -54,7 +54,10 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     Emitter<AdminState> emit,
   ) async {
     emit(state.copyWith(status: AdminStatus.loading));
-    final result = await getAdminReportsUseCase(const NoParams());
+    final result = await getAdminReportsUseCase(GetReportParams(
+      startDate: event.startDate,
+      endDate: event.endDate,
+    ));
     result.fold(
       (failure) => emit(state.copyWith(status: AdminStatus.error, errorMessage: failure.message)),
       (report) => emit(state.copyWith(status: AdminStatus.success, report: report)),

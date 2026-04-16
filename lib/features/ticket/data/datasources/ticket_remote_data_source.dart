@@ -8,8 +8,8 @@ import '../models/ticket_history_model.dart';
 import 'package:uts/core/constants/enums.dart';
 
 abstract class TicketRemoteDataSource {
-  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status});
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId});
+  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status, DateTime? startDate, DateTime? endDate});
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId, DateTime? startDate, DateTime? endDate});
   Future<List<Map<String, dynamic>>> getStaffUsers();
   Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths);
   Future<TicketModel> getTicketDetail(String ticketId);
@@ -17,8 +17,9 @@ abstract class TicketRemoteDataSource {
   Future<CommentModel> addComment(CommentModel comment);
   Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
+  Future<TicketModel> submitRating(String ticketId, int rating, String feedback);
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
-  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy});
+  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate});
   Future<Map<String, int>> getTicketStats({String? assignedToId});
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId});
   Stream<List<CommentModel>> watchTicketComments(String ticketId);
@@ -66,7 +67,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status}) async {
+  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status, DateTime? startDate, DateTime? endDate}) async {
     final from = page * limit;
     final to = from + limit - 1;
 
@@ -88,6 +89,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     if (searchQuery != null && searchQuery.isNotEmpty) {
       query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
     }
+    if (startDate != null) {
+      query = query.gte('created_at', startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query = query.lte('created_at', endDate.toIso8601String());
+    }
 
     final response = await query
         .order('created_at', ascending: false)
@@ -104,7 +111,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId}) async {
+  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId, DateTime? startDate, DateTime? endDate}) async {
     final from = page * limit;
     final to = from + limit - 1;
 
@@ -128,6 +135,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }
     if (searchQuery != null && searchQuery.isNotEmpty) {
       query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+    }
+    if (startDate != null) {
+      query = query.gte('created_at', startDate.toIso8601String());
+    }
+    if (endDate != null) {
+      query = query.lte('created_at', endDate.toIso8601String());
     }
 
     final response = await query
@@ -270,6 +283,37 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
+  Future<TicketModel> submitRating(String ticketId, int rating, String feedback) async {
+    try {
+      final response = await supabaseClient
+          .from('tickets')
+          .update({
+            'rating': rating,
+            'feedback': feedback,
+            'updated_at': DateTime.now().toIso8601String(),
+          })
+          .eq('id', ticketId)
+          .select('*, profiles:user_id(*), technician:assigned_to(*)')
+          .single();
+      
+      final updatedTicket = TicketModel.fromJson(response);
+
+      // Log to history
+      await _logHistory(
+        ticketId: ticketId,
+        newStatus: 'closed', // Rating usually happens at the end/closed state
+        changedBy: supabaseClient.auth.currentUser!.id,
+      );
+
+      return updatedTicket;
+    } on sup.PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message}');
+    } catch (e) {
+      throw Exception('Failed to submit rating: $e');
+    }
+  }
+
+  @override
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId) async {
     try {
       final response = await supabaseClient
@@ -285,7 +329,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy}) async {
+  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate}) async {
     try {
       var query = supabaseClient
           .from('ticket_history')
@@ -293,6 +337,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       
       if (changedBy != null) {
         query = query.eq('changed_by', changedBy);
+      }
+      if (startDate != null) {
+        query = query.gte('created_at', startDate.toIso8601String());
+      }
+      if (endDate != null) {
+        query = query.lte('created_at', endDate.toIso8601String());
       }
 
       final response = await query

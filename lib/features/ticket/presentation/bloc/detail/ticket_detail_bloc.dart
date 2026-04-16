@@ -15,6 +15,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final AssignTicketUseCase assignTicketUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
   final WatchTicketCommentsUseCase watchTicketCommentsUseCase;
+  final SubmitRatingUseCase submitRatingUseCase;
   StreamSubscription? _commentSubscription;
 
   TicketDetailBloc({
@@ -25,11 +26,13 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     required this.assignTicketUseCase,
     required this.getTicketHistoryUseCase,
     required this.watchTicketCommentsUseCase,
+    required this.submitRatingUseCase,
   }) : super(const TicketDetailState()) {
     on<FetchTicketDetailRequested>(_onFetchDetail);
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
     on<AssignTicketRequested>(_onAssignTicket);
     on<AddCommentRequested>(_onAddComment);
+    on<SubmitRatingRequested>(_onSubmitRating);
     on<FetchTicketActivitiesRequested>(_onFetchActivities);
     on<StartTicketCommentsSubscription>(_onStartCommentSubscription);
     on<CommentStreamUpdated>(_onCommentStreamUpdated);
@@ -68,6 +71,23 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
       (comment) => emit(state.copyWith(successMessage: 'Tanggapan berhasil dikirim')),
+    );
+  }
+
+  Future<void> _onSubmitRating(SubmitRatingRequested event, Emitter<TicketDetailState> emit) async {
+    emit(state.copyWith(isRatingSubmitting: true));
+    final result = await submitRatingUseCase(SubmitRatingParams(
+      ticketId: event.ticketId,
+      rating: event.rating,
+      feedback: event.feedback,
+    ));
+    result.fold(
+      (failure) => emit(state.copyWith(isRatingSubmitting: false, errorMessage: failure.message)),
+      (ticket) => emit(state.copyWith(
+        isRatingSubmitting: false,
+        ticket: ticket,
+        successMessage: 'Terima kasih atas penilaian Anda!',
+      )),
     );
   }
 

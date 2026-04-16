@@ -39,8 +39,12 @@ class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
   }
 
   Future<void> _onFetchAllHistory(FetchAllHistoryRequested event, Emitter<TicketStatsState> emit) async {
-    emit(state.copyWith(isLoading: true));
-    final result = await getAllTicketHistoryUseCase(event.changedBy);
+    emit(state.copyWith(isLoading: true, startDate: event.startDate, endDate: event.endDate));
+    final result = await getAllTicketHistoryUseCase(GetHistoryParams(
+      changedBy: event.changedBy,
+      startDate: event.startDate,
+      endDate: event.endDate,
+    ));
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (history) => emit(state.copyWith(isLoading: false, history: history)),

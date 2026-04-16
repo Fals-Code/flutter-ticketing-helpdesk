@@ -14,6 +14,9 @@ class TicketListState extends Equatable {
   final String searchQuery;
   final TicketStatusFilter statusFilter;
   final String? categoryFilter;
+  final DateTime? startDate;
+  final DateTime? endDate;
+  final bool isOffline;
 
   const TicketListState({
     this.isLoading = false,
@@ -26,6 +29,9 @@ class TicketListState extends Equatable {
     this.searchQuery = '',
     this.statusFilter = TicketStatusFilter.all,
     this.categoryFilter,
+    this.startDate,
+    this.endDate,
+    this.isOffline = false,
   });
 
   TicketListState copyWith({
@@ -39,6 +45,9 @@ class TicketListState extends Equatable {
     String? searchQuery,
     TicketStatusFilter? statusFilter,
     String? categoryFilter,
+    DateTime? startDate,
+    DateTime? endDate,
+    bool? isOffline,
   }) {
     return TicketListState(
       isLoading: isLoading ?? this.isLoading,
@@ -51,6 +60,9 @@ class TicketListState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       statusFilter: statusFilter ?? this.statusFilter,
       categoryFilter: categoryFilter ?? this.categoryFilter,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      isOffline: isOffline ?? this.isOffline,
     );
   }
 
@@ -66,5 +78,8 @@ class TicketListState extends Equatable {
         searchQuery,
         statusFilter,
         categoryFilter,
+        startDate,
+        endDate,
+        isOffline,
       ];
 }

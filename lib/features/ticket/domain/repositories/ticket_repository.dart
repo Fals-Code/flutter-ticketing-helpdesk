@@ -34,6 +34,8 @@ abstract class TicketRepository {
     String? searchQuery,
     String? category,
     String? status,
+    DateTime? startDate,
+    DateTime? endDate,
   });
 
   /// Mengambil SEMUA daftar tiket di sistem (Paginated - untuk Admin/Staff).
@@ -44,6 +46,8 @@ abstract class TicketRepository {
     String? searchQuery,
     String? category,
     String? assignedToId,
+    DateTime? startDate,
+    DateTime? endDate,
   });
 
   /// Mengambil daftar staff (Technician/Admin) untuk penugasan.
@@ -74,6 +78,13 @@ abstract class TicketRepository {
     required String technicianId,
   });
 
+  /// Memberikan rating dan feedback untuk tiket yang sudah resolved (User only).
+  Future<Either<Failure, TicketEntity>> submitRating({
+    required String ticketId,
+    required int rating,
+    required String feedback,
+  });
+
   /// Mengambil daftar komentar/reply untuk tiket tertentu.
   Future<Either<Failure, List<CommentEntity>>> getTicketComments(String ticketId);
 
@@ -87,7 +98,11 @@ abstract class TicketRepository {
   Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId);
 
   /// Mengambil SEMUA riwayat perjalanan tiket di sistem (Admin/Staff only).
-  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy});
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({
+    String? changedBy,
+    DateTime? startDate,
+    DateTime? endDate,
+  });
 
   /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
   Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId});

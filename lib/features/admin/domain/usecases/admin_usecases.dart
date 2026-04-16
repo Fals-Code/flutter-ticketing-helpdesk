@@ -25,14 +25,24 @@ class UpdateUserRoleUseCase implements UseCase<Either<Failure, void>, UpdateRole
   }
 }
 
-class GetAdminReportsUseCase implements UseCase<Either<Failure, AdminReport>, NoParams> {
+class GetAdminReportsUseCase implements UseCase<Either<Failure, AdminReport>, GetReportParams> {
   final AdminRepository repository;
   GetAdminReportsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, AdminReport>> call(NoParams params) async {
-    return await repository.getAdminReports();
+  Future<Either<Failure, AdminReport>> call(GetReportParams params) async {
+    return await repository.getAdminReports(
+      startDate: params.startDate,
+      endDate: params.endDate,
+    );
   }
+}
+
+class GetReportParams {
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  GetReportParams({this.startDate, this.endDate});
 }
 
 class UpdateRoleParams {

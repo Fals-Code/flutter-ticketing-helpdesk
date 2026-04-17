@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_strings.dart';
@@ -8,6 +7,9 @@ import 'package:uts/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/features/notification/domain/entities/notification_entity.dart';
+import 'package:uts/core/utils/date_helper.dart';
+import 'package:uts/core/utils/haptic_helper.dart';
+import 'package:uts/core/services/toast_service.dart';
 
 class NotificationTab extends StatelessWidget {
   const NotificationTab({super.key});
@@ -16,11 +18,18 @@ class NotificationTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocBuilder<NotificationBloc, NotificationState>(
+    return BlocConsumer<NotificationBloc, NotificationState>(
+      listener: (context, state) {
+        if (state.errorMessage != null) {
+          ToastService().show(context, message: state.errorMessage!, type: ToastType.error);
+        }
+      },
       builder: (context, state) {
+        final unreadCount = state.notifications.where((n) => !n.isRead).length;
+
         return Scaffold(
           backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-          appBar: _buildAppBar(context, state, isDark),
+          appBar: _buildAppBar(context, state, unreadCount, isDark),
           body: state.isLoading && state.notifications.isEmpty
               ? _buildSkeleton(isDark)
               : state.notifications.isEmpty
@@ -28,8 +37,11 @@ class NotificationTab extends StatelessWidget {
                   : _buildNotificationList(context, state, isDark),
           floatingActionButton: state.selectionMode && state.selectedIds.isNotEmpty
               ? FloatingActionButton.extended(
-                  onPressed: () => _showDeleteConfirm(context, selected: true),
-                  label: Text('Hapus (${state.selectedIds.length})', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  onPressed: () => _handleBatchDelete(context, state),
+                  label: Text(
+                    'Hapus ${state.selectedIds.length} Notifikasi',
+                    style: GoogleFonts.inter(fontWeight: FontWeight.w700),
+                  ),
                   icon: const Icon(Icons.delete_sweep_rounded),
                   backgroundColor: AppColors.danger,
                 )
@@ -39,20 +51,45 @@ class NotificationTab extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context, NotificationState state, bool isDark) {
+  PreferredSizeWidget _buildAppBar(BuildContext context, NotificationState state, int unreadCount, bool isDark) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
-      leading: state.selectionMode
-          ? IconButton(
-              icon: const Icon(Icons.close_rounded),
-              onPressed: () => context.read<NotificationBloc>().add(ToggleSelectionModeRequested()),
-            )
-          : null,
-      title: Text(
-        state.selectionMode ? '${state.selectedIds.length} Terpilih' : AppStrings.navNotifications,
-        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+      leading: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 300),
+        child: state.selectionMode
+            ? IconButton(
+                key: const ValueKey('close'),
+                icon: const Icon(Icons.close_rounded),
+                onPressed: () {
+                  HapticHelper.light();
+                  context.read<NotificationBloc>().add(ToggleSelectionModeRequested());
+                },
+              )
+            : null,
+      ),
+      title: Row(
+        children: [
+          Text(
+            state.selectionMode ? '${state.selectedIds.length} Terpilih' : AppStrings.navNotifications,
+            style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+          ),
+          if (!state.selectionMode && unreadCount > 0) ...[
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppColors.primary,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Text(
+                unreadCount.toString(),
+                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ],
       ),
       actions: [
         if (state.notifications.isNotEmpty) _buildPopupMenu(context, state),
@@ -61,71 +98,62 @@ class NotificationTab extends StatelessWidget {
     );
   }
 
-  Widget _buildNotificationList(BuildContext context, NotificationState state, bool isDark) {
-    final grouped = _groupNotifications(state.notifications);
+  void _handleBatchDelete(BuildContext context, NotificationState state) {
+    HapticHelper.heavy();
+    context.read<NotificationBloc>().add(DeleteSelectedNotificationsRequested());
+    ToastService().show(context, message: '${state.selectedIds.length} notifikasi dihapus', type: ToastType.success);
+  }
 
+  Widget _buildNotificationList(BuildContext context, NotificationState state, bool isDark) {
     return RefreshIndicator(
       onRefresh: () async => context.read<NotificationBloc>().add(FetchNotificationsRequested()),
       child: ListView.builder(
         physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
-        itemCount: grouped.length,
+        itemCount: state.notifications.length,
         itemBuilder: (context, index) {
-          final entry = grouped.entries.elementAt(index);
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 4, top: 24, bottom: 12),
-                child: Text(
-                  entry.key.toUpperCase(),
-                  style: GoogleFonts.inter(
-                    fontSize: 11,
-                    fontWeight: FontWeight.w800,
-                    color: isDark ? Colors.white24 : Colors.black26,
-                    letterSpacing: 1.5,
+          final notification = state.notifications[index];
+          final isSelected = state.selectedIds.contains(notification.id);
+          
+          return Dismissible(
+            key: Key('notif_${notification.id}'),
+            direction: DismissDirection.endToStart,
+            background: Container(
+              alignment: Alignment.centerRight,
+              padding: const EdgeInsets.only(right: 20),
+              decoration: BoxDecoration(
+                color: AppColors.danger,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(Icons.delete_outline_rounded, color: Colors.white),
+            ),
+            onDismissed: (direction) {
+              HapticHelper.medium();
+              context.read<NotificationBloc>().add(DeleteNotificationRequested(notification.id));
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: const Text('Notifikasi dihapus'),
+                  duration: const Duration(seconds: 5),
+                  action: SnackBarAction(
+                    label: 'Urungkan',
+                    textColor: Colors.white,
+                    onPressed: () {
+                      // Logic untuk undo bisa ditambahkan di BLoC jika didukung
+                    },
                   ),
                 ),
-              ),
-              ...entry.value.map((notification) {
-                final isSelected = state.selectedIds.contains(notification.id);
-                return _NotificationCard(
-                  notification: notification,
-                  isDark: isDark,
-                  isSelectionMode: state.selectionMode,
-                  isSelected: isSelected,
-                );
-              }),
-            ],
+              );
+            },
+            child: _NotificationCard(
+              notification: notification,
+              isDark: isDark,
+              isSelectionMode: state.selectionMode,
+              isSelected: isSelected,
+            ),
           );
         },
       ),
     );
-  }
-
-  Map<String, List<NotificationEntity>> _groupNotifications(List<NotificationEntity> notifications) {
-    final Map<String, List<NotificationEntity>> groups = {};
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final yesterday = today.subtract(const Duration(days: 1));
-
-    for (var n in notifications) {
-      final date = DateTime(n.createdAt.year, n.createdAt.month, n.createdAt.day);
-      String key;
-      if (date == today) {
-        key = 'Hari Ini';
-      } else if (date == yesterday) {
-        key = 'Kemarin';
-      } else {
-        key = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
-      }
-
-      if (!groups.containsKey(key)) {
-        groups[key] = [];
-      }
-      groups[key]!.add(n);
-    }
-    return groups;
   }
 
   Widget _buildEmptyState(bool isDark) {
@@ -134,16 +162,16 @@ class NotificationTab extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(40),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.notifications_none_rounded, size: 48, color: AppColors.primary),
+            child: Icon(Icons.notifications_none_rounded, size: 80, color: AppColors.primary.withValues(alpha: 0.4)),
           ),
           const SizedBox(height: 24),
           Text(
-            'Kosong',
+            'Semua Sudah Terbaca!',
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w800,
@@ -152,7 +180,7 @@ class NotificationTab extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Belum ada notifikasi baru untuk Anda.',
+            'Ketuk untuk menyegarkan jika ada yang tertinggal.',
             style: GoogleFonts.inter(
               fontSize: 14,
               color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
@@ -221,42 +249,20 @@ class NotificationTab extends StatelessWidget {
 
   void _handleMenuAction(BuildContext context, String value, NotificationState state) {
     final bloc = context.read<NotificationBloc>();
+    HapticHelper.light();
     switch (value) {
-      case 'read_all': bloc.add(MarkAllReadRequested()); break;
+      case 'read_all': 
+        bloc.add(MarkAllReadRequested()); 
+        ToastService().show(context, message: 'Semua notifikasi dibaca', type: ToastType.success);
+        break;
       case 'pilih': bloc.add(ToggleSelectionModeRequested()); break;
       case 'select_all': bloc.add(SelectAllNotificationsRequested()); break;
-      case 'delete_all': _showDeleteConfirm(context, selected: false); break;
+      case 'delete_all': 
+        HapticHelper.heavy();
+        bloc.add(DeleteAllNotificationsRequested());
+        ToastService().show(context, message: 'Semua notifikasi dihapus', type: ToastType.success);
+        break;
     }
-  }
-
-  void _showDeleteConfirm(BuildContext context, {required bool selected}) {
-    showDialog(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Text('Hapus Notifikasi', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
-        content: Text(
-          selected 
-              ? 'Yakin ingin menghapus notifikasi yang dipilih?' 
-              : 'Yakin ingin menghapus seluruh riwayat notifikasi?',
-          style: GoogleFonts.inter(fontSize: 14),
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.inter(color: Colors.grey))),
-          TextButton(
-            onPressed: () {
-              if (selected) {
-                context.read<NotificationBloc>().add(DeleteSelectedNotificationsRequested());
-              } else {
-                context.read<NotificationBloc>().add(DeleteAllNotificationsRequested());
-              }
-              Navigator.pop(ctx);
-            },
-            child: Text('Hapus', style: GoogleFonts.inter(color: AppColors.danger, fontWeight: FontWeight.bold)),
-          ),
-        ],
-      ),
-    );
   }
 }
 
@@ -280,11 +286,13 @@ class _NotificationCard extends StatelessWidget {
     return GestureDetector(
       onLongPress: () {
         if (!isSelectionMode) {
+          HapticHelper.medium();
           context.read<NotificationBloc>().add(ToggleSelectionModeRequested());
           context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id));
         }
       },
       onTap: () {
+        HapticHelper.light();
         if (isSelectionMode) {
           context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id));
         } else {
@@ -294,102 +302,115 @@ class _NotificationCard extends StatelessWidget {
           }
         }
       },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : unread 
-                  ? AppColors.primary.withValues(alpha: 0.03) 
-                  : (isDark ? AppColors.surfaceDark : Colors.white),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: isSelected
-                ? AppColors.primary
-                : unread 
-                    ? AppColors.primary.withValues(alpha: 0.2) 
+      child: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            margin: const EdgeInsets.only(bottom: 12),
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.08)
+                  : unread 
+                      ? AppColors.primary.withValues(alpha: 0.03) 
+                      : (isDark ? AppColors.surfaceDark : Colors.white),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isSelected
+                    ? AppColors.primary
                     : (isDark ? AppColors.borderDark : AppColors.borderLight),
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (isSelectionMode) ...[
-              SizedBox(
-                width: 24, height: 24,
-                child: Checkbox(
-                  value: isSelected,
-                  onChanged: (_) => context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  activeColor: AppColors.primary,
-                ),
+                width: isSelected ? 1.5 : 1,
               ),
-              const SizedBox(width: 14),
-            ],
-            Container(
-              width: 40, height: 40,
-              decoration: BoxDecoration(
-                color: unread ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Icon(
-                unread ? Icons.notifications_active_rounded : Icons.notifications_rounded,
-                size: 20,
-                color: unread ? AppColors.primary : (isDark ? Colors.white24 : Colors.black26),
-              ),
+              boxShadow: isSelected ? [
+                BoxShadow(color: AppColors.primary.withValues(alpha: 0.1), blurRadius: 10, offset: const Offset(0, 4))
+              ] : [],
             ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
+            child: IntrinsicHeight(
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    notification.title,
-                    style: GoogleFonts.plusJakartaSans(
-                      fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
-                      fontSize: 15,
-                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    notification.message,
-                    style: GoogleFonts.inter(
-                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                      fontSize: 13,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Icon(Icons.access_time_rounded, size: 12, color: isDark ? Colors.white24 : Colors.black26),
-                      const SizedBox(width: 4),
-                      Text(
-                        DateFormat('HH:mm').format(notification.createdAt),
-                        style: GoogleFonts.inter(
-                          color: isDark ? Colors.white24 : Colors.black26,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  if (unread)
+                    Container(
+                      width: 3,
+                      margin: const EdgeInsets.only(right: 12),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary,
+                        borderRadius: BorderRadius.circular(2),
                       ),
-                    ],
+                    ),
+                  
+                  AnimatedContainer(
+                    duration: const Duration(milliseconds: 300),
+                    width: isSelectionMode ? 32 : 0,
+                    child: isSelectionMode 
+                      ? Checkbox(
+                          value: isSelected,
+                          onChanged: (_) {
+                            HapticHelper.selection();
+                            context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id));
+                          },
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                          activeColor: AppColors.primary,
+                        )
+                      : const SizedBox.shrink(),
+                  ),
+                  if (isSelectionMode) const SizedBox(width: 12),
+
+                  Container(
+                    width: 36, height: 36,
+                    decoration: BoxDecoration(
+                      color: unread ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      unread ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                      size: 18,
+                      color: unread ? AppColors.primary : (isDark ? Colors.white24 : Colors.black26),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification.title,
+                          style: GoogleFonts.plusJakartaSans(
+                            fontWeight: unread ? FontWeight.w800 : FontWeight.w600,
+                            fontSize: 14,
+                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.message,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: GoogleFonts.inter(
+                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            fontSize: 13,
+                            height: 1.4,
+                            fontWeight: unread ? FontWeight.w500 : FontWeight.w400,
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text(
+                          DateHelper.formatRelative(notification.createdAt),
+                          style: GoogleFonts.inter(
+                            color: isDark ? Colors.white24 : Colors.black26,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
-            if (unread && !isSelectionMode)
-              Container(
-                margin: const EdgeInsets.only(top: 6),
-                width: 8, height: 8,
-                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-              ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -52,6 +52,13 @@ class DeleteSelectedNotificationsRequested extends NotificationEvent {}
 
 class DeleteAllNotificationsRequested extends NotificationEvent {}
 
+class DeleteNotificationRequested extends NotificationEvent {
+  final String notificationId;
+  const DeleteNotificationRequested(this.notificationId);
+  @override
+  List<Object?> get props => [notificationId];
+}
+
 // State
 class NotificationState extends Equatable {
   final bool isLoading;
@@ -127,6 +134,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<SelectAllNotificationsRequested>(_onSelectAll);
     on<DeleteSelectedNotificationsRequested>(_onDeleteSelected);
     on<DeleteAllNotificationsRequested>(_onDeleteAll);
+    on<DeleteNotificationRequested>(_onDeleteSingle);
   }
 
   void _onStartSubscription(
@@ -290,6 +298,21 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           selectionMode: false,
           selectedIds: {},
           successMessage: 'Semua notifikasi berhasil dihapus',
+        ));
+        add(FetchNotificationsRequested());
+      },
+    );
+  }
+
+  Future<void> _onDeleteSingle(DeleteNotificationRequested event, Emitter<NotificationState> emit) async {
+    emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
+    final result = await deleteNotification(event.notificationId);
+    result.fold(
+      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (_) {
+        emit(state.copyWith(
+          isLoading: false,
+          successMessage: 'Notifikasi berhasil dihapus',
         ));
         add(FetchNotificationsRequested());
       },

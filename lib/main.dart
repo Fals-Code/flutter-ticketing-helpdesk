@@ -22,6 +22,8 @@ import 'package:uts/shared/theme/app_theme.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 import 'package:uts/core/storage/secure_local_storage.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:uts/features/admin/presentation/bloc/settings/app_settings_bloc.dart';
+import 'package:uts/features/admin/presentation/bloc/settings/app_settings_event.dart';
 import 'package:uts/core/services/local_notification_service.dart';
 import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/shared/widgets/connectivity_banner_widget.dart';
@@ -121,6 +123,10 @@ class ETicketingApp extends StatelessWidget {
         // AdminBloc untuk manajemen sistem
         BlocProvider<AdminBloc>(
           create: (_) => sl<AdminBloc>(),
+        ),
+        // AppSettingsBloc untuk konfigurasi global
+        BlocProvider<AppSettingsBloc>(
+          create: (_) => sl<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
         ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(

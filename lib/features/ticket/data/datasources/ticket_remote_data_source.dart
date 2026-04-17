@@ -350,7 +350,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId}) {
-    var query = supabaseClient.from('tickets').stream(primaryKey: ['id']);
+    dynamic query = supabaseClient.from('tickets').stream(primaryKey: ['id']);
 
     if (userId != null) {
       query = query.eq('user_id', userId);

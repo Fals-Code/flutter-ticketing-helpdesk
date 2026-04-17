@@ -3,6 +3,14 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
 import 'package:uts/core/services/toast_service.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import '../../presentation/bloc/settings/app_settings_bloc.dart';
+import '../../presentation/bloc/settings/app_settings_event.dart';
+import '../../presentation/bloc/settings/app_settings_state.dart';
+import '../../domain/entities/app_settings_entity.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:get_it/get_it.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -12,107 +20,150 @@ class AdminSettingsPage extends StatefulWidget {
 }
 
 class _AdminSettingsPageState extends State<AdminSettingsPage> {
-  bool _maintenanceMode = false;
-  bool _autoAssign = true;
-  double _slaHours = 4.0;
-  String _defaultPriority = 'Medium';
+  // Temporary local state for editing before save
+  bool? _maintenanceMode;
+  bool? _autoAssign;
+  double? _slaHours;
+  String? _defaultPriority;
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text('Pengaturan Sistem', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18)),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 8),
-            child: TextButton(
-              onPressed: () {
-                HapticHelper.success();
-                ToastService().show(context, message: 'Pengaturan berhasil disimpan', type: ToastType.success);
-              },
-              child: Text('SIMPAN', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary)),
-            ),
-          ),
-        ],
-      ),
-      body: ListView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
-        children: [
-          _buildHeroSection(isDark),
-          const SizedBox(height: 32),
+    return BlocProvider(
+      create: (context) => GetIt.I<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
+      child: BlocConsumer<AppSettingsBloc, AppSettingsState>(
+        listener: (context, state) {
+          if (state.errorMessage != null) {
+            ToastService().show(context, message: state.errorMessage!, type: ToastType.error);
+          }
+          if (state.successMessage != null) {
+            ToastService().show(context, message: state.successMessage!, type: ToastType.success);
+            // Refresh stats because SLA might have changed
+            context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
+          }
+        },
+        builder: (context, state) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
           
-          _buildSectionHeader('OPERASIONAL SISTEM'),
-          _buildSettingsGroup(isDark, [
-            _buildToggleTile(
-              icon: Icons.construction_rounded,
-              title: 'Mode Pemeliharaan',
-              subtitle: 'Hanya Admin yang dapat mengakses',
-              value: _maintenanceMode,
-              onChanged: (v) { HapticHelper.medium(); setState(() => _maintenanceMode = v); },
-              color: Colors.orange,
-              isDark: isDark,
-            ),
-            _buildToggleTile(
-              icon: Icons.auto_awesome_rounded,
-              title: 'Penugasan Otomatis',
-              subtitle: 'Distribusi tugas teknisi cerdas',
-              value: _autoAssign,
-              onChanged: (v) { HapticHelper.medium(); setState(() => _autoAssign = v); },
-              color: Colors.purple,
-              isDark: isDark,
-            ),
-          ]),
+          // Sync local state if it's first load or state updated successfully
+          if (state.status == AppSettingsStatus.success) {
+            _maintenanceMode ??= state.settings.maintenanceMode;
+            _autoAssign ??= state.settings.autoAssign;
+            _slaHours ??= state.settings.slaHours.toDouble();
+            _defaultPriority ??= state.settings.defaultPriority;
+          }
 
-          const SizedBox(height: 32),
-          _buildSectionHeader('KONFIGURASI TIKET'),
-          _buildSettingsGroup(isDark, [
-            _buildSliderTile(
-              icon: Icons.timer_outlined,
-              title: 'Target SLA Response',
-              subtitle: 'Batas respon awal bantuan (jam)',
-              value: _slaHours,
-              min: 1, max: 24,
-              onChanged: (v) => setState(() => _slaHours = v),
-              color: Colors.blue,
-              isDark: isDark,
-            ),
-            _buildDropdownTile(
-              icon: Icons.flag_outlined,
-              title: 'Prioritas Bawaan',
-              subtitle: 'Status default untuk tiket baru',
-              value: _defaultPriority,
-              options: ['Low', 'Medium', 'High', 'Urgent'],
-              onChanged: (v) => setState(() => _defaultPriority = v),
-              color: Colors.redAccent,
-              isDark: isDark,
-            ),
-          ]),
+          final currentMaintenance = _maintenanceMode ?? state.settings.maintenanceMode;
+          final currentAutoAssign = _autoAssign ?? state.settings.autoAssign;
+          final currentSla = _slaHours ?? state.settings.slaHours.toDouble();
+          final currentPriority = _defaultPriority ?? state.settings.defaultPriority;
 
-          const SizedBox(height: 32),
-          _buildSectionHeader('KEAMANAN & DATA'),
-          _buildSettingsGroup(isDark, [
-            _buildActionTile(Icons.history_rounded, 'Log Audit Sistem', 'Lihat jejak aktivitas admin', Colors.grey, isDark),
-            _buildActionTile(Icons.cloud_download_outlined, 'Cadangkan Database', 'Simpan snapshot data sekarang', Colors.teal, isDark, isLast: true),
-          ]),
-          
-          const SizedBox(height: 48),
-          Center(
-            child: Opacity(
-              opacity: 0.4,
-              child: Text(
-                'TICKET-Q Engine v1.2.5\nBuild: 2026.04.18',
-                textAlign: TextAlign.center,
-                style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, height: 1.5),
-              ),
+          final isLoading = state.status == AppSettingsStatus.loading;
+
+          return Scaffold(
+            backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+            appBar: AppBar(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              title: Text('Pengaturan Sistem', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18)),
+              actions: [
+                if (isLoading)
+                  const Center(child: Padding(padding: EdgeInsets.only(right: 16), child: SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2))))
+                else
+                  Padding(
+                    padding: const EdgeInsets.only(right: 8),
+                    child: TextButton(
+                      onPressed: () {
+                        HapticHelper.success();
+                        context.read<AppSettingsBloc>().add(UpdateAppSettingsRequested(
+                          AppSettings(
+                            maintenanceMode: currentMaintenance,
+                            slaHours: currentSla.toInt(),
+                            autoAssign: currentAutoAssign,
+                            defaultPriority: currentPriority,
+                          ),
+                        ));
+                      },
+                      child: Text('SIMPAN', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13, color: AppColors.primary)),
+                    ),
+                  ),
+              ],
             ),
-          ),
-        ],
+            body: ListView(
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(24, 8, 24, 100),
+              children: [
+                _buildHeroSection(isDark),
+                const SizedBox(height: 32),
+                
+                _buildSectionHeader('OPERASIONAL SISTEM'),
+                _buildSettingsGroup(isDark, [
+                  _buildToggleTile(
+                    icon: Icons.construction_rounded,
+                    title: 'Mode Pemeliharaan',
+                    subtitle: 'Hanya Admin yang dapat mengakses',
+                    value: currentMaintenance,
+                    onChanged: (v) { HapticHelper.medium(); setState(() => _maintenanceMode = v); },
+                    color: Colors.orange,
+                    isDark: isDark,
+                  ),
+                  _buildToggleTile(
+                    icon: Icons.auto_awesome_rounded,
+                    title: 'Penugasan Otomatis',
+                    subtitle: 'Distribusi tugas teknisi cerdas',
+                    value: currentAutoAssign,
+                    onChanged: (v) { HapticHelper.medium(); setState(() => _autoAssign = v); },
+                    color: Colors.purple,
+                    isDark: isDark,
+                  ),
+                ]),
+
+                const SizedBox(height: 32),
+                _buildSectionHeader('KONFIGURASI TIKET'),
+                _buildSettingsGroup(isDark, [
+                  _buildSliderTile(
+                    icon: Icons.timer_outlined,
+                    title: 'Target SLA Response',
+                    subtitle: 'Batas respon awal bantuan (jam)',
+                    value: currentSla,
+                    min: 1, max: 72,
+                    onChanged: (v) => setState(() => _slaHours = v),
+                    color: Colors.blue,
+                    isDark: isDark,
+                  ),
+                  _buildDropdownTile(
+                    icon: Icons.flag_outlined,
+                    title: 'Prioritas Bawaan',
+                    subtitle: 'Status default untuk tiket baru',
+                    value: currentPriority,
+                    options: ['Low', 'Medium', 'High', 'Urgent'],
+                    onChanged: (v) => setState(() => _defaultPriority = v),
+                    color: Colors.redAccent,
+                    isDark: isDark,
+                  ),
+                ]),
+
+                const SizedBox(height: 32),
+                _buildSectionHeader('KEAMANAN & DATA'),
+                _buildSettingsGroup(isDark, [
+                  _buildActionTile(Icons.history_rounded, 'Log Audit Sistem', 'Lihat jejak aktivitas admin', Colors.grey, isDark),
+                  _buildActionTile(Icons.cloud_download_outlined, 'Cadangkan Database', 'Simpan snapshot data sekarang', Colors.teal, isDark, isLast: true),
+                ]),
+                
+                const SizedBox(height: 48),
+                Center(
+                  child: Opacity(
+                    opacity: 0.4,
+                    child: Text(
+                      'TICKET-Q Engine v1.2.6\nBuild: 2026.04.18',
+                      textAlign: TextAlign.center,
+                      style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w600, height: 1.5),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }

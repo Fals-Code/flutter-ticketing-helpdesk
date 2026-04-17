@@ -6,6 +6,8 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
 import 'package:uts/features/admin/presentation/bloc/admin_state.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/auth/domain/entities/user_entity.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
@@ -249,12 +251,58 @@ class _RoleSelectionSheetState extends State<_RoleSelectionSheet> {
   }
 
   void _handleUpdate() {
+    final currentUserId = context.read<AuthBloc>().state.user.id;
+    final isSelfChange = widget.user.id == currentUserId;
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text('Konfirmasi Perubahan', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+        content: Text(
+          isSelfChange 
+            ? 'Anda sedang mengubah peran Anda sendiri. Setelah disimpan, Anda akan dikeluarkan secara otomatis untuk memperbarui sesi. Lanjutkan?'
+            : 'Apakah Anda yakin ingin mengubah peran ${widget.user.fullName} menjadi ${_getRoleLabel(_selectedRole!)}?',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dialogContext), child: const Text('BATAL', style: TextStyle(color: Colors.grey))),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(dialogContext);
+              _executeRoleUpdate(isSelfChange);
+            },
+            child: const Text('YA, LANJUTKAN', style: TextStyle(fontWeight: FontWeight.bold, color: AppColors.primary)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _executeRoleUpdate(bool isSelfChange) {
     setState(() => _isUpdating = true);
     HapticHelper.medium();
-    context.read<AdminBloc>().add(UpdateUserRoleRequested(userId: widget.user.id, newRole: _selectedRole!.toInt));
-    Future.delayed(const Duration(seconds: 1), () {
-      if (mounted) Navigator.pop(context);
+
+    context.read<AdminBloc>().add(UpdateUserRoleRequested(
+      userId: widget.user.id, 
+      newRole: _selectedRole!.toInt,
+    ));
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      if (isSelfChange) {
+        // Force logout to refresh session
+        context.read<AuthBloc>().add(LogoutRequested());
+      }
+      Navigator.pop(context);
     });
+  }
+
+  String _getRoleLabel(UserRole role) {
+    switch (role) {
+      case UserRole.admin: return 'Administrator';
+      case UserRole.technician: return 'Teknisi';
+      case UserRole.user: return 'Pelanggan';
+    }
   }
 
   Widget _buildOption(UserRole role, String label, String desc, IconData icon, Color color) {

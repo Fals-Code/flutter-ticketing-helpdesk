@@ -157,10 +157,28 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
 
     if (picked != null) {
+      // Validate range (max 1 year)
+      if (picked.end.difference(picked.start).inDays > 366) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Maksimal rentang waktu adalah 1 tahun.'), backgroundColor: AppColors.danger),
+          );
+        }
+        return;
+      }
+
       HapticHelper.medium();
       setState(() { _startDate = picked.start; _endDate = picked.end; });
       _refreshData();
     }
+  }
+
+  bool _isDataStale(AdminState state) {
+    if (state.report == null) return true;
+    // Simple check: do the report parameters match our current filter?
+    // In a real app, the report entity might have a 'generatedAt' or 'period' property.
+    // For now, if we are loading, it's definitely stale or about to be.
+    return state.status == AdminStatus.loading;
   }
 
   @override
@@ -414,29 +432,44 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   }
 
   Widget _buildDownloadButton(AdminReport report, bool isDark) {
+    final state = context.watch<AdminBloc>().state;
+    final isStale = _isDataStale(state);
+    final isLoadingReport = state.status == AdminStatus.loading;
+
     return Container(
       width: double.infinity,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(colors: [AppColors.primary, Color(0xFF4F46E5)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        boxShadow: [BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
+        gradient: LinearGradient(
+          colors: isStale ? [Colors.grey, Colors.grey.shade600] : [AppColors.primary, const Color(0xFF4F46E5)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          if (!isStale) BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: _isExporting ? null : () => _showExportBottomSheet(report),
+          onTap: (isStale || _isExporting) ? null : () => _showExportBottomSheet(report),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                if (_isExporting)
+                if (_isExporting || isLoadingReport)
                   const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                 else
                   const Icon(Icons.download_rounded, color: Colors.white, size: 20),
                 const SizedBox(width: 12),
-                Text(_isExporting ? 'MENYIAPKAN LAPORAN...' : 'UNDUH LAPORAN', style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                Text(
+                  _isExporting
+                      ? 'MENYIAPKAN LAPORAN...'
+                      : (isLoadingReport ? 'MEMUAT DATA...' : 'UNDUH LAPORAN'),
+                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1),
+                ),
               ],
             ),
           ),

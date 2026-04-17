@@ -12,6 +12,12 @@ abstract class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);
 
+  // ── Aurora Palette (Redesign) ──────────────────────────────────────────────
+  static const Color auroraIndigo = Color(0xFF1E1B4B);
+  static const Color auroraPurple = Color(0xFF6366F1);
+  static const Color auroraCyan = Color(0xFF06B6D4);
+  static const Color auroraRose = Color(0xFFF43F5E);
+
   // ── Dark Theme Surfaces ────────────────────────────────────────────────────
   static const Color backgroundDark = Color(0xFF0A0A0F); // Near black
   static const Color surfaceDark = Color(0xFF111118); // Card bg

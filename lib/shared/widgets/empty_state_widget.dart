@@ -3,7 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import 'app_button.dart';
 
-enum EmptyStateType { tickets, notifications, search, history, defaultState }
+enum EmptyStateType { tickets, notifications, search, history, error, defaultState }
 
 /// Widget empty state yang modern dengan gaya desain Linear/Raycast.
 /// Menampilkan ilustrasi SVG/Icon dengan efek subtle glow/glassmorphism,
@@ -59,6 +59,16 @@ class EmptyStateWidget extends StatelessWidget {
       type: EmptyStateType.history,
       title: title ?? 'Belum Ada Riwayat',
       subtitle: subtitle ?? 'Riwayat aktivitas Anda masih kosong.',
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
+  }
+
+  factory EmptyStateWidget.error({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+    return EmptyStateWidget(
+      type: EmptyStateType.error,
+      title: title ?? 'Terjadi Kesalahan',
+      subtitle: subtitle ?? 'Gagal memuat data. Silakan coba beberapa saat lagi.',
       actionLabel: actionLabel,
       onAction: onAction,
     );
@@ -133,6 +143,9 @@ class EmptyStateWidget extends StatelessWidget {
       case EmptyStateType.history:
         fallbackIcon = Icons.history_rounded;
         break;
+      case EmptyStateType.error:
+        fallbackIcon = Icons.error_outline_rounded;
+        break;
       case EmptyStateType.defaultState:
         fallbackIcon = Icons.inbox_outlined;
         break;
@@ -146,10 +159,9 @@ class EmptyStateWidget extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            AppColors.primary.withValues(alpha: 0.15),
-            AppColors.accent.withValues(alpha: 0.05),
-          ],
+          colors: type == EmptyStateType.error 
+            ? [Colors.red.withValues(alpha: 0.15), Colors.redAccent.withValues(alpha: 0.05)]
+            : [AppColors.primary.withValues(alpha: 0.15), AppColors.accent.withValues(alpha: 0.05)],
         ),
         boxShadow: [
           BoxShadow(
@@ -174,7 +186,9 @@ class EmptyStateWidget extends StatelessWidget {
         child: Icon(
           fallbackIcon,
           size: 36,
-          color: AppColors.primary.withValues(alpha: 0.8),
+          color: type == EmptyStateType.error 
+            ? Colors.redAccent.withValues(alpha: 0.8)
+            : AppColors.primary.withValues(alpha: 0.8),
         ),
       ),
     );

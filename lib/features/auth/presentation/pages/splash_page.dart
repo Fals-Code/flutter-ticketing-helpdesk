@@ -1,14 +1,12 @@
+import 'dart:ui';
+import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
-import 'package:uts/core/router/app_router.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
-import '../../../../core/constants/enums.dart';
 import '../../../../shared/widgets/loading_widget.dart';
-import '../../presentation/bloc/auth_bloc.dart';
+import '../../../../shared/widgets/aurora_background.dart';
 
-/// Splash Page premium dengan sequence animasi dan logika navigasi Role-Based.
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
 
@@ -16,174 +14,221 @@ class SplashPage extends StatefulWidget {
   State<SplashPage> createState() => _SplashPageState();
 }
 
-class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _logoScaleAnimation;
-  late Animation<double> _titleFadeAnimation;
-  late Animation<Offset> _titleSlideAnimation;
-  late Animation<double> _taglineFadeAnimation;
-  late Animation<double> _loaderFadeAnimation;
+class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
+  late AnimationController _entranceController;
+  late AnimationController _idleController;
+
+  late Animation<double> _logoScale;
+  late Animation<double> _cardFade;
+  late Animation<double> _textFade;
+  late Animation<Offset> _textSlide;
+  late Animation<double> _shimmerAnimation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+
+    // 1. Entrance Sequence (2 sec)
+    _entranceController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 2000),
     );
 
-    // 1. Logo scale dari 0.7 ke 1.0 dengan elastic curve (800ms)
-    _logoScaleAnimation = Tween<double>(begin: 0.7, end: 1.0).animate(
+    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.0, 0.533, curve: Curves.elasticOut), // 800/1500
+        parent: _entranceController,
+        curve: const Interval(0.0, 0.4, curve: Curves.elasticOut),
       ),
     );
 
-    // 2. Teks fade in dari bawah (600ms, delay 200ms)
-    _titleFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _cardFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.133, 0.533, curve: Curves.easeOutCubic), // 200-800ms
-      ),
-    );
-    _titleSlideAnimation = Tween<Offset>(begin: const Offset(0, 0.5), end: Offset.zero).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.133, 0.533, curve: Curves.easeOutCubic),
+        parent: _entranceController,
+        curve: const Interval(0.1, 0.5, curve: Curves.easeIn),
       ),
     );
 
-    // 3. Tagline fade in (400ms, delay 500ms)
-    _taglineFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _textFade = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.333, 0.6, curve: Curves.easeIn), // 500-900ms
+        parent: _entranceController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeIn),
       ),
     );
 
-    // 4. Dots loader muncul (delay 800ms)
-    _loaderFadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+    _textSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
       CurvedAnimation(
-        parent: _controller,
-        curve: const Interval(0.533, 1.0, curve: Curves.easeIn), // 800-1500ms
+        parent: _entranceController,
+        curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
       ),
     );
 
-    _controller.forward();
+    // 2. Idle & Shimmer (Repeat)
+    _idleController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat();
+
+    _shimmerAnimation = Tween<double>(begin: -1.0, end: 2.0).animate(
+      CurvedAnimation(parent: _idleController, curve: Curves.easeInOutSine),
+    );
+
+    _entranceController.forward();
     _checkAuth();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _entranceController.dispose();
+    _idleController.dispose();
     super.dispose();
   }
 
   Future<void> _checkAuth() async {
-    // Splash durasi: 2.5 detik untuk branding
+    // Branding time
     await Future.delayed(const Duration(milliseconds: 2500));
-    // Setelah delay, kita tidak perlu melakukan context.go() manual 
-    // karena GoRouter dengan refreshListenable akan otomatis memicu 
-    // redirect() ketika AuthBloc state sudah siap (authenticated/unauthenticated).
+    // Redirect logic remains managed by GoRouter + AuthBloc listenable
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          // Background: dark gradient dari #0A0A0F ke #111118
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF0A0A0F),
-              Color(0xFF111118),
-            ],
+      body: AuroraBackground(
+        child: Center(
+          child: AnimatedBuilder(
+            animation: Listenable.merge([_entranceController, _idleController]),
+            builder: (context, child) {
+              return Opacity(
+                opacity: _cardFade.value,
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 40),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(32),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(32),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.1),
+                            width: 1.5,
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.2),
+                              blurRadius: 40,
+                              offset: const Offset(0, 20),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            // Floating Logo Container
+                            Transform.translate(
+                              offset: Offset(0, sin(_idleController.value * 2 * 3.14159) * 8),
+                              child: Transform.scale(
+                                scale: _logoScale.value,
+                                child: _buildLogoIcon(),
+                              ),
+                            ),
+                            const SizedBox(height: 32),
+                            
+                            // Branding Info
+                            FadeTransition(
+                              opacity: _textFade,
+                              child: SlideTransition(
+                                position: _textSlide,
+                                child: Column(
+                                  children: [
+                                    _buildShimmerText(),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'YOUR IT HELPDESK SOLUTION',
+                                      style: GoogleFonts.plusJakartaSans(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.white.withValues(alpha: 0.4),
+                                        letterSpacing: 3.0,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            
+                            const SizedBox(height: 48),
+                            
+                            // Footer Loading
+                            Opacity(
+                              opacity: _textFade.value,
+                              child: const LoadingWidget(
+                                size: 6,
+                                color: Colors.white54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
         ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            // Logo
-            AnimatedBuilder(
-              animation: _logoScaleAnimation,
-              builder: (context, child) {
-                return Transform.scale(
-                  scale: _logoScaleAnimation.value,
-                  child: Container(
-                    padding: const EdgeInsets.all(AppDimensions.space24),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.05),
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.1),
-                        width: 1,
-                      ),
-                    ),
-                    child: ShaderMask(
-                      shaderCallback: (bounds) => const LinearGradient(
-                        colors: [AppColors.primary, AppColors.accent],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ).createShader(bounds),
-                      child: const Icon(
-                        Icons.confirmation_number_rounded,
-                        size: 56,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: AppDimensions.space32),
-            
-            // Title
-            SlideTransition(
-              position: _titleSlideAnimation,
-              child: FadeTransition(
-                opacity: _titleFadeAnimation,
-                child: const Text(
-                  'TICKET-Q',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.white,
-                    letterSpacing: 6.0,
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space8),
-            
-            // Tagline
-            FadeTransition(
-              opacity: _taglineFadeAnimation,
-              child: Text(
-                'YOUR IT HELPDESK SOLUTION',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.white.withValues(alpha: 0.6),
-                  letterSpacing: 3.0,
-                ),
-              ),
-            ),
-            const SizedBox(height: AppDimensions.space64),
-            
-            // Loader
-            FadeTransition(
-              opacity: _loaderFadeAnimation,
-              child: const LoadingWidget(
-                size: 8,
-                color: Colors.white,
-              ),
-            ),
+      ),
+    );
+  }
+
+  Widget _buildLogoIcon() {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.space20),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.2),
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 30,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+      child: const Icon(
+        Icons.confirmation_number_rounded,
+        size: 56,
+        color: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildShimmerText() {
+    return ShaderMask(
+      shaderCallback: (bounds) {
+        return LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: const [
+            Colors.white,
+            AppColors.auroraCyan,
+            Colors.white,
           ],
+          stops: [
+            _shimmerAnimation.value - 0.4,
+            _shimmerAnimation.value,
+            _shimmerAnimation.value + 0.4,
+          ],
+        ).createShader(bounds);
+      },
+      child: Text(
+        'TICKET-Q',
+        style: GoogleFonts.plusJakartaSans(
+          fontSize: 36,
+          fontWeight: FontWeight.w900,
+          color: Colors.white,
+          letterSpacing: 8.0,
         ),
       ),
     );

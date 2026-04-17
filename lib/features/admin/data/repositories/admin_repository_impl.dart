@@ -5,6 +5,9 @@ import '../../domain/entities/admin_report_entity.dart';
 import '../../domain/repositories/admin_repository.dart';
 import '../datasources/admin_remote_data_source.dart';
 
+import '../../domain/entities/app_settings_entity.dart';
+import '../models/app_settings_model.dart';
+
 class AdminRepositoryImpl implements AdminRepository {
   final AdminRemoteDataSource remoteDataSource;
 
@@ -38,6 +41,26 @@ class AdminRepositoryImpl implements AdminRepository {
         endDate: endDate,
       );
       return Right(report.toEntity());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, AppSettings>> getAppSettings() async {
+    try {
+      final settings = await remoteDataSource.getAppSettings();
+      return Right(settings.toEntity());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> updateAppSettings(AppSettings settings) async {
+    try {
+      await remoteDataSource.updateAppSettings(AppSettingsModel.fromEntity(settings));
+      return const Right(null);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }

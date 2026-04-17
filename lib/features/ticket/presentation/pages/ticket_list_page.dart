@@ -15,6 +15,8 @@ import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dar
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:uts/features/admin/presentation/bloc/settings/app_settings_bloc.dart';
+import 'package:uts/features/admin/presentation/bloc/settings/app_settings_state.dart';
 import 'package:uts/core/constants/enums.dart';
 
 class TicketListPage extends StatefulWidget {
@@ -30,7 +32,6 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
   final TextEditingController _searchController = TextEditingController();
   
   bool _isFabExpanded = true;
-  int _currentPage = 0;
 
   @override
   void initState() {
@@ -442,7 +443,7 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
     if (tickets.isEmpty) {
       if (state.errorMessage != null) {
         return EmptyStateWidget.error(
-          message: state.errorMessage!,
+          subtitle: state.errorMessage!,
           onAction: () => _fetchInitial(),
           actionLabel: 'Coba Lagi',
         );
@@ -677,9 +678,24 @@ class _TicketCardState extends State<_TicketCard> with SingleTickerProviderState
                         Text(widget.ticket.userName!, style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white60 : Colors.black54)),
                       ],
                       const Spacer(),
-                      Text(
-                        DateFormat('dd MMM').format(widget.ticket.createdAt),
-                        style: TextStyle(fontSize: 11, color: widget.isDark ? Colors.white54 : Colors.black45),
+                      BlocBuilder<AppSettingsBloc, AppSettingsState>(
+                        builder: (context, settingsState) {
+                          final settings = settingsState.settings;
+                          final slaHours = settings.slaHours;
+                          final isOverSla = widget.ticket.status == TicketStatus.open &&
+                              DateTime.now().difference(widget.ticket.createdAt).inHours >= slaHours;
+                          
+                          return Text(
+                            DateFormat('dd MMM').format(widget.ticket.createdAt),
+                            style: TextStyle(
+                              fontSize: 11, 
+                              fontWeight: isOverSla ? FontWeight.bold : FontWeight.normal,
+                              color: isOverSla 
+                                  ? const Color(0xFFC0392B) // Brick Red
+                                  : (widget.isDark ? Colors.white54 : Colors.black45),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),

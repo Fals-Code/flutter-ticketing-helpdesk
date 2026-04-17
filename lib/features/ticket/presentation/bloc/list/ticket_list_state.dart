@@ -47,6 +47,8 @@ class TicketListState extends Equatable {
     String? categoryFilter,
     DateTime? startDate,
     DateTime? endDate,
+    bool clearStartDate = false,
+    bool clearEndDate = false,
     bool? isOffline,
   }) {
     return TicketListState(
@@ -60,8 +62,8 @@ class TicketListState extends Equatable {
       searchQuery: searchQuery ?? this.searchQuery,
       statusFilter: statusFilter ?? this.statusFilter,
       categoryFilter: categoryFilter ?? this.categoryFilter,
-      startDate: startDate ?? this.startDate,
-      endDate: endDate ?? this.endDate,
+      startDate: clearStartDate ? null : (startDate ?? this.startDate),
+      endDate: clearEndDate ? null : (endDate ?? this.endDate),
       isOffline: isOffline ?? this.isOffline,
     );
   }

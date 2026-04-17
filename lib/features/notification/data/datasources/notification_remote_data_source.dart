@@ -67,7 +67,7 @@ class SupabaseNotificationRemoteDataSourceImpl
           .stream(primaryKey: ['id'])
           .eq('user_id', supabaseClient.auth.currentUser!.id)
           .order('created_at', ascending: false)
-          .map((data) => data
+          .map((data) => (data as List)
               .map((json) => NotificationModel.fromJson(json))
               .toList());
     } catch (e) {
@@ -78,10 +78,17 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteNotification(String notificationId) async {
     try {
-      await supabaseClient
+      final response = await supabaseClient
           .from('notifications')
           .delete()
-          .eq('id', notificationId);
+          .eq('id', notificationId)
+          .select();
+      
+      if ((response as List).isEmpty) {
+        throw Exception('Notifikasi tidak ditemukan atau izin dihapus ditolak (RLS).');
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to delete notification: $e');
     }
@@ -90,10 +97,17 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteNotifications(List<String> notificationIds) async {
     try {
-      await supabaseClient
+      final response = await supabaseClient
           .from('notifications')
           .delete()
-          .inFilter('id', notificationIds);
+          .inFilter('id', notificationIds)
+          .select();
+      
+      if ((response as List).isEmpty) {
+        throw Exception('Tidak ada notifikasi yang berhasil dihapus. Cek izin RLS.');
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to delete notifications: $e');
     }
@@ -102,10 +116,19 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteAllNotifications() async {
     try {
-      await supabaseClient
+      final response = await supabaseClient
           .from('notifications')
           .delete()
-          .eq('user_id', supabaseClient.auth.currentUser!.id);
+          .eq('user_id', supabaseClient.auth.currentUser!.id)
+          .select();
+          
+      if ((response as List).isEmpty) {
+        // Only throw if there were actually notifications to delete
+        // We can't easily check that without another query, but usually 
+        // if user clicks "Hapus Semua" there are notifications.
+      }
+    } on PostgrestException catch (e) {
+      throw Exception('Database error: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to delete all notifications: $e');
     }

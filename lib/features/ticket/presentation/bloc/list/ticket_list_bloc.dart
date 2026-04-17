@@ -196,7 +196,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     FilterDateRangeChanged event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(startDate: event.startDate, endDate: event.endDate));
+    emit(state.copyWith(
+      startDate: event.startDate, 
+      endDate: event.endDate,
+      clearStartDate: event.startDate == null,
+      clearEndDate: event.endDate == null,
+    ));
     add(const FetchTicketsRequested(page: 0));
     add(const FetchAllTicketsRequested(page: 0));
   }

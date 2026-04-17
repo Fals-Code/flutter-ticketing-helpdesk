@@ -57,6 +57,7 @@ class NotificationState extends Equatable {
   final bool isLoading;
   final List<NotificationEntity> notifications;
   final String? errorMessage;
+  final String? successMessage;
   final bool selectionMode;
   final Set<String> selectedIds;
 
@@ -64,6 +65,7 @@ class NotificationState extends Equatable {
     this.isLoading = false,
     this.notifications = const [],
     this.errorMessage,
+    this.successMessage,
     this.selectionMode = false,
     this.selectedIds = const {},
   });
@@ -72,20 +74,24 @@ class NotificationState extends Equatable {
     bool? isLoading,
     List<NotificationEntity>? notifications,
     String? errorMessage,
+    String? successMessage,
     bool? selectionMode,
     Set<String>? selectedIds,
+    bool clearError = false,
+    bool clearSuccess = false,
   }) {
     return NotificationState(
       isLoading: isLoading ?? this.isLoading,
       notifications: notifications ?? this.notifications,
-      errorMessage: errorMessage,
+      errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
+      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
       selectionMode: selectionMode ?? this.selectionMode,
       selectedIds: selectedIds ?? this.selectedIds,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, notifications, errorMessage, selectionMode, selectedIds];
+  List<Object?> get props => [isLoading, notifications, errorMessage, successMessage, selectionMode, selectedIds];
 }
 
 // Bloc
@@ -150,7 +156,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       }
     }
 
-    emit(state.copyWith(notifications: event.notifications));
+    emit(state.copyWith(
+      notifications: event.notifications,
+      clearError: true, 
+      clearSuccess: true,
+    ));
   }
 
   @override
@@ -211,7 +221,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       if (!n.isRead) return n.copyWith(isRead: true);
       return n;
     }).toList();
-    emit(state.copyWith(notifications: updatedList));
+    emit(state.copyWith(notifications: updatedList, successMessage: 'Semua notifikasi ditandai dibaca'));
 
     await Future.wait(
       unreadIds.map((id) => markNotificationAsRead(id)),
@@ -250,7 +260,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     if (state.selectedIds.isEmpty) return;
     
     final idsToDelete = List<String>.from(state.selectedIds);
-    emit(state.copyWith(isLoading: true));
+    emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
     
     final result = await deleteMultipleNotifications(idsToDelete);
     result.fold(
@@ -258,26 +268,30 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       (_) {
         emit(state.copyWith(
           isLoading: false,
+          notifications: [], // Optimistically clear
           selectionMode: false,
           selectedIds: {},
+          successMessage: '${idsToDelete.length} notifikasi berhasil dihapus',
         ));
-        // State will be refreshed by subscription
+        add(FetchNotificationsRequested());
       },
     );
   }
 
   Future<void> _onDeleteAll(DeleteAllNotificationsRequested event, Emitter<NotificationState> emit) async {
-    emit(state.copyWith(isLoading: true));
+    emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
     final result = await deleteAllNotifications();
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (_) {
         emit(state.copyWith(
           isLoading: false,
+          notifications: [], // Optimistically clear
           selectionMode: false,
           selectedIds: {},
+          successMessage: 'Semua notifikasi berhasil dihapus',
         ));
-        // State will be refreshed by subscription
+        add(FetchNotificationsRequested());
       },
     );
   }

@@ -151,19 +151,6 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     NotificationStreamUpdated event,
     Emitter<NotificationState> emit,
   ) {
-    final currentIds = state.notifications.map((n) => n.id).toSet();
-
-    for (var notification in event.notifications) {
-      if (!notification.isRead && !currentIds.contains(notification.id)) {
-        localNotificationService.showNotification(
-          id: notification.id.hashCode,
-          title: notification.title,
-          body: notification.message,
-          payload: '${notification.id}|${notification.ticketId ?? ""}',
-        );
-      }
-    }
-
     emit(state.copyWith(
       notifications: event.notifications,
       clearError: true, 

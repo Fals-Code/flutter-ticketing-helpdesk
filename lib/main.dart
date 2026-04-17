@@ -155,6 +155,13 @@ class ETicketingApp extends StatelessWidget {
                     _showSessionExpiredDialog(context);
                   }
                   
+                  if (state.status == AuthStatus.authenticated) {
+                    // Start/Restart subscriptions on login
+                    context.read<TicketListBloc>().add(const list_event.StartTicketListSubscription());
+                    context.read<NotificationBloc>().add(StartNotificationSubscription());
+                    context.read<TicketStatsBloc>().add(const stats_event.FetchTicketStatsRequested());
+                  }
+
                   if (state.status == AuthStatus.unauthenticated) {
                     // Reset all app states on logout
                     context.read<TicketListBloc>().add(list_event.ResetTicketListState());

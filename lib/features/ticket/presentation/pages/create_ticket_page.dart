@@ -32,7 +32,6 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   final _descFocus = FocusNode();
 
   String _selectedCategory = '';
-  TicketPriority _selectedPriority = TicketPriority.medium;
   final List<String> _imagePaths = [];
   final ImagePicker _picker = ImagePicker();
 
@@ -141,7 +140,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
       title: _subjectController.text.trim(),
       description: _descController.text.trim(),
       category: _selectedCategory,
-      priority: _selectedPriority.name,
+      priority: TicketPriority.medium.name,
       imagePaths: _imagePaths,
     ));
   }
@@ -284,40 +283,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       const SizedBox(height: 24),
 
                       // SECTION 3
-                      _buildSectionTitle('3. Prioritas & Lampiran', isDark),
+                      _buildSectionTitle('3. Lampiran', isDark),
                       const SizedBox(height: 16),
-                      Text('Prioritas', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87)),
-                      const SizedBox(height: 12),
-                      Row(
-                        children: TicketPriority.values.map((priority) {
-                          final isSelected = _selectedPriority == priority;
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _selectedPriority = priority),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                margin: const EdgeInsets.symmetric(horizontal: 4),
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? priority.color.withValues(alpha: 0.15) : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: isSelected ? priority.color : (isDark ? AppColors.borderDark : AppColors.borderLight)),
-                                ),
-                                alignment: Alignment.center,
-                                child: Text(
-                                  priority.label,
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                    color: isSelected ? priority.color : (isDark ? Colors.white54 : Colors.black54),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
-                      const SizedBox(height: 24),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -348,7 +315,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                     Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
-                        'Kategori: ${_selectedCategory.isEmpty ? '-' : _categories.firstWhere((e) => e['value'] == _selectedCategory)['label']} • Prioritas: ${_selectedPriority.label}',
+                        'Kategori: ${_selectedCategory.isEmpty ? '-' : _categories.firstWhere((e) => e['value'] == _selectedCategory)['label']}',
                         style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54, fontWeight: FontWeight.w500),
                       ),
                     ),

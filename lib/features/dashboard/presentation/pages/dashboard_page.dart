@@ -264,23 +264,6 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             ),
           ),
         ),
-        floatingActionButton: _currentIndex == 1
-            ? BlocBuilder<AuthBloc, AuthState>(
-                builder: (context, state) {
-                  if (state.user.role != UserRole.user) return const SizedBox.shrink();
-                  return FloatingActionButton(
-                    heroTag: 'dashboard_fab',
-                    onPressed: () => context.push(AppRoutes.createTicket),
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: Colors.white,
-                    elevation: 4,
-                    highlightElevation: 8,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                    child: const Icon(Icons.add_rounded, size: 28),
-                  );
-                },
-              )
-            : null,
       ),
     );
   }

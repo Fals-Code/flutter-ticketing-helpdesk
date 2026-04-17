@@ -696,12 +696,6 @@ class _TicketCardState extends State<_TicketCard> with SingleTickerProviderState
                         color: widget.isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
                         textColor: widget.isDark ? Colors.white70 : Colors.black87,
                       ),
-                      const SizedBox(width: 8),
-                      _Badge(
-                        label: widget.ticket.priority.label,
-                        color: widget.ticket.priority.color.withValues(alpha: 0.1),
-                        textColor: widget.ticket.priority.color,
-                      ),
                       const Spacer(),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),

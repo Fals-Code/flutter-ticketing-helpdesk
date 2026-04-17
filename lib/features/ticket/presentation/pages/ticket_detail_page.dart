@@ -248,15 +248,6 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             Icon(Icons.category_outlined, size: 14, color: isDark ? Colors.white54 : Colors.black54),
             const SizedBox(width: 6),
             Text(ticket.category, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w500)),
-            Container(width: 1, height: 14, margin: const EdgeInsets.symmetric(horizontal: 12), color: isDark ? Colors.white12 : Colors.black12),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-              decoration: BoxDecoration(
-                color: ticket.priority.color.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Text(ticket.priority.label, style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: ticket.priority.color)),
-            ),
           ],
         ),
         const SizedBox(height: 14),

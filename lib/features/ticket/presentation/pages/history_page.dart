@@ -353,7 +353,7 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   String _getDescription(item) {
-    if (item.oldStatus == null) return 'Membuat tiket baru dengan prioritas ${item.priority?.toUpperCase() ?? 'MEDIUM'}.';
+    if (item.oldStatus == null) return 'Membuat tiket baru.';
     return 'Mengubah status tiket dari ${item.oldStatus!.toUpperCase()} menjadi ${item.newStatus.toUpperCase()}.';
   }
 }

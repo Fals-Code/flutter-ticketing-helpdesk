@@ -61,6 +61,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   void dispose() {
     _commentController.dispose();
     _scrollController.dispose();
+    if (mounted) {
+      context.read<TicketDetailBloc>().add(detail_event.ResetTicketDetailState());
+    }
     super.dispose();
   }
 

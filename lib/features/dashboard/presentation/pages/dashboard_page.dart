@@ -18,6 +18,7 @@ import 'tabs/dashboard_home_tab.dart';
 import 'tabs/admin_home_tab.dart';
 import 'tabs/profile_tab.dart';
 import 'tabs/notification_tab.dart';
+import 'package:uts/shared/widgets/lazy_indexed_stack.dart';
 
 /// Dashboard utama dengan modern floating bottom navigation bar
 class DashboardPage extends StatefulWidget {
@@ -136,7 +137,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                 child: child,
               );
             },
-            child: IndexedStack(
+            child: LazyIndexedStack(
               index: _currentIndex,
               children: [
                 state.user.role == UserRole.admin 

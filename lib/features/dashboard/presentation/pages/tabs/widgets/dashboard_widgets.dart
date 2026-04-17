@@ -26,8 +26,9 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
     super.initState();
     _animController = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
+      duration: const Duration(milliseconds: 800),
+    );
+    _animController.forward();
   }
 
   @override
@@ -59,125 +60,138 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
         final name = state.user.fullName ?? 'Pengguna';
         final today = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now());
 
-        return ClipRRect(
-          borderRadius: BorderRadius.circular(24),
-          child: Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              color: widget.isDark ? AppColors.surfaceDark : Colors.white,
-              border: Border.all(
-                color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
+        return AnimatedBuilder(
+          animation: _animController,
+          builder: (context, child) {
+            final slideValue = Curves.easeOutCubic.transform(1.0 - _animController.value) * 20;
+            return Opacity(
+              opacity: _animController.value,
+              child: Transform.translate(
+                offset: Offset(0, slideValue),
+                child: child,
               ),
-            ),
-            child: Stack(
-              children: [
-                // Mesh Background effect
-                Positioned(
-                  top: -40,
-                  right: -40,
-                  child: Container(
-                    width: 150,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          accentColor.withValues(alpha: 0.15),
-                          accentColor.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
+            );
+          },
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: widget.isDark ? AppColors.surfaceDark : Colors.white,
+                border: Border.all(
+                  color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
                 ),
-                Positioned(
-                  bottom: -30,
-                  left: -30,
-                  child: Container(
-                    width: 120,
-                    height: 120,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      gradient: RadialGradient(
-                        colors: [
-                          AppColors.primary.withValues(alpha: 0.1),
-                          AppColors.primary.withValues(alpha: 0),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                
-                // Content
-                Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(config['icon'] as IconData, color: accentColor, size: 14),
-                              const SizedBox(width: 8),
-                              Text(
-                                (config['text'] as String).toUpperCase(),
-                                style: GoogleFonts.inter(
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w800,
-                                  color: accentColor,
-                                  letterSpacing: 1.2,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            name,
-                            style: GoogleFonts.plusJakartaSans(
-                              fontSize: 24,
-                              fontWeight: FontWeight.w800,
-                              color: widget.isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
-                              letterSpacing: -0.8,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            today,
-                            style: GoogleFonts.inter(
-                              fontSize: 13,
-                              color: widget.isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    // Elegant Avatar placeholder or icon
-                    Container(
-                      width: 52,
-                      height: 52,
+              ),
+              child: Stack(
+                children: [
+                  // Mesh Background effect
+                  Positioned(
+                    top: -40,
+                    right: -40,
+                    child: Container(
+                      width: 150,
+                      height: 150,
                       decoration: BoxDecoration(
-                        color: widget.isDark ? AppColors.surfaceDark2 : Colors.grey.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          name.substring(0, 1).toUpperCase(),
-                          style: GoogleFonts.plusJakartaSans(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.primary,
-                          ),
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            accentColor.withValues(alpha: 0.15),
+                            accentColor.withValues(alpha: 0),
+                          ],
                         ),
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  Positioned(
+                    bottom: -30,
+                    left: -30,
+                    child: Container(
+                      width: 120,
+                      height: 120,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.primary.withValues(alpha: 0.1),
+                            AppColors.primary.withValues(alpha: 0),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  
+                  // Content
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(config['icon'] as IconData, color: accentColor, size: 14),
+                                const SizedBox(width: 8),
+                                Text(
+                                  (config['text'] as String).toUpperCase(),
+                                  style: GoogleFonts.inter(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w800,
+                                    color: accentColor,
+                                    letterSpacing: 1.2,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              name,
+                              style: GoogleFonts.plusJakartaSans(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w800,
+                                color: widget.isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                letterSpacing: -0.8,
+                              ),
+                            ),
+                            const SizedBox(height: 6),
+                            Text(
+                              today,
+                              style: GoogleFonts.inter(
+                                fontSize: 13,
+                                color: widget.isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 16),
+                      // Elegant Avatar placeholder or icon
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          color: widget.isDark ? AppColors.surfaceDark2 : Colors.grey.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            name.substring(0, 1).toUpperCase(),
+                            style: GoogleFonts.plusJakartaSans(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
         );

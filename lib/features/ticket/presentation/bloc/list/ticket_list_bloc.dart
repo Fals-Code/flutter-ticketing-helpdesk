@@ -39,17 +39,28 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     CreateTicketRequested event,
     Emitter<TicketListState> emit,
   ) async {
+    // 0. Hardened Validation
+    if (event.category.isEmpty) {
+      emit(state.copyWith(errorMessage: 'Kategori harus dipilih'));
+      return;
+    }
+
+    if (event.title.trim().length < 5) {
+      emit(state.copyWith(errorMessage: 'Judul terlalu pendek'));
+      return;
+    }
+
     // 1. Create optimistic ticket
     final optimisticTicket = TicketEntity(
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       title: event.title,
       description: event.description,
-      status: TicketStatus.open, // Use open as base status
+      status: TicketStatus.open, 
       priority: TicketPriority.fromString(event.priority),
       category: event.category,
       createdAt: DateTime.now(),
       userId: event.userId,
-      imageUrls: event.imagePaths, // Temporary use paths as URLs for preview
+      imageUrls: event.imagePaths, 
     );
 
     // 2. Insert into current list (optimistic update)
@@ -58,8 +69,8 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     
     emit(state.copyWith(
       tickets: updatedTickets,
-      // We don't set isLoading: true here to avoid global loading overlay if any
-      // but we can set a specific flag if needed.
+      successMessage: null, // Clear messages
+      errorMessage: null,
     ));
 
     final result = await createTicketUseCase(CreateTicketParams(
@@ -80,11 +91,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         ));
       },
       (ticket) {
-        // 4. On success, the real-time stream will eventually replace 
-        // the optimistic ticket with the real one from DB.
-        // We just need to clear any error and show success.
+        // 4. Success
         emit(state.copyWith(
           successMessage: 'Laporan berhasil dibuat',
+          errorMessage: null,
         ));
       },
     );
@@ -110,8 +120,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     FetchTicketsRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    if (event.page == 0) {
-      emit(state.copyWith(isLoading: true, tickets: []));
+    final bool isInitial = event.page == 0;
+    
+    if (isInitial) {
+      emit(state.copyWith(isLoading: true, tickets: [], currentPage: 0, isLastPage: false, errorMessage: null));
+    } else {
+      emit(state.copyWith(isLoading: true, errorMessage: null));
     }
 
     final result = await getTicketsUseCase(
@@ -130,33 +144,32 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
 
     result.fold(
       (failure) async {
-        // Fallback to cache on error if fetching the first page
-        if (event.page == 0) {
+        if (isInitial) {
           try {
             final cached = await localDataSource.getCachedTickets();
             emit(state.copyWith(
               isLoading: false,
               tickets: cached.map((m) => m.toEntity()).toList(),
               isOffline: true,
+              currentPage: 0,
             ));
             return;
-          } catch (_) {
-             // If cache is empty, fall through and emit the error message
-          }
+          } catch (_) {}
         }
         emit(state.copyWith(isLoading: false, errorMessage: failure.message));
       },
       (newTickets) {
-        if (event.page == 0) {
-          // Cache the first page tickets
+        if (isInitial) {
           localDataSource.cacheTickets(newTickets.map((t) => TicketModel.fromEntity(t)).toList());
         }
-        final allTickets = event.page == 0 ? newTickets : [...state.tickets, ...newTickets];
+        
+        final allTickets = isInitial ? newTickets : [...state.tickets, ...newTickets];
         emit(state.copyWith(
           isLoading: false,
           tickets: allTickets,
           isLastPage: newTickets.length < event.limit,
           isOffline: false,
+          currentPage: event.page, // Update page only on success
         ));
       },
     );
@@ -166,8 +179,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     FetchAllTicketsRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    if (event.page == 0) {
-      emit(state.copyWith(isLoading: true, allTickets: []));
+    final bool isInitial = event.page == 0;
+
+    if (isInitial) {
+      emit(state.copyWith(isLoading: true, allTickets: [], allTicketsPage: 0, isLastPageAll: false, errorMessage: null));
+    } else {
+      emit(state.copyWith(isLoading: true, errorMessage: null));
     }
 
     final result = await getAllTicketsUseCase(
@@ -188,11 +205,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     result.fold(
       (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (newTickets) {
-        final currentTickets = event.page == 0 ? newTickets : [...state.allTickets, ...newTickets];
+        final currentTickets = isInitial ? newTickets : [...state.allTickets, ...newTickets];
         emit(state.copyWith(
           isLoading: false,
           allTickets: currentTickets,
           isLastPageAll: newTickets.length < event.limit,
+          allTicketsPage: event.page, // Update page only on success
         ));
       },
     );

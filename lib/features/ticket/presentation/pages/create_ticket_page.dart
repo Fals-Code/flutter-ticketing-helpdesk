@@ -40,6 +40,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   late final AnimationController _successAnimController;
   late final Animation<double> _scaleAnim;
 
+  bool _showCategoryError = false;
+
   static const _categories = [
     {'value': 'hardware', 'label': 'Hardware', 'icon': '🔧'},
     {'value': 'software', 'label': 'Software', 'icon': '💻'},
@@ -126,7 +128,16 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   }
 
   void _submit() {
-    if (!_isFormValid) return;
+    if (_selectedCategory.isEmpty) {
+      setState(() => _showCategoryError = true);
+    }
+
+    if (!_isFormValid) {
+      if (_formKey.currentState?.validate() ?? false) {
+        // Just category missing
+      }
+      return;
+    }
     FocusScope.of(context).unfocus();
     
     final currentUser = Supabase.instance.client.auth.currentUser;
@@ -217,9 +228,17 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         textInputAction: TextInputAction.next,
                         onSubmitted: (_) => FocusScope.of(context).requestFocus(_descFocus),
                         maxLength: 100,
+                        validator: (v) => v == null || v.trim().isEmpty ? 'Harap isi judul laporan' : null,
                       ),
                       const SizedBox(height: 24),
-                      Text('Kategori', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87)),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text('Kategori', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87)),
+                          if (_showCategoryError && _selectedCategory.isEmpty)
+                            const Text('Pilih kategori', style: TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w600)),
+                        ],
+                      ),
                       const SizedBox(height: 12),
                       GridView.builder(
                         shrinkWrap: true,
@@ -234,9 +253,14 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         itemBuilder: (context, index) {
                           final cat = _categories[index];
                           final isSelected = _selectedCategory == cat['value'];
+                          final hasError = _showCategoryError && _selectedCategory.isEmpty;
+                          
                           return GestureDetector(
                             onTap: () {
-                              setState(() => _selectedCategory = cat['value']!);
+                              setState(() {
+                                _selectedCategory = cat['value']!;
+                                _showCategoryError = false;
+                              });
                               _updateProgress();
                             },
                             child: AnimatedContainer(
@@ -244,7 +268,12 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                               decoration: BoxDecoration(
                                 color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: isSelected ? AppColors.primary : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+                                border: Border.all(
+                                  color: isSelected 
+                                      ? AppColors.primary 
+                                      : (hasError ? AppColors.danger.withValues(alpha: 0.5) : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+                                  width: isSelected || hasError ? 1.5 : 1.0,
+                                ),
                               ),
                               alignment: Alignment.centerLeft,
                               padding: const EdgeInsets.symmetric(horizontal: 12),

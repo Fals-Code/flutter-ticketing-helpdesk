@@ -172,15 +172,21 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     List<String> uploadedUrls = [];
 
     // Upload images to Supabase Storage
-    for (var path in imagePaths) {
-      final file = File(path);
-      final fileExt = path.split('.').last;
-      final fileName = '${const Uuid().v4()}.$fileExt';
-      final storagePath = 'ticket_images/$fileName';
+    try {
+      for (var path in imagePaths) {
+        final file = File(path);
+        final fileExt = path.split('.').last;
+        final fileName = '${const Uuid().v4()}.$fileExt';
+        final storagePath = 'ticket_images/$fileName';
 
-      await supabaseClient.storage.from(_bucketName).upload(storagePath, file);
-      final url = supabaseClient.storage.from(_bucketName).getPublicUrl(storagePath);
-      uploadedUrls.add(url);
+        await supabaseClient.storage.from(_bucketName).upload(storagePath, file);
+        final url = supabaseClient.storage.from(_bucketName).getPublicUrl(storagePath);
+        uploadedUrls.add(url);
+      }
+    } catch (e) {
+      // If upload fails, we should ideally delete the ones already uploaded
+      // but for now we just throw a descriptive error to prevent DB insertion
+      throw Exception('Gagal mengunggah foto: $e');
     }
 
     final ticketData = ticket.toJson();
@@ -237,6 +243,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Future<TicketModel> assignTicket(String ticketId, String technicianId) async {
+    // 1. Get current status to check if closed
+    final currentTicket = await getTicketDetail(ticketId);
+    if (currentTicket.status == TicketStatus.closed) {
+      throw Exception('Tiket yang sudah ditutup tidak dapat didelegasikan ulang.');
+    }
+
     final response = await supabaseClient
         .from('tickets')
         .update({
@@ -269,6 +281,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .update({
             'rating': rating,
             'feedback': feedback,
+            'status': 'closed', // Auto close ticket after rating
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', ticketId)
@@ -276,6 +289,14 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .single();
       
       final updatedTicket = TicketModel.fromJson(response);
+
+      // Notify User
+      await _notifyUser(
+        userId: updatedTicket.userId,
+        title: 'Tiket Ditutup',
+        message: 'Terima kasih atas penilaian Anda. Tiket ini telah ditutup.',
+        ticketId: ticketId,
+      );
 
       return updatedTicket;
     } on sup.PostgrestException catch (e) {

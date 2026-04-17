@@ -61,7 +61,8 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+    if (_scrollController.position.maxScrollExtent > 0 &&
+        _scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
       final authState = context.read<AuthBloc>().state;
       if (authState.user.isEmpty) return;
       
@@ -73,13 +74,11 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
 
       if (!isStaff) {
         if (!state.isLastPage) {
-          _currentPage++;
-          listBloc.add(list_event.FetchTicketsRequested(page: _currentPage, limit: _pageSize));
+          listBloc.add(list_event.FetchTicketsRequested(page: state.currentPage + 1, limit: _pageSize));
         }
       } else {
         if (!state.isLastPageAll) {
-          _currentPage++;
-          listBloc.add(list_event.FetchAllTicketsRequested(page: _currentPage, limit: _pageSize));
+          listBloc.add(list_event.FetchAllTicketsRequested(page: state.allTicketsPage + 1, limit: _pageSize));
         }
       }
     }
@@ -214,7 +213,6 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
                 },
                 body: RefreshIndicator(
                   onRefresh: () async {
-                    _currentPage = 0;
                     _fetchInitial();
                   },
                   color: AppColors.primary,
@@ -442,6 +440,14 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
     }
 
     if (tickets.isEmpty) {
+      if (state.errorMessage != null) {
+        return EmptyStateWidget.error(
+          message: state.errorMessage!,
+          onAction: () => _fetchInitial(),
+          actionLabel: 'Coba Lagi',
+        );
+      }
+
       if (_searchController.text.isNotEmpty) {
         return EmptyStateWidget.emptySearch(
           actionLabel: 'Hapus Pencarian',
@@ -451,6 +457,7 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
           },
         );
       }
+
       if (state.statusFilter != TicketStatusFilter.all || state.startDate != null) {
         return EmptyStateWidget.emptySearch(
           title: 'Filter Kosong',
@@ -462,9 +469,11 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
           },
         );
       }
+
+      final isUser = context.read<AuthBloc>().state.user.role == UserRole.user;
       return EmptyStateWidget.emptyTickets(
-        actionLabel: context.read<AuthBloc>().state.user.role == UserRole.user ? 'Buat Tiket Sekarang' : null,
-        onAction: context.read<AuthBloc>().state.user.role == UserRole.user ? () => context.push(AppRoutes.createTicket) : null,
+        actionLabel: isUser ? 'Buat Tiket Sekarang' : null,
+        onAction: isUser ? () => context.push(AppRoutes.createTicket) : null,
       );
     }
 

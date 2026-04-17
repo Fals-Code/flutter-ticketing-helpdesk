@@ -18,6 +18,9 @@ class TicketListState extends Equatable {
   final DateTime? endDate;
   final bool isOffline;
 
+  final int currentPage;
+  final int allTicketsPage;
+
   const TicketListState({
     this.isLoading = false,
     this.tickets = const [],
@@ -32,6 +35,8 @@ class TicketListState extends Equatable {
     this.startDate,
     this.endDate,
     this.isOffline = false,
+    this.currentPage = 0,
+    this.allTicketsPage = 0,
   });
 
   TicketListState copyWith({
@@ -50,6 +55,8 @@ class TicketListState extends Equatable {
     bool clearStartDate = false,
     bool clearEndDate = false,
     bool? isOffline,
+    int? currentPage,
+    int? allTicketsPage,
   }) {
     return TicketListState(
       isLoading: isLoading ?? this.isLoading,
@@ -65,6 +72,8 @@ class TicketListState extends Equatable {
       startDate: clearStartDate ? null : (startDate ?? this.startDate),
       endDate: clearEndDate ? null : (endDate ?? this.endDate),
       isOffline: isOffline ?? this.isOffline,
+      currentPage: currentPage ?? this.currentPage,
+      allTicketsPage: allTicketsPage ?? this.allTicketsPage,
     );
   }
 
@@ -83,5 +92,7 @@ class TicketListState extends Equatable {
         startDate,
         endDate,
         isOffline,
+        currentPage,
+        allTicketsPage,
       ];
 }

@@ -44,7 +44,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       title: event.title,
       description: event.description,
       category: event.category,
-      priority: event.priority,
+
       imagePaths: event.imagePaths,
     ));
 

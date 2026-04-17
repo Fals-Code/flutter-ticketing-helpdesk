@@ -13,7 +13,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
   bool _maintenanceMode = false;
   bool _autoAssign = true;
   double _slaHours = 4.0;
-  String _priorityLogic = 'Standard';
+
 
   @override
   Widget build(BuildContext context) {
@@ -72,15 +72,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
               (v) => setState(() => _slaHours = v),
               Colors.blue,
             ),
-            const Divider(height: 1),
-            _buildPickerTile(
-              Icons.sort_rounded,
-              'Logika Prioritas',
-              _priorityLogic,
-              ['Standard', 'Urgent First', 'FIFO', 'AI Sorted'],
-              (v) => setState(() => _priorityLogic = v!),
-              Colors.teal,
-            ),
+
           ]),
 
           const SizedBox(height: 32),
@@ -207,18 +199,6 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
     );
   }
 
-  Widget _buildPickerTile(IconData icon, String title, String value, List<String> options, Function(String?) onChanged, Color color) {
-    return ListTile(
-      leading: _IconContainer(icon: icon, color: color),
-      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-      trailing: DropdownButton<String>(
-        value: value,
-        underline: const SizedBox(),
-        items: options.map((e) => DropdownMenuItem(value: e, child: Text(e, style: const TextStyle(fontSize: 12)))).toList(),
-        onChanged: onChanged,
-      ),
-    );
-  }
 }
 
 class _IconContainer extends StatelessWidget {

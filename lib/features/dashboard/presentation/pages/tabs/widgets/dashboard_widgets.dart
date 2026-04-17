@@ -202,8 +202,7 @@ class RecentTicketCard extends StatelessWidget {
             Row(
               children: [
                 BadgeWidget(label: ticket.category, color: AppColors.primary.withValues(alpha: 0.1), textColor: AppColors.primary),
-                const SizedBox(width: 8),
-                BadgeWidget(label: ticket.priority.label, color: ticket.priority.color.withValues(alpha: 0.1), textColor: ticket.priority.color),
+
               ],
             ),
           ],

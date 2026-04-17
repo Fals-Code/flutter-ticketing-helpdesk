@@ -28,15 +28,11 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
   final _descController = TextEditingController();
 
   String _selectedCategory = 'software';
-  String _selectedPriority = 'medium';
+
   final List<String> _imagePaths = [];
   final ImagePicker _picker = ImagePicker();
 
-  static const _priorities = [
-    {'value': 'low', 'label': 'Rendah'},
-    {'value': 'medium', 'label': 'Sedang'},
-    {'value': 'high', 'label': 'Tinggi'},
-  ];
+
 
   static const _categories = [
     {'value': 'hardware', 'label': 'Hardware'},
@@ -232,30 +228,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         ),
                         const SizedBox(height: 32),
 
-                        // Priority Section
-                        DropdownButtonFormField<String>(
-                          initialValue: _selectedPriority,
-                          decoration: InputDecoration(
-                            labelText: 'Tingkat Prioritas',
-                            prefixIcon: const Icon(Icons.priority_high_rounded),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            filled: true,
-                            fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.grey.withValues(alpha: 0.05),
-                          ),
-                          items: _priorities.map((p) {
-                            return DropdownMenuItem<String>(
-                              value: p['value'],
-                              child: Text(p['label']!),
-                            );
-                          }).toList(),
-                          onChanged: (val) {
-                            if (val != null) setState(() => _selectedPriority = val);
-                          },
-                          validator: (v) => v == null ? 'Pilih tingkat prioritas' : null,
-                        ),
-                        const SizedBox(height: 32),
+
 
                         // Image Picker Section
                         _buildLabel('Lampiran Foto (Opsional)'),
@@ -286,7 +259,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                                     title: _subjectController.text,
                                     description: _descController.text,
                                     category: _selectedCategory,
-                                    priority: _selectedPriority,
+
                                     imagePaths: _imagePaths,
                                   ));
                             },

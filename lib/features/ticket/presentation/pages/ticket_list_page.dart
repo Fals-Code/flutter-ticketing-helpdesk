@@ -719,13 +719,7 @@ class _TicketCard extends StatelessWidget {
                           AppColors.primary.withValues(alpha: 0.1),
                       textColor: AppColors.primary,
                     ),
-                    const SizedBox(width: 6),
-                    _Badge(
-                      label: ticket.priority.label,
-                      color: ticket.priority.color
-                          .withValues(alpha: 0.1),
-                      textColor: ticket.priority.color,
-                    ),
+
                     const Spacer(),
                     Container(
                       padding: const EdgeInsets.symmetric(

@@ -58,7 +58,7 @@ class CreateTicketRequested extends TicketListEvent {
   final String title;
   final String description;
   final String category;
-  final String priority;
+
   final List<String> imagePaths;
 
   const CreateTicketRequested({
@@ -66,12 +66,12 @@ class CreateTicketRequested extends TicketListEvent {
     required this.title,
     required this.description,
     required this.category,
-    required this.priority,
+
     required this.imagePaths,
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
+  List<Object?> get props => [userId, title, description, category, imagePaths];
 }
 
 class StartTicketListSubscription extends TicketListEvent {

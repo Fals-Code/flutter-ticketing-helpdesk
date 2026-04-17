@@ -7,7 +7,7 @@ class TicketModel extends TicketEntity {
     required super.title,
     required super.description,
     required super.status,
-    required super.priority,
+
     required super.category,
     required super.createdAt,
     super.updatedAt,
@@ -26,7 +26,7 @@ class TicketModel extends TicketEntity {
       title: entity.title,
       description: entity.description,
       status: entity.status,
-      priority: entity.priority,
+
       category: entity.category,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -66,7 +66,7 @@ class TicketModel extends TicketEntity {
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       status: TicketStatus.fromString(json['status'] ?? 'open'),
-      priority: TicketPriority.fromString(json['priority'] ?? 'medium'),
+
       category: json['category'] ?? 'General',
       createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
       updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
@@ -86,7 +86,7 @@ class TicketModel extends TicketEntity {
       'title': title,
       'description': description,
       'status': status.dbValue,
-      'priority': priority.dbValue,
+
       'category': category,
       'user_id': userId,
       'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
@@ -103,7 +103,7 @@ class TicketModel extends TicketEntity {
       title: title,
       description: description,
       status: status,
-      priority: priority,
+
       category: category,
       createdAt: createdAt,
       updatedAt: updatedAt,

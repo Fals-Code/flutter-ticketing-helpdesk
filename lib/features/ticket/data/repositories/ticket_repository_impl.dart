@@ -96,7 +96,7 @@ class TicketRepositoryImpl implements TicketRepository {
     required String title,
     required String description,
     required String category,
-
+    String priority = 'medium',
     required List<String> imagePaths,
   }) async {
     try {
@@ -105,7 +105,7 @@ class TicketRepositoryImpl implements TicketRepository {
         title: title,
         description: description,
         status: TicketStatus.open,
-
+        priority: TicketPriority.fromString(priority),
         category: category,
         createdAt: DateTime.now(),
         userId: userId,

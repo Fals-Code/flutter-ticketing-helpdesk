@@ -59,7 +59,7 @@ abstract class TicketRepository {
     required String title,
     required String description,
     required String category,
-
+    String priority = 'medium',
     required List<String> imagePaths,
   });
 

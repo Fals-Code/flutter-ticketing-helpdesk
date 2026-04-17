@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 
-enum TicketStatusFilter { all, open, inProgress, resolved, closed }
+import 'package:uts/core/constants/enums.dart';
 
 class TicketListState extends Equatable {
   final bool isLoading;

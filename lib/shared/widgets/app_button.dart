@@ -90,7 +90,6 @@ class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMix
       case AppButtonSize.large:
         return AppDimensions.buttonHeightLG;
       case AppButtonSize.normal:
-      default:
         return AppDimensions.buttonHeight;
     }
   }
@@ -102,7 +101,6 @@ class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMix
       case AppButtonSize.large:
         return 16;
       case AppButtonSize.normal:
-      default:
         return 14;
     }
   }

@@ -7,6 +7,7 @@ class TicketEntity extends Equatable {
   final String title;
   final String description;
   final TicketStatus status;
+  final TicketPriority priority;
 
   final String category;
   final DateTime createdAt;
@@ -24,6 +25,7 @@ class TicketEntity extends Equatable {
     required this.title,
     required this.description,
     required this.status,
+    this.priority = TicketPriority.medium,
 
     required this.category,
     required this.createdAt,
@@ -43,6 +45,7 @@ class TicketEntity extends Equatable {
         title,
         description,
         status,
+        priority,
 
         category,
         createdAt,

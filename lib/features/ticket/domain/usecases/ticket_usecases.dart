@@ -38,7 +38,7 @@ class CreateTicketUseCase implements UseCase<Either<Failure, TicketEntity>, Crea
       title: params.title,
       description: params.description,
       category: params.category,
-
+      priority: params.priority,
       imagePaths: params.imagePaths,
     );
   }
@@ -166,7 +166,7 @@ class CreateTicketParams extends Equatable {
   final String title;
   final String description;
   final String category;
-
+  final String priority;
   final List<String> imagePaths;
 
   const CreateTicketParams({
@@ -174,12 +174,12 @@ class CreateTicketParams extends Equatable {
     required this.title,
     required this.description,
     required this.category,
-
+    this.priority = 'medium',
     required this.imagePaths,
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, imagePaths];
+  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
 }
 
 class AddCommentParams extends Equatable {

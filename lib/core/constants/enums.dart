@@ -108,3 +108,53 @@ enum TicketStatus {
   }
 }
 
+/// Prioritas tiket.
+enum TicketPriority {
+  low,
+  medium,
+  high;
+
+  static TicketPriority fromString(String? priority) {
+    switch (priority?.toLowerCase()) {
+      case 'low':
+      case 'rendah':
+        return TicketPriority.low;
+      case 'medium':
+      case 'sedang':
+        return TicketPriority.medium;
+      case 'high':
+      case 'tinggi':
+        return TicketPriority.high;
+      default:
+        return TicketPriority.medium; // Default
+    }
+  }
+
+  String get dbValue => name;
+
+  String get label {
+    switch (this) {
+      case TicketPriority.low: return 'Rendah';
+      case TicketPriority.medium: return 'Sedang';
+      case TicketPriority.high: return 'Tinggi';
+    }
+  }
+
+  Color get color {
+    switch (this) {
+      case TicketPriority.low: return AppColors.success;
+      case TicketPriority.medium: return AppColors.warning;
+      case TicketPriority.high: return AppColors.danger;
+    }
+  }
+}
+
+/// Filter Status Tiket untuk List
+enum TicketStatusFilter {
+  all,
+  open,
+  inProgress,
+  resolved,
+  closed
+}
+

@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:uts/core/constants/enums.dart';
 import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
@@ -44,7 +45,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       title: event.title,
       description: event.description,
       category: event.category,
-
+      priority: event.priority,
       imagePaths: event.imagePaths,
     ));
 

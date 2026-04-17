@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dart';
+import 'package:uts/core/constants/enums.dart';
 
 abstract class TicketListEvent extends Equatable {
   const TicketListEvent();
@@ -58,6 +58,7 @@ class CreateTicketRequested extends TicketListEvent {
   final String title;
   final String description;
   final String category;
+  final String priority;
 
   final List<String> imagePaths;
 
@@ -66,12 +67,13 @@ class CreateTicketRequested extends TicketListEvent {
     required this.title,
     required this.description,
     required this.category,
+    required this.priority,
 
     required this.imagePaths,
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, imagePaths];
+  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
 }
 
 class StartTicketListSubscription extends TicketListEvent {

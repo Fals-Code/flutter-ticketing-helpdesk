@@ -21,6 +21,8 @@ class AppTextField extends StatefulWidget {
   final TextInputAction textInputAction;
   final void Function(String)? onSubmitted;
   final bool isSuccess;
+  final int? maxLength;
+  final int? minLines;
 
   const AppTextField({
     super.key,
@@ -40,6 +42,8 @@ class AppTextField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.onSubmitted,
     this.isSuccess = false,
+    this.maxLength,
+    this.minLines,
   });
 
   @override
@@ -84,6 +88,8 @@ class _AppTextFieldState extends State<AppTextField> {
             onChanged: widget.onChanged,
             enabled: widget.enabled,
             maxLines: widget.isPassword ? 1 : widget.maxLines,
+            minLines: widget.minLines,
+            maxLength: widget.maxLength,
             textInputAction: widget.textInputAction,
             onFieldSubmitted: widget.onSubmitted,
             style: TextStyle(fontSize: 14, color: primaryTextColor),

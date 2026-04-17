@@ -26,6 +26,7 @@ import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/shared/widgets/connectivity_banner_widget.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+import 'package:intl/date_symbol_data_local.dart';
 
 // Top-level function for background FCM handling
 @pragma('vm:entry-point')
@@ -78,6 +79,9 @@ Future<void> main() async {
 
   // 4. Inisialisasi FCM Service
   await sl<FCMService>().initialize();
+
+  // 5. Inisialisasi locale formatting
+  await initializeDateFormatting('id', null);
 
   runApp(const ETicketingApp());
 }

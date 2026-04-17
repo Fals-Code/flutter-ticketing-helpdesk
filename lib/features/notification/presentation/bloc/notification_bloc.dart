@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'dart:developer' as developer;
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/usecases/notification_usecases.dart';
@@ -31,6 +32,13 @@ class NotificationStreamUpdated extends NotificationEvent {
 }
 
 class MarkAllReadRequested extends NotificationEvent {}
+
+class DeleteNotificationsRequested extends NotificationEvent {
+  final List<String> notificationIds;
+  const DeleteNotificationsRequested(this.notificationIds);
+  @override
+  List<Object?> get props => [notificationIds];
+}
 
 class ResetNotificationState extends NotificationEvent {}
 
@@ -66,6 +74,7 @@ class NotificationState extends Equatable {
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final GetNotifications getNotifications;
   final MarkNotificationAsRead markNotificationAsRead;
+  final DeleteNotifications deleteNotifications;
   final WatchNotifications watchNotifications;
   final LocalNotificationService localNotificationService;
   StreamSubscription? _notificationSubscription;
@@ -73,6 +82,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   NotificationBloc({
     required this.getNotifications,
     required this.markNotificationAsRead,
+    required this.deleteNotifications,
     required this.watchNotifications,
     required this.localNotificationService,
   }) : super(const NotificationState()) {
@@ -81,6 +91,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<StartNotificationSubscription>(_onStartSubscription);
     on<NotificationStreamUpdated>(_onStreamUpdated);
     on<MarkAllReadRequested>(_onMarkAllRead);
+    on<DeleteNotificationsRequested>(_onDeleteNotifications);
     on<ResetNotificationState>(_onResetState);
   }
 
@@ -107,7 +118,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           id: notification.id.hashCode,
           title: notification.title,
           body: notification.message,
-          payload: notification.ticketId,
+          payload: '${notification.id}|${notification.ticketId ?? ""}',
         );
       }
     }
@@ -141,7 +152,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     // Optimistic local update first
-    final updatedList = state.notifications.map((n) {
+    final originalList = state.notifications;
+    final updatedList = originalList.map((n) {
       if (n.id == event.notificationId) {
         return n.copyWith(isRead: true);
       }
@@ -154,7 +166,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     result.fold(
       (failure) {
         // Revert on failure
-        emit(state.copyWith(notifications: state.notifications));
+        developer.log('Failed to mark notification as read! ${failure.message}', name: 'NotificationBloc');
+        emit(state.copyWith(notifications: originalList));
       },
       (_) {
         // Already updated optimistically, nothing else needed
@@ -182,6 +195,26 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     // Persist ALL unread to database concurrently
     await Future.wait(
       unreadIds.map((id) => markNotificationAsRead(id)),
+    );
+  }
+
+  Future<void> _onDeleteNotifications(
+    DeleteNotificationsRequested event,
+    Emitter<NotificationState> emit,
+  ) async {
+    final originalList = state.notifications;
+    final updatedList = originalList
+        .where((n) => !event.notificationIds.contains(n.id))
+        .toList();
+    emit(state.copyWith(notifications: updatedList));
+
+    final result = await deleteNotifications(event.notificationIds);
+    result.fold(
+      (failure) {
+        developer.log('Failed to delete notifications! ${failure.message}', name: 'NotificationBloc');
+        emit(state.copyWith(notifications: originalList));
+      },
+      (_) {},
     );
   }
 

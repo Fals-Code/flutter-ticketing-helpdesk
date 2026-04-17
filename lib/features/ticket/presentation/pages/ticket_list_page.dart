@@ -95,6 +95,49 @@ class _TicketListPageState extends State<TicketListPage> {
     super.dispose();
   }
 
+  Future<void> _selectDateRange(BuildContext context) async {
+    final bloc = context.read<TicketListBloc>();
+    final state = bloc.state;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    final DateTimeRange? picked = await showDateRangePicker(
+      context: context,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 1)),
+      initialDateRange: state.startDate != null && state.endDate != null
+          ? DateTimeRange(start: state.startDate!, end: state.endDate!)
+          : null,
+      helpText: 'Pilih Rentang Tanggal',
+      cancelText: 'Batal',
+      confirmText: 'Pilih',
+      saveText: 'Simpan',
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: isDark
+                ? const ColorScheme.dark(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surfaceDark,
+                    onSurface: Colors.white,
+                  )
+                : const ColorScheme.light(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: Colors.white,
+                    onSurface: Colors.black87,
+                  ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null && mounted) {
+      bloc.add(list_event.FilterDateRangeChanged(picked.start, picked.end));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -105,24 +148,34 @@ class _TicketListPageState extends State<TicketListPage> {
         final user = authState.user;
         final isStaff =
             user.role == UserRole.admin || user.role == UserRole.technician;
-        // Only regular users (role == user) get the FAB to create tickets
         final canCreateTicket = user.role == UserRole.user;
 
         String title;
         if (user.role == UserRole.admin) {
-          title = 'Daftar Semua Laporan';
+          title = 'Semua Laporan';
         } else if (user.role == UserRole.technician) {
-          title = 'Tugas Perbaikan Saya';
+          title = 'Tugas Saya';
         } else {
           title = 'Laporan Saya';
         }
 
         return Scaffold(
+          backgroundColor:
+              isDark ? AppColors.backgroundDark : const Color(0xFFF7F8FA),
           appBar: AppBar(
-            title: Text(title),
+            title: Text(
+              title,
+              style: const TextStyle(
+                  fontWeight: FontWeight.w700, fontSize: 20),
+            ),
+            backgroundColor: isDark
+                ? AppColors.backgroundDark
+                : const Color(0xFFF7F8FA),
+            surfaceTintColor: Colors.transparent,
+            elevation: 0,
             actions: [
               IconButton(
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const Icon(Icons.refresh_rounded, size: 20),
                 onPressed: () {
                   _myTicketsPage = 0;
                   _allTicketsPage = 0;
@@ -135,27 +188,31 @@ class _TicketListPageState extends State<TicketListPage> {
             builder: (context, listState) {
               return Column(
                 children: [
-                  _buildFilters(context, listState, isDark),
+                  _buildFilterBar(context, listState, isDark),
                   if (listState.isOffline)
                     Container(
                       width: double.infinity,
                       color: Colors.orange.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      padding: const EdgeInsets.symmetric(vertical: 6),
                       child: const Text(
-                        'Sedang offline. Menampilkan data tersimpan.',
+                        '📴 Mode offline – data lokal',
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        style: TextStyle(
+                            color: Colors.white, fontSize: 12),
                       ),
                     ),
                   if (user.role == UserRole.admin)
                     BlocBuilder<TicketStatsBloc, TicketStatsState>(
                       builder: (context, statsState) {
-                        return _buildAdminStatsBar(statsState, isDark);
+                        return _buildAdminStatsBar(
+                            statsState, isDark);
                       },
                     ),
                   Expanded(
                     child: _buildTicketList(
-                        isStaff ? listState.allTickets : listState.tickets,
+                        isStaff
+                            ? listState.allTickets
+                            : listState.tickets,
                         listState.isLoading,
                         listState.errorMessage,
                         isStaff
@@ -167,12 +224,13 @@ class _TicketListPageState extends State<TicketListPage> {
               );
             },
           ),
-          // Only show FAB for regular users (not admin/technician)
           floatingActionButton: canCreateTicket
               ? FloatingActionButton(
                   heroTag: 'ticket_list_fab',
                   onPressed: () => context.push(AppRoutes.createTicket),
-                  child: const Icon(Icons.add),
+                  backgroundColor: AppColors.primary,
+                  foregroundColor: Colors.white,
+                  child: const Icon(Icons.add_rounded),
                 )
               : null,
         );
@@ -180,84 +238,186 @@ class _TicketListPageState extends State<TicketListPage> {
     );
   }
 
-  Widget _buildFilters(
+  Widget _buildFilterBar(
       BuildContext context, TicketListState state, bool isDark) {
+    final hasDateFilter =
+        state.startDate != null || state.endDate != null;
+
     return Container(
-      padding: const EdgeInsets.all(AppDimensions.spaceLG),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark : Colors.white,
-        border: Border(
-          bottom: BorderSide(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-          ),
-        ),
-      ),
+      color: isDark ? AppColors.surfaceDark : Colors.white,
+      padding: const EdgeInsets.fromLTRB(12, 12, 12, 0),
       child: Column(
         children: [
+          // Search row
           Row(
             children: [
               Expanded(
-                child: TextField(
-                  onChanged: (val) => context
-                      .read<TicketListBloc>()
-                      .add(list_event.SearchTicketsRequested(val)),
-                  decoration: InputDecoration(
-                    hintText: 'Cari tiket...',
-                    prefixIcon:
-                        const Icon(Icons.search_rounded, size: 20),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16, vertical: 12),
-                    fillColor: isDark
-                        ? const Color(0xFF1E1E22)
-                        : const Color(0xFFF5F5F7),
-                    filled: true,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                child: Container(
+                  height: 42,
+                  decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.07)
+                        : const Color(0xFFF2F2F5),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    onChanged: (val) => context
+                        .read<TicketListBloc>()
+                        .add(list_event.SearchTicketsRequested(val)),
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isDark ? Colors.white : Colors.black87,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Cari tiket...',
+                      hintStyle: TextStyle(
+                        fontSize: 14,
+                        color: isDark
+                            ? Colors.white38
+                            : Colors.black38,
+                      ),
+                      prefixIcon: Icon(
+                        Icons.search_rounded,
+                        size: 18,
+                        color: isDark
+                            ? Colors.white38
+                            : Colors.black38,
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          vertical: 12),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              _buildDateFilterIcon(context, state, isDark),
+              _buildDateFilterButton(context, state, isDark, hasDateFilter),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
+          // Date active indicator
+          if (hasDateFilter) _buildActiveDateChip(context, state, isDark),
+          // Status filters
           SizedBox(
-            height: 32,
+            height: 34,
             child: ListView(
               scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.only(bottom: 2),
               children: [
-                _buildQuickDateChips(context, state, isDark),
-                VerticalDivider(
-                    width: 20,
-                    thickness: 1,
-                    color: isDark
-                        ? AppColors.borderDark
-                        : AppColors.borderLight),
-                _buildFilterChip(
+                _buildStatusChip(
                   context,
-                  label: 'Semua Status',
+                  label: 'Semua',
                   isSelected:
                       state.statusFilter == TicketStatusFilter.all,
                   onTap: () => context.read<TicketListBloc>().add(
-                      const list_event
-                          .FilterStatusChanged(TicketStatusFilter.all)),
+                      const list_event.FilterStatusChanged(
+                          TicketStatusFilter.all)),
                   isDark: isDark,
+                  color: Colors.grey,
                 ),
                 ...TicketStatus.values.map((status) {
                   final mappedFilter = TicketStatusFilter.values
                       .firstWhere((e) => e.name == status.name);
-                  return _buildFilterChip(
+                  return _buildStatusChip(
                     context,
                     label: status.label,
                     isSelected: state.statusFilter == mappedFilter,
                     onTap: () => context
                         .read<TicketListBloc>()
-                        .add(list_event.FilterStatusChanged(mappedFilter)),
+                        .add(list_event
+                            .FilterStatusChanged(mappedFilter)),
                     isDark: isDark,
+                    color: status.color,
                   );
                 }),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Divider(
+            height: 1,
+            color:
+                isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDateFilterButton(BuildContext context, TicketListState state,
+      bool isDark, bool hasFilter) {
+    return GestureDetector(
+      onTap: () => _selectDateRange(context),
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: hasFilter
+              ? AppColors.primary.withValues(alpha: 0.12)
+              : (isDark
+                  ? Colors.white.withValues(alpha: 0.07)
+                  : const Color(0xFFF2F2F5)),
+          borderRadius: BorderRadius.circular(12),
+          border: hasFilter
+              ? Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.4))
+              : null,
+        ),
+        child: Icon(
+          Icons.calendar_month_rounded,
+          size: 18,
+          color: hasFilter
+              ? AppColors.primary
+              : (isDark ? Colors.white54 : Colors.black45),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveDateChip(
+      BuildContext context, TicketListState state, bool isDark) {
+    final fmt = DateFormat('d MMM');
+    final label = state.startDate != null && state.endDate != null
+        ? '${fmt.format(state.startDate!)} – ${fmt.format(state.endDate!)}'
+        : state.startDate != null
+            ? 'Mulai ${fmt.format(state.startDate!)}'
+            : 'Hingga ${fmt.format(state.endDate!)}';
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Container(
+            padding:
+                const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                  color: AppColors.primary.withValues(alpha: 0.3)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.calendar_today_rounded,
+                    size: 12, color: AppColors.primary),
+                const SizedBox(width: 6),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: () => context.read<TicketListBloc>().add(
+                      const list_event.FilterDateRangeChanged(
+                          null, null)),
+                  child: const Icon(Icons.close_rounded,
+                      size: 14, color: AppColors.primary),
+                ),
               ],
             ),
           ),
@@ -266,175 +426,44 @@ class _TicketListPageState extends State<TicketListPage> {
     );
   }
 
-  Widget _buildDateFilterIcon(
-      BuildContext context, TicketListState state, bool isDark) {
-    final hasDateFilter =
-        state.startDate != null || state.endDate != null;
-    return InkWell(
-      onTap: () async {
-        final bloc = context.read<TicketListBloc>();
-        final DateTimeRange? picked = await showDateRangePicker(
-          context: context,
-          firstDate: DateTime(2020),
-          lastDate: DateTime.now().add(const Duration(days: 1)),
-          initialDateRange: state.startDate != null && state.endDate != null
-              ? DateTimeRange(start: state.startDate!, end: state.endDate!)
-              : null,
-          builder: (context, child) {
-            return Theme(
-              data: Theme.of(context).copyWith(
-                colorScheme: isDark
-                    ? const ColorScheme.dark(
-                        primary: AppColors.primary,
-                        onPrimary: Colors.white,
-                        surface: AppColors.surfaceDark,
-                        onSurface: Colors.white)
-                    : const ColorScheme.light(
-                        primary: AppColors.primary,
-                        onPrimary: Colors.white,
-                        surface: Colors.white,
-                        onSurface: Colors.black87),
-              ),
-              child: child!,
-            );
-          },
-        );
-        if (picked != null) {
-          bloc.add(
-              list_event.FilterDateRangeChanged(picked.start, picked.end));
-        }
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        height: 48,
-        width: 48,
-        decoration: BoxDecoration(
-          color: hasDateFilter
-              ? AppColors.primary.withValues(alpha: 0.1)
-              : (isDark
-                  ? const Color(0xFF1E1E22)
-                  : const Color(0xFFF5F5F7)),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-              color: hasDateFilter ? AppColors.primary : Colors.transparent),
-        ),
-        child: Icon(
-          Icons.calendar_month_rounded,
-          color: hasDateFilter
-              ? AppColors.primary
-              : (isDark ? Colors.white70 : Colors.black54),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickDateChips(
-      BuildContext context, TicketListState state, bool isDark) {
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-
-    bool isToday = state.startDate != null &&
-        state.startDate == today &&
-        state.endDate == null;
-    bool isThisWeek = state.startDate != null &&
-        state.startDate ==
-            today.subtract(const Duration(days: 7)) &&
-        state.endDate == null;
-    bool isThisMonth = state.startDate != null &&
-        state.startDate == DateTime(now.year, now.month, 1) &&
-        state.endDate == null;
-
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _buildFilterChip(
-          context,
-          label: 'Hari Ini',
-          isSelected: isToday,
-          onTap: () => context
-              .read<TicketListBloc>()
-              .add(list_event.FilterDateRangeChanged(today, null)),
-          isDark: isDark,
-        ),
-        _buildFilterChip(
-          context,
-          label: 'Minggu Ini',
-          isSelected: isThisWeek,
-          onTap: () => context.read<TicketListBloc>().add(
-              list_event.FilterDateRangeChanged(
-                  today.subtract(const Duration(days: 7)), null)),
-          isDark: isDark,
-        ),
-        _buildFilterChip(
-          context,
-          label: 'Bulan Ini',
-          isSelected: isThisMonth,
-          onTap: () => context.read<TicketListBloc>().add(
-              list_event.FilterDateRangeChanged(
-                  DateTime(now.year, now.month, 1), null)),
-          isDark: isDark,
-        ),
-        if (state.startDate != null || state.endDate != null)
-          _buildFilterChip(
-            context,
-            label: 'Hapus Filter Tgl',
-            isSelected: false,
-            onTap: () => context.read<TicketListBloc>().add(
-                const list_event.FilterDateRangeChanged(null, null)),
-            isDark: isDark,
-            icon: Icons.close_rounded,
-          ),
-      ],
-    );
-  }
-
-  Widget _buildFilterChip(
+  Widget _buildStatusChip(
     BuildContext context, {
     required String label,
     required bool isSelected,
     required VoidCallback onTap,
     required bool isDark,
-    IconData? icon,
+    required Color color,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: InkWell(
+      padding: const EdgeInsets.only(right: 6),
+      child: GestureDetector(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          alignment: Alignment.center,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: isSelected
-                ? AppColors.primary
-                : (isDark
-                    ? const Color(0xFF2A2A2E)
-                    : Colors.grey.shade200),
+                ? color.withValues(alpha: 0.15)
+                : Colors.transparent,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: isSelected
+                  ? color.withValues(alpha: 0.4)
+                  : (isDark
+                      ? Colors.white.withValues(alpha: 0.12)
+                      : Colors.black.withValues(alpha: 0.1)),
+            ),
           ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[
-                Icon(icon,
-                    size: 14,
-                    color: isSelected
-                        ? Colors.white
-                        : (isDark ? Colors.white70 : Colors.black87)),
-                const SizedBox(width: 4),
-              ],
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight:
-                      isSelected ? FontWeight.w600 : FontWeight.w500,
-                  color: isSelected
-                      ? Colors.white
-                      : (isDark ? Colors.white70 : Colors.black87),
-                ),
-              ),
-            ],
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight:
+                  isSelected ? FontWeight.w600 : FontWeight.w400,
+              color: isSelected
+                  ? color
+                  : (isDark ? Colors.white60 : Colors.black54),
+            ),
           ),
         ),
       ),
@@ -450,11 +479,11 @@ class _TicketListPageState extends State<TicketListPage> {
   ) {
     if (tickets.isEmpty && isLoading) {
       return ListView.builder(
-        padding: const EdgeInsets.all(AppDimensions.spaceLG),
+        padding: const EdgeInsets.all(12),
         itemCount: 5,
         itemBuilder: (context, index) => const Padding(
-          padding: EdgeInsets.only(bottom: 12),
-          child: ShimmerCard(height: 140),
+          padding: EdgeInsets.only(bottom: 10),
+          child: ShimmerCard(height: 130),
         ),
       );
     }
@@ -464,11 +493,10 @@ class _TicketListPageState extends State<TicketListPage> {
         onRefresh: () async => _fetchInitial(),
         child: ListView(
           children: const [
-            SizedBox(height: 100),
+            SizedBox(height: 80),
             EmptyStateWidget(
               title: 'Belum Ada Tiket',
-              subtitle:
-                  'Buat tiket baru untuk memulai\nlayanan helpdesk.',
+              subtitle: 'Buat tiket baru untuk memulai\nlayanan helpdesk.',
               icon: Icons.confirmation_number_outlined,
             ),
           ],
@@ -482,15 +510,19 @@ class _TicketListPageState extends State<TicketListPage> {
         _allTicketsPage = 0;
         _fetchInitial();
       },
+      color: AppColors.primary,
       child: ListView.builder(
         controller: controller,
-        padding: const EdgeInsets.all(AppDimensions.spaceLG),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 80),
         itemCount: tickets.length + (isLoading ? 1 : 0),
         itemBuilder: (context, index) {
           if (index == tickets.length) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 20),
-              child: Center(child: CircularProgressIndicator()),
+              child: Center(
+                child: CircularProgressIndicator(
+                    strokeWidth: 2, color: AppColors.primary),
+              ),
             );
           }
           return _TicketCard(ticket: tickets[index], isDark: isDark);
@@ -502,58 +534,64 @@ class _TicketListPageState extends State<TicketListPage> {
   Widget _buildAdminStatsBar(TicketStatsState state, bool isDark) {
     final stats = state.stats;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: isDark ? AppColors.surfaceDark : Colors.grey.shade50,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      color: isDark ? AppColors.surfaceDark : Colors.white,
       child: Row(
         children: [
-          _buildMiniStatCard(
-              'Terbuka', stats.open, AppColors.statusOpen, isDark),
+          _buildMiniStat('Terbuka', stats.open, AppColors.statusOpen,
+              isDark),
           const SizedBox(width: 8),
-          _buildMiniStatCard('Diproses', stats.inProgress,
+          _buildMiniStat('Diproses', stats.inProgress,
               AppColors.statusInProgress, isDark),
           const SizedBox(width: 8),
-          _buildMiniStatCard(
-              'Selesai', stats.resolved, AppColors.statusResolved, isDark),
+          _buildMiniStat('Selesai', stats.resolved,
+              AppColors.statusResolved, isDark),
         ],
       ),
     );
   }
 
-  Widget _buildMiniStatCard(
+  Widget _buildMiniStat(
       String label, int value, Color color, bool isDark) {
     return Expanded(
       child: Container(
         padding:
-            const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+            const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
         decoration: BoxDecoration(
           color: isDark ? Colors.black26 : Colors.white,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: color.withValues(alpha: 0.3)),
-          boxShadow: [
-            if (!isDark)
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.05),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-          ],
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withValues(alpha: 0.25)),
         ),
-        child: Column(
+        child: Row(
           children: [
-            Text(
-              value.toString(),
-              style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: color),
+            Container(
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                  color: color, shape: BoxShape.circle),
             ),
-            const SizedBox(height: 2),
-            Text(
-              label,
-              style: TextStyle(
-                  fontSize: 10,
-                  color:
-                      isDark ? Colors.white70 : Colors.black54),
+            const SizedBox(width: 6),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  value.toString(),
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: color,
+                  ),
+                ),
+                Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: isDark
+                        ? Colors.white54
+                        : Colors.black45,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -570,117 +608,140 @@ class _TicketCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: InkWell(
-        onTap: () => context.push('/tickets/${ticket.id}'),
-        borderRadius: BorderRadius.circular(10),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : Colors.white,
-            borderRadius: BorderRadius.circular(10),
-            border: Border.all(
-              color:
-                  isDark ? AppColors.borderDark : AppColors.borderLight,
-              width: 1,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(14),
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: () => context.push('/tickets/${ticket.id}'),
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark
+                    ? AppColors.borderDark
+                    : const Color(0xFFEEEEF2),
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 8,
-                    height: 8,
-                    decoration: BoxDecoration(
-                      color: ticket.status.color,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    '#${ticket.id.substring(0, 8).toUpperCase()}',
-                    style: GoogleFonts.firaCode(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w500,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
-                    ),
-                  ),
-                  if (ticket.userName != null) ...[
-                    const SizedBox(width: 8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
                     Container(
-                        width: 4,
-                        height: 4,
-                        decoration: const BoxDecoration(
-                            color: Colors.grey,
-                            shape: BoxShape.circle)),
-                    const SizedBox(width: 8),
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: ticket.status.color,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                    const SizedBox(width: 7),
                     Text(
-                      ticket.userName!,
+                      '#${ticket.id.substring(0, 8).toUpperCase()}',
+                      style: GoogleFonts.firaCode(
+                        fontSize: 11,
+                        color: isDark
+                            ? Colors.white38
+                            : Colors.black38,
+                      ),
+                    ),
+                    if (ticket.userName != null) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                          width: 3,
+                          height: 3,
+                          decoration: BoxDecoration(
+                              color: isDark
+                                  ? Colors.white30
+                                  : Colors.black30,
+                              shape: BoxShape.circle)),
+                      const SizedBox(width: 6),
+                      Text(
+                        ticket.userName!,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark
+                              ? Colors.white60
+                              : Colors.black54,
+                        ),
+                      ),
+                    ],
+                    const Spacer(),
+                    Text(
+                      DateFormat('dd MMM').format(ticket.createdAt),
                       style: TextStyle(
                         fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: isDark ? Colors.white70 : Colors.black87,
+                        color: isDark
+                            ? Colors.white38
+                            : Colors.black38,
                       ),
                     ),
                   ],
-                  const Spacer(),
-                  Text(
-                    DateFormat('dd MMM').format(ticket.createdAt),
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: isDark
-                          ? AppColors.textSecondaryDark
-                          : AppColors.textSecondaryLight,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  ticket.title,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  ticket.description,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                    height: 1.4,
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    _Badge(
+                      label: ticket.category,
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      textColor: AppColors.primary,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                ticket.title,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                    const SizedBox(width: 6),
+                    _Badge(
+                      label: ticket.priority.label,
+                      color: ticket.priority.color
+                          .withValues(alpha: 0.1),
+                      textColor: ticket.priority.color,
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: ticket.status.color
+                            .withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: Text(
+                        ticket.status.label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: ticket.status.color,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                ticket.description,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: isDark
-                      ? AppColors.textSecondaryDark
-                      : AppColors.textSecondaryLight,
-                  height: 1.4,
-                ),
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  _Badge(
-                    label: ticket.category,
-                    color: AppColors.primary.withValues(alpha: 0.1),
-                    textColor: AppColors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                  _Badge(
-                    label: ticket.priority.label,
-                    color:
-                        ticket.priority.color.withValues(alpha: 0.1),
-                    textColor: ticket.priority.color,
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),
@@ -702,15 +763,15 @@ class _Badge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: color,
-        borderRadius: BorderRadius.circular(4),
+        borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
         label,
         style: TextStyle(
-          fontSize: 10,
+          fontSize: 11,
           fontWeight: FontWeight.w600,
           color: textColor,
         ),

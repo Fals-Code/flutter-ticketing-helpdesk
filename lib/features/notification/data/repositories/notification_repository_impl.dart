@@ -35,6 +35,18 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
+  Future<Either<Failure, void>> deleteNotifications(List<String> ids) async {
+    try {
+      await remoteDataSource.deleteNotifications(ids);
+      return const Right(null);
+    } on ServerException {
+      return const Left(ServerFailure());
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Stream<List<NotificationEntity>> watchNotifications() {
     return remoteDataSource.watchNotifications().map(
           (models) => models.map((m) => m.toEntity()).toList(),

@@ -22,6 +22,7 @@ Future<void> initNotificationDependencies(GetIt sl) async {
   // UseCases
   sl.registerLazySingleton(() => GetNotifications(sl()));
   sl.registerLazySingleton(() => MarkNotificationAsRead(sl()));
+  sl.registerLazySingleton(() => DeleteNotifications(sl()));
   sl.registerLazySingleton(() => WatchNotifications(sl()));
 
   // Services
@@ -33,6 +34,7 @@ Future<void> initNotificationDependencies(GetIt sl) async {
     () => NotificationBloc(
       getNotifications: sl(),
       markNotificationAsRead: sl(),
+      deleteNotifications: sl(),
       watchNotifications: sl(),
       localNotificationService: sl(),
     ),

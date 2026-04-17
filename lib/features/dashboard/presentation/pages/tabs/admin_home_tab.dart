@@ -9,6 +9,7 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.da
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart';
 import 'package:uts/features/dashboard/presentation/pages/tabs/widgets/dashboard_widgets.dart';
+import 'package:uts/shared/theme/theme_cubit.dart';
 
 class AdminHomeTab extends StatelessWidget {
   const AdminHomeTab({super.key});
@@ -23,6 +24,10 @@ class AdminHomeTab extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Admin Console'),
             actions: [
+              IconButton(
+                icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded),
                 onPressed: () {

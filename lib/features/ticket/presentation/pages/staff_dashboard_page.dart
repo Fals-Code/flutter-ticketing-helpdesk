@@ -11,6 +11,7 @@ import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/shared/theme/theme_cubit.dart';
 
 class StaffDashboardPage extends StatefulWidget {
   const StaffDashboardPage({super.key});
@@ -40,6 +41,10 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> {
               },
             ),
             actions: [
+              IconButton(
+                icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
+                onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+              ),
               IconButton(
                 icon: const Icon(Icons.refresh),
                 onPressed: () {

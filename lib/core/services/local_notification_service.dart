@@ -4,6 +4,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:flutter/foundation.dart';
 import 'package:uts/core/router/app_router.dart';
+import 'package:uts/core/di/injection_container.dart';
+import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
 
 class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -35,13 +37,33 @@ class LocalNotificationService {
 
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
-      onDidReceiveNotificationResponse: (NotificationResponse response) {
+      onDidReceiveNotificationResponse: (NotificationResponse response) async {
         // Handle notification tap logic here
         final String? payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
           debugPrint('Notification tapped with payload: $payload');
-          // Navigate to ticket detail: /tickets/:id
-          appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', payload));
+          // Payload format: "notificationId|ticketId"
+          final parts = payload.split('|');
+          if (parts.length > 1) {
+            final notificationId = parts[0];
+            final ticketId = parts[1];
+            
+            // Mark as read in the database
+            if (notificationId.isNotEmpty) {
+              final result = await sl<MarkNotificationAsRead>().call(notificationId);
+              result.fold(
+                (failure) => debugPrint('Failed to mark notification as read: ${failure.message}'),
+                (_) => debugPrint('Successfully marked notification $notificationId as read via background tap.'),
+              );
+            }
+
+            if (ticketId.isNotEmpty) {
+              appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));
+            }
+          } else {
+            // Fallback for old simple payloads (just ticketId)
+            appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', payload));
+          }
         }
       },
     );

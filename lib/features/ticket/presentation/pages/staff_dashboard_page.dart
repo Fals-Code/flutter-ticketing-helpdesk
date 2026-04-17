@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
@@ -29,7 +30,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
 
     _slideAnimations = [];
@@ -37,10 +38,10 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
 
     // Staggered sequence: Greeting (0), Summary Bar (1), Grid (2), Motivation (3)
     for (int i = 0; i < 4; i++) {
-      final double start = i * 0.15;
-      final double end = (start + 0.4).clamp(0.0, 1.0);
+      final double start = i * 0.12;
+      final double end = (start + 0.6).clamp(0.0, 1.0);
       _slideAnimations.add(
-        Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero).animate(
+        Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
           CurvedAnimation(parent: _animationController, curve: Interval(start, end, curve: Curves.easeOutCubic)),
         ),
       );
@@ -79,26 +80,32 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
         final stats = state.stats;
 
         return Scaffold(
+          backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
           appBar: AppBar(
             title: BlocBuilder<AuthBloc, AuthState>(
               builder: (context, authState) {
-                return Text(authState.user.role == UserRole.admin ? 'Dashboard Admin' : 'Panel Teknisi');
+                return Text(
+                  authState.user.role == UserRole.admin ? 'Dashboard Admin' : 'Panel Teknisi',
+                  style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+                );
               },
             ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
             actions: [
               BlocBuilder<ThemeCubit, ThemeMode>(
                 builder: (context, mode) {
                   return IconButton(
                     icon: Icon(
                       mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                      size: 20,
                     ),
                     onPressed: () => context.read<ThemeCubit>().toggleTheme(),
-                    tooltip: mode == ThemeMode.dark ? 'Mode Terang' : 'Mode Gelap',
                   );
                 },
               ),
               IconButton(
-                icon: const Icon(Icons.refresh_rounded),
+                icon: const Icon(Icons.refresh_rounded, size: 20),
                 onPressed: () {
                   final authState = context.read<AuthBloc>().state;
                   final user = authState.user;
@@ -112,6 +119,7 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
                       ));
                 },
               ),
+              const SizedBox(width: 8),
             ],
           ),
           body: RefreshIndicator(
@@ -128,8 +136,8 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
                   ));
             },
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-              physics: const AlwaysScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+              physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -140,17 +148,13 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
                   _buildAnimatedSection(2, Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'STATISTIK PENUGASAN',
-                        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.5),
-                      ),
+                      _buildSectionLabel('STATISTIK PENUGASAN', isDark),
                       const SizedBox(height: 16),
                       _buildStatusGrid(context, stats.open, stats.inProgress, stats.resolved, stats.closed),
                     ],
                   )),
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 36),
                   _buildAnimatedSection(3, _buildMotivationSection(isDark)),
-                  const SizedBox(height: 80),
                 ],
                ),
             ),
@@ -160,51 +164,67 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
     );
   }
 
+  Widget _buildSectionLabel(String label, bool isDark) {
+    return Text(
+      label, 
+      style: GoogleFonts.inter(
+        fontSize: 11, 
+        fontWeight: FontWeight.w800,
+        color: isDark ? Colors.white38 : Colors.black45,
+        letterSpacing: 1.5,
+      ),
+    );
+  }
+
   Widget _buildSummarySection(bool isDark, int active, int resolved, int total) {
     return Container(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 10),
       decoration: BoxDecoration(
-        color: AppColors.primary,
-        borderRadius: BorderRadius.circular(16),
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.accent],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
             color: AppColors.primary.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 6),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildSummaryItem('TOTAL MASUK', total.toString(), Icons.analytics_outlined),
-          Container(width: 1, height: 40, color: Colors.white24),
-          _buildSummaryItem('PENANGANAN', active.toString(), Icons.engineering_outlined),
-          Container(width: 1, height: 40, color: Colors.white24),
-          _buildSummaryItem('SELESAI', resolved.toString(), Icons.task_alt_rounded),
+          _buildSummaryItem('TOTAL MASUK', total, Icons.analytics_rounded),
+          Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.2)),
+          _buildSummaryItem('PENANGANAN', active, Icons.engineering_rounded),
+          Container(width: 1, height: 32, color: Colors.white.withValues(alpha: 0.2)),
+          _buildSummaryItem('SELESAI', resolved, Icons.verified_rounded),
         ],
       ),
     );
   }
 
-  Widget _buildSummaryItem(String label, String value, IconData icon) {
+  Widget _buildSummaryItem(String label, int value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white70, size: 24),
-        const SizedBox(height: 8),
+        Icon(icon, color: Colors.white.withValues(alpha: 0.8), size: 20),
+        const SizedBox(height: 12),
         TweenAnimationBuilder<double>(
-          tween: Tween<double>(begin: 0, end: double.tryParse(value) ?? 0.0),
-          duration: const Duration(milliseconds: 800),
-          curve: Curves.easeOutCubic,
+          tween: Tween<double>(begin: 0, end: value.toDouble()),
+          duration: const Duration(milliseconds: 1000),
+          curve: Curves.easeOutExpo,
           builder: (context, val, child) {
             return Text(
               val.toInt().toString(), 
-              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1)
+              style: GoogleFonts.plusJakartaSans(color: Colors.white, fontSize: 26, fontWeight: FontWeight.w800, height: 1)
             );
           },
         ),
-        const SizedBox(height: 4),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 0.5, fontWeight: FontWeight.w600)),
+        const SizedBox(height: 6),
+        Text(label, style: GoogleFonts.inter(color: Colors.white.withValues(alpha: 0.6), fontSize: 9, letterSpacing: 0.8, fontWeight: FontWeight.w700)),
       ],
     );
   }
@@ -214,15 +234,16 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
+      padding: EdgeInsets.zero,
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 12,
       crossAxisSpacing: 12,
       childAspectRatio: 1.25,
       children: [
-        StatCard(label: 'Terbuka', value: open.toString(), color: AppColors.statusOpen, icon: Icons.fiber_new_outlined, isDark: isDark),
-        StatCard(label: 'Diproses', value: prog.toString(), color: AppColors.statusInProgress, icon: Icons.run_circle_outlined, isDark: isDark),
-        StatCard(label: 'Selesai', value: res.toString(), color: AppColors.statusResolved, icon: Icons.check_circle_outline, isDark: isDark),
-        StatCard(label: 'Ditutup', value: closed.toString(), color: const Color(0xFF64748B), icon: Icons.cancel_outlined, isDark: isDark),
+        StatCard(label: 'Terbuka', value: open.toString(), color: AppColors.statusOpen, icon: Icons.fiber_new_rounded, isDark: isDark),
+        StatCard(label: 'Diproses', value: prog.toString(), color: AppColors.statusInProgress, icon: Icons.sync_rounded, isDark: isDark),
+        StatCard(label: 'Selesai', value: res.toString(), color: AppColors.statusResolved, icon: Icons.check_circle_rounded, isDark: isDark),
+        StatCard(label: 'Ditutup', value: closed.toString(), color: const Color(0xFF94A3B8), icon: Icons.archive_rounded, isDark: isDark),
       ],
     );
   }
@@ -238,23 +259,32 @@ class _StaffDashboardPageState extends State<StaffDashboardPage> with SingleTick
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: isDark ? AppColors.surfaceDark2 : const Color(0xFFF1F5F9),
-        borderRadius: BorderRadius.circular(16),
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Column(
         children: [
-          Icon(Icons.format_quote_rounded, color: AppColors.primary.withValues(alpha: 0.5), size: 32),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.05),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.format_quote_rounded, color: AppColors.primary, size: 28),
+          ),
+          const SizedBox(height: 16),
           Text(
             quote,
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14, 
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 15, 
               fontStyle: FontStyle.italic,
-              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              fontWeight: FontWeight.w600,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              height: 1.5,
             ),
           ),
         ],

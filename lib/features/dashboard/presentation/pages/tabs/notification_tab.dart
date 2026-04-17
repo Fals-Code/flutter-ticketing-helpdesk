@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
@@ -16,80 +16,22 @@ class NotificationTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocConsumer<NotificationBloc, NotificationState>(
-      listener: (context, state) {
-        if (state.successMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.successMessage!),
-              backgroundColor: AppColors.primary,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-        if (state.errorMessage != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.errorMessage!),
-              backgroundColor: Colors.redAccent,
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-        }
-      },
+    return BlocBuilder<NotificationBloc, NotificationState>(
       builder: (context, state) {
         return Scaffold(
-          appBar: AppBar(
-            leading: state.selectionMode
-                ? IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => context.read<NotificationBloc>().add(ToggleSelectionModeRequested()),
-                  )
-                : null,
-            title: Text(
-              state.selectionMode 
-                  ? '${state.selectedIds.length} terpilih' 
-                  : AppStrings.navNotifications
-            ),
-            actions: [
-              if (state.notifications.isNotEmpty)
-                _NotificationPopupMenu(state: state),
-            ],
-          ),
+          backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          appBar: _buildAppBar(context, state, isDark),
           body: state.isLoading && state.notifications.isEmpty
-              ? const Center(child: CircularProgressIndicator())
+              ? _buildSkeleton(isDark)
               : state.notifications.isEmpty
-                  ? _EmptyState(isDark: isDark)
-                  : RefreshIndicator(
-                      onRefresh: () async {
-                        context.read<NotificationBloc>().add(FetchNotificationsRequested());
-                      },
-                      child: ListView.separated(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.spaceMD,
-                          vertical: AppDimensions.spaceMD,
-                        ),
-                        itemCount: state.notifications.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: AppDimensions.spaceSM),
-                        itemBuilder: (context, index) {
-                          final notification = state.notifications[index];
-                          final isSelected = state.selectedIds.contains(notification.id);
-                          
-                          return _NotificationCard(
-                            notification: notification, 
-                            isDark: isDark,
-                            isSelectionMode: state.selectionMode,
-                            isSelected: isSelected,
-                          );
-                        },
-                      ),
-                    ),
+                  ? _buildEmptyState(isDark)
+                  : _buildNotificationList(context, state, isDark),
           floatingActionButton: state.selectionMode && state.selectedIds.isNotEmpty
               ? FloatingActionButton.extended(
                   onPressed: () => _showDeleteConfirm(context, selected: true),
-                  label: const Text('Hapus yang dipilih'),
-                  icon: const Icon(Icons.delete_outline),
-                  backgroundColor: Colors.redAccent,
+                  label: Text('Hapus (${state.selectedIds.length})', style: GoogleFonts.inter(fontWeight: FontWeight.w700)),
+                  icon: const Icon(Icons.delete_sweep_rounded),
+                  backgroundColor: AppColors.danger,
                 )
               : null,
         );
@@ -97,16 +39,210 @@ class NotificationTab extends StatelessWidget {
     );
   }
 
+  PreferredSizeWidget _buildAppBar(BuildContext context, NotificationState state, bool isDark) {
+    return AppBar(
+      backgroundColor: Colors.transparent,
+      elevation: 0,
+      centerTitle: false,
+      leading: state.selectionMode
+          ? IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () => context.read<NotificationBloc>().add(ToggleSelectionModeRequested()),
+            )
+          : null,
+      title: Text(
+        state.selectionMode ? '${state.selectedIds.length} Terpilih' : AppStrings.navNotifications,
+        style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+      ),
+      actions: [
+        if (state.notifications.isNotEmpty) _buildPopupMenu(context, state),
+        const SizedBox(width: 8),
+      ],
+    );
+  }
+
+  Widget _buildNotificationList(BuildContext context, NotificationState state, bool isDark) {
+    final grouped = _groupNotifications(state.notifications);
+
+    return RefreshIndicator(
+      onRefresh: () async => context.read<NotificationBloc>().add(FetchNotificationsRequested()),
+      child: ListView.builder(
+        physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+        padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
+        itemCount: grouped.length,
+        itemBuilder: (context, index) {
+          final entry = grouped.entries.elementAt(index);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(left: 4, top: 24, bottom: 12),
+                child: Text(
+                  entry.key.toUpperCase(),
+                  style: GoogleFonts.inter(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                    color: isDark ? Colors.white24 : Colors.black26,
+                    letterSpacing: 1.5,
+                  ),
+                ),
+              ),
+              ...entry.value.map((notification) {
+                final isSelected = state.selectedIds.contains(notification.id);
+                return _NotificationCard(
+                  notification: notification,
+                  isDark: isDark,
+                  isSelectionMode: state.selectionMode,
+                  isSelected: isSelected,
+                );
+              }),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Map<String, List<NotificationEntity>> _groupNotifications(List<NotificationEntity> notifications) {
+    final Map<String, List<NotificationEntity>> groups = {};
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (var n in notifications) {
+      final date = DateTime(n.createdAt.year, n.createdAt.month, n.createdAt.day);
+      String key;
+      if (date == today) {
+        key = 'Hari Ini';
+      } else if (date == yesterday) {
+        key = 'Kemarin';
+      } else {
+        key = DateFormat('dd MMMM yyyy', 'id_ID').format(date);
+      }
+
+      if (!groups.containsKey(key)) {
+        groups[key] = [];
+      }
+      groups[key]!.add(n);
+    }
+    return groups;
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.notifications_none_rounded, size: 48, color: AppColors.primary),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Kosong',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Belum ada notifikasi baru untuk Anda.',
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSkeleton(bool isDark) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(20),
+      itemCount: 5,
+      itemBuilder: (_, __) => Padding(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Container(
+          height: 100,
+          decoration: BoxDecoration(
+            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPopupMenu(BuildContext context, NotificationState state) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert_rounded),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      onSelected: (val) => _handleMenuAction(context, val, state),
+      itemBuilder: (context) {
+        final hasUnread = state.notifications.any((n) => !n.isRead);
+        final isAllSelected = state.selectedIds.length == state.notifications.length;
+        return [
+          if (!state.selectionMode) ...[
+            PopupMenuItem(
+              value: 'read_all',
+              enabled: hasUnread,
+              child: const _PopupItem(icon: Icons.done_all_rounded, label: 'Baca Semua'),
+            ),
+            const PopupMenuItem(
+              value: 'pilih',
+              child: _PopupItem(icon: Icons.checklist_rounded, label: 'Pilih'),
+            ),
+          ],
+          if (state.selectionMode) ...[
+             PopupMenuItem(
+              value: 'select_all',
+              child: _PopupItem(
+                icon: isAllSelected ? Icons.deselect_rounded : Icons.select_all_rounded, 
+                label: isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'
+              ),
+            ),
+          ],
+          const PopupMenuDivider(),
+          const PopupMenuItem(
+            value: 'delete_all',
+            child: _PopupItem(icon: Icons.delete_forever_rounded, label: 'Hapus Semua', isDestructive: true),
+          ),
+        ];
+      },
+    );
+  }
+
+  void _handleMenuAction(BuildContext context, String value, NotificationState state) {
+    final bloc = context.read<NotificationBloc>();
+    switch (value) {
+      case 'read_all': bloc.add(MarkAllReadRequested()); break;
+      case 'pilih': bloc.add(ToggleSelectionModeRequested()); break;
+      case 'select_all': bloc.add(SelectAllNotificationsRequested()); break;
+      case 'delete_all': _showDeleteConfirm(context, selected: false); break;
+    }
+  }
+
   void _showDeleteConfirm(BuildContext context, {required bool selected}) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(selected ? 'Hapus Terpilih' : 'Hapus Semua'),
-        content: Text(selected 
-            ? 'Apakah Anda yakin ingin menghapus notifikasi yang dipilih?' 
-            : 'Apakah Anda yakin ingin menghapus semua notifikasi?'),
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Text('Hapus Notifikasi', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.bold)),
+        content: Text(
+          selected 
+              ? 'Yakin ingin menghapus notifikasi yang dipilih?' 
+              : 'Yakin ingin menghapus seluruh riwayat notifikasi?',
+          style: GoogleFonts.inter(fontSize: 14),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(onPressed: () => Navigator.pop(ctx), child: Text('Batal', style: GoogleFonts.inter(color: Colors.grey))),
           TextButton(
             onPressed: () {
               if (selected) {
@@ -114,150 +250,10 @@ class NotificationTab extends StatelessWidget {
               } else {
                 context.read<NotificationBloc>().add(DeleteAllNotificationsRequested());
               }
-              Navigator.pop(context);
+              Navigator.pop(ctx);
             },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+            child: Text('Hapus', style: GoogleFonts.inter(color: AppColors.danger, fontWeight: FontWeight.bold)),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _NotificationPopupMenu extends StatelessWidget {
-  final NotificationState state;
-  const _NotificationPopupMenu({required this.state});
-
-  @override
-  Widget build(BuildContext context) {
-    return PopupMenuButton<String>(
-      onSelected: (value) {
-        final bloc = context.read<NotificationBloc>();
-        switch (value) {
-          case 'read_all':
-            bloc.add(MarkAllReadRequested());
-            break;
-          case 'pilih':
-            bloc.add(ToggleSelectionModeRequested());
-            break;
-          case 'select_all':
-            bloc.add(SelectAllNotificationsRequested());
-            break;
-          case 'delete_all':
-            _showDeleteConfirmDialog(context, bloc, selected: false);
-            break;
-          case 'delete_selected':
-            _showDeleteConfirmDialog(context, bloc, selected: true);
-            break;
-        }
-      },
-      itemBuilder: (context) {
-        final hasUnread = state.notifications.any((n) => !n.isRead);
-        final isAllSelected = state.selectedIds.length == state.notifications.length;
-        
-        return [
-          if (!state.selectionMode) ...[
-            PopupMenuItem(
-              value: 'read_all',
-              enabled: hasUnread,
-              child: const Row(
-                children: [
-                  Icon(Icons.done_all, size: 20),
-                  SizedBox(width: 12),
-                  Text('Baca Semua'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'pilih',
-              child: Row(
-                children: [
-                  Icon(Icons.checklist, size: 20),
-                  SizedBox(width: 12),
-                  Text('Pilih'),
-                ],
-              ),
-            ),
-          ],
-          if (state.selectionMode) ...[
-             PopupMenuItem(
-              value: 'select_all',
-              child: Row(
-                children: [
-                  Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 20),
-                  SizedBox(width: 12),
-                  Text(isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'),
-                ],
-              ),
-            ),
-            if (state.selectedIds.isNotEmpty)
-              const PopupMenuItem(
-                value: 'delete_selected',
-                child: Row(
-                  children: [
-                    Icon(Icons.delete_sweep, size: 20, color: Colors.red),
-                    SizedBox(width: 12),
-                    Text('Hapus yang dipilih', style: TextStyle(color: Colors.red)),
-                  ],
-                ),
-              ),
-          ],
-          if (!state.selectionMode || state.selectedIds.isEmpty)
-            const PopupMenuItem(
-              value: 'delete_all',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_forever, size: 20, color: Colors.red),
-                  SizedBox(width: 12),
-                  Text('Hapus Semua', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-        ];
-      },
-    );
-  }
-
-  void _showDeleteConfirmDialog(BuildContext context, NotificationBloc bloc, {required bool selected}) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(selected ? 'Hapus Terpilih' : 'Hapus Semua'),
-        content: Text(selected 
-            ? 'Hapus ${state.selectedIds.length} notifikasi terpilih?' 
-            : 'Apakah Anda yakin ingin menghapus semua notifikasi?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
-          TextButton(
-            onPressed: () {
-              if (selected) {
-                bloc.add(DeleteSelectedNotificationsRequested());
-              } else {
-                bloc.add(DeleteAllNotificationsRequested());
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _EmptyState extends StatelessWidget {
-  final bool isDark;
-  const _EmptyState({required this.isDark});
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.notifications_none, size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
-          const SizedBox(height: 16),
-          Text('Belum ada notifikasi.', style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );
@@ -298,102 +294,121 @@ class _NotificationCard extends StatelessWidget {
           }
         }
       },
-      child: Stack(
-        children: [
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 200),
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: isSelected
-                  ? AppColors.primary.withValues(alpha: 0.1)
-                  : unread 
-                      ? AppColors.primary.withValues(alpha: 0.04) 
-                      : (isDark ? AppColors.surfaceDark : Colors.white),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: isSelected
-                    ? AppColors.primary
-                    : unread 
-                        ? AppColors.primary.withValues(alpha: 0.2) 
-                        : (isDark ? AppColors.borderDark : AppColors.borderLight),
-              ),
-              boxShadow: isSelected ? [
-                BoxShadow(
-                  color: AppColors.primary.withValues(alpha: 0.1),
-                  blurRadius: 8,
-                  offset: const Offset(0, 2),
-                )
-              ] : null,
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (isSelectionMode) ...[
-                  Checkbox(
-                    value: isSelected,
-                    onChanged: (_) => context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                    activeColor: AppColors.primary,
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    color: unread ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    unread ? Icons.notifications_active : Icons.notifications_none,
-                    size: 18,
-                    color: unread ? AppColors.primary : Colors.grey,
-                  ),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : unread 
+                  ? AppColors.primary.withValues(alpha: 0.03) 
+                  : (isDark ? AppColors.surfaceDark : Colors.white),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected
+                ? AppColors.primary
+                : unread 
+                    ? AppColors.primary.withValues(alpha: 0.2) 
+                    : (isDark ? AppColors.borderDark : AppColors.borderLight),
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (isSelectionMode) ...[
+              SizedBox(
+                width: 24, height: 24,
+                child: Checkbox(
+                  value: isSelected,
+                  onChanged: (_) => context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                  activeColor: AppColors.primary,
                 ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              const SizedBox(width: 14),
+            ],
+            Container(
+              width: 40, height: 40,
+              decoration: BoxDecoration(
+                color: unread ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(
+                unread ? Icons.notifications_active_rounded : Icons.notifications_rounded,
+                size: 20,
+                color: unread ? AppColors.primary : (isDark ? Colors.white24 : Colors.black26),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    notification.title,
+                    style: GoogleFonts.plusJakartaSans(
+                      fontWeight: unread ? FontWeight.w800 : FontWeight.w700,
+                      fontSize: 15,
+                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    notification.message,
+                    style: GoogleFonts.inter(
+                      color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                      fontSize: 13,
+                      height: 1.5,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
                     children: [
+                      Icon(Icons.access_time_rounded, size: 12, color: isDark ? Colors.white24 : Colors.black26),
+                      const SizedBox(width: 4),
                       Text(
-                        notification.title,
-                        style: TextStyle(
-                          fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        notification.message,
-                        style: TextStyle(
-                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
-                          fontSize: 13,
-                          height: 1.4,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        DateFormat('dd MMM, HH:mm').format(notification.createdAt),
-                        style: const TextStyle(
-                          color: Colors.grey,
+                        DateFormat('HH:mm').format(notification.createdAt),
+                        style: GoogleFonts.inter(
+                          color: isDark ? Colors.white24 : Colors.black26,
                           fontSize: 11,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
-                ),
-                if (unread && !isSelectionMode)
-                  Container(
-                    margin: const EdgeInsets.only(top: 4, left: 8),
-                    width: 6,
-                    height: 6,
-                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+            if (unread && !isSelectionMode)
+              Container(
+                margin: const EdgeInsets.only(top: 6),
+                width: 8, height: 8,
+                decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
+              ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _PopupItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool isDestructive;
+  const _PopupItem({required this.icon, required this.label, this.isDestructive = false});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: isDestructive ? AppColors.danger : null),
+        const SizedBox(width: 12),
+        Text(label, style: GoogleFonts.inter(fontSize: 14, color: isDestructive ? AppColors.danger : null)),
+      ],
     );
   }
 }

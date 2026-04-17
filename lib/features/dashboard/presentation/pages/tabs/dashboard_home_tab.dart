@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
@@ -30,7 +31,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
     super.initState();
     _animationController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 800),
+      duration: const Duration(milliseconds: 1000),
     );
 
     _slideAnimations = [];
@@ -38,10 +39,10 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
 
     // Staggered sequence: Greeting (0), Stats (1), Recent Tickets (2)
     for (int i = 0; i < 3; i++) {
-      final double start = i * 0.15;
-      final double end = (start + 0.5).clamp(0.0, 1.0);
+      final double start = i * 0.1;
+      final double end = (start + 0.6).clamp(0.0, 1.0);
       _slideAnimations.add(
-        Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero).animate(
+        Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
           CurvedAnimation(parent: _animationController, curve: Interval(start, end, curve: Curves.easeOutCubic)),
         ),
       );
@@ -76,27 +77,36 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       appBar: AppBar(
-        title: const Text(AppStrings.appName),
+        title: Text(
+          AppStrings.appName,
+          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+        ),
+        centerTitle: false,
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         actions: [
           BlocBuilder<ThemeCubit, ThemeMode>(
             builder: (context, mode) {
               return IconButton(
                 icon: Icon(
                   mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
+                  size: 20,
+                  color: isDark ? Colors.white70 : Colors.black87,
                 ),
                 onPressed: () => context.read<ThemeCubit>().toggleTheme(),
-                tooltip: mode == ThemeMode.dark ? 'Mode Terang' : 'Mode Gelap',
               );
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 20),
             onPressed: () {
               context.read<TicketStatsBloc>().add(const stats_event.FetchTicketStatsRequested());
               context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 5));
             },
           ),
+          const SizedBox(width: 8),
         ],
       ),
       body: RefreshIndicator(
@@ -105,8 +115,8 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
           context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 5));
         },
         child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -116,26 +126,20 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
               _buildAnimatedSection(1, Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Ringkasan Aktivitas',
-                    style: TextStyle(
-                      fontSize: 14, 
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
+                  _buildSectionHeader('Ringkasan Aktivitas', isDark),
                   const SizedBox(height: 16),
                   BlocBuilder<TicketStatsBloc, TicketStatsState>(
                     builder: (context, state) {
                       if (state.isLoading && state.stats.total == 0) {
                         return GridView.builder(
                           shrinkWrap: true,
+                          padding: EdgeInsets.zero,
                           physics: const NeverScrollableScrollPhysics(),
                           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 12,
                             mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
+                            childAspectRatio: 1.1,
                           ),
                           itemCount: 4,
                           itemBuilder: (context, i) => const ShimmerCard(),
@@ -171,6 +175,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
 
                       return GridView.builder(
                         shrinkWrap: true,
+                        padding: EdgeInsets.zero,
                         physics: const NeverScrollableScrollPhysics(),
                         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
@@ -203,21 +208,18 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Tiket Terbaru', 
-                        style: TextStyle(
-                          fontSize: 16, 
-                          fontWeight: FontWeight.w700,
-                        ),
-                      ),
+                      _buildSectionHeader('Tiket Terbaru', isDark),
                       TextButton(
                         onPressed: widget.onSeeAll,
                         style: TextButton.styleFrom(
-                          padding: EdgeInsets.zero,
-                          minimumSize: const Size(50, 30),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                          backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                         ),
-                        child: const Text('Lihat Semua', style: TextStyle(fontWeight: FontWeight.w600)),
+                        child: Text(
+                          'Lihat Semua', 
+                          style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.primary),
+                        ),
                       ),
                     ],
                   ),
@@ -234,40 +236,7 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
                                   )),
                         );
                       } else if (state.tickets.isEmpty) {
-                        return Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.symmetric(vertical: 40),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.surfaceDark : Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
-                          ),
-                          child: Column(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: AppColors.primary.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(Icons.confirmation_number_outlined,
-                                    size: 32, color: AppColors.primary),
-                              ),
-                              const SizedBox(height: 16),
-                              Text('Belum ada tiket.',
-                                  style: TextStyle(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w600,
-                                      color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight)),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Bantuan yang Anda minta akan muncul di sini.',
-                                textAlign: TextAlign.center,
-                                style: TextStyle(fontSize: 13, color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                              ),
-                            ],
-                          ),
-                        );
+                        return _buildEmptyState(isDark);
                       }
                       return Column(
                         children: state.tickets
@@ -279,11 +248,64 @@ class _DashboardHomeTabState extends State<DashboardHomeTab> with SingleTickerPr
                   ),
                 ],
               )),
-              
-              const SizedBox(height: 80), // Padding bottom for floating nav
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildSectionHeader(String title, bool isDark) {
+    return Text(
+      title,
+      style: GoogleFonts.plusJakartaSans(
+        fontSize: 16,
+        fontWeight: FontWeight.w800,
+        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+        letterSpacing: -0.2,
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(bool isDark) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.confirmation_number_outlined, size: 40, color: AppColors.primary),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Belum ada tiket',
+            style: GoogleFonts.plusJakartaSans(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Klik tombol "+" untuk membuat permintaan bantuan baru.',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.inter(
+              fontSize: 14,
+              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }

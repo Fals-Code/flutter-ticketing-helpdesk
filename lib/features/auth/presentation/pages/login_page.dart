@@ -160,7 +160,7 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         ),
         const SizedBox(height: AppDimensions.space24),
         Text(
-          'Selamat Datang Kembali 👋',
+          'Selamat Datang Kembali ',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w700,
             letterSpacing: -0.5,

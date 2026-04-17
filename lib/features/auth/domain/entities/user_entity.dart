@@ -28,4 +28,5 @@ class AuthUser extends Equatable {
   );
 
   bool get isEmpty => this == AuthUser.empty;
+  bool get isNotEmpty => !isEmpty;
 }

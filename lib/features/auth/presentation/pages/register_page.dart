@@ -219,7 +219,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     1,
                     AppTextField(
                       label: 'Nama Lengkap',
-                      hint: 'Jhon Doe',
+                      hint: 'Masukan Nama Anda',
                       controller: _nameController,
                       focusNode: _nameFocus,
                       prefixIcon: Icons.person_outline,
@@ -235,7 +235,7 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     2,
                     AppTextField(
                       label: 'Email',
-                      hint: 'contoh@email.com',
+                      hint: 'Masukan Email Anda',
                       controller: _emailController,
                       focusNode: _emailFocus,
                       keyboardType: TextInputType.emailAddress,

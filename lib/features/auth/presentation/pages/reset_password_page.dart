@@ -141,7 +141,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
           key: _formKey,
           child: AppTextField(
             label: 'Email',
-            hint: 'contoh@email.com',
+            hint: 'Masukan Email Anda',
             controller: _emailController,
             prefixIcon: Icons.email_outlined,
             keyboardType: TextInputType.emailAddress,

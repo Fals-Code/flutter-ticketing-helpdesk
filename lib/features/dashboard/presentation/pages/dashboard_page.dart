@@ -101,8 +101,9 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
     
     // Trigger logic fetching data for tickets tab
     if (index == 1) {
+      if (!mounted) return;
       final authState = context.read<AuthBloc>().state;
-      if (authState.user.id.isNotEmpty) {
+      if (authState.user.isNotEmpty) {
         final user = authState.user;
         final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
         final isTechnician = user.role == UserRole.technician;

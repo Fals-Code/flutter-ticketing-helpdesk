@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sup show AuthChangeEvent, SupabaseClient;
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
@@ -14,6 +16,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUserUseCase getCurrentUserUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
   final UpdatePasswordUseCase updatePasswordUseCase;
+  final sup.SupabaseClient supabaseClient;
+  StreamSubscription<dynamic>? _authSubscription;
 
   AuthBloc({
     required this.loginUseCase,
@@ -22,6 +26,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUserUseCase,
     required this.resetPasswordUseCase,
     required this.updatePasswordUseCase,
+    required this.supabaseClient,
   }) : super(const AuthState()) {
     on<AppStarted>(_onAppStarted);
     on<LoginSubmitted>(_onLoginSubmitted);
@@ -31,6 +36,22 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
     on<ClearAuthStatus>(_onClearStatus);
     on<SessionExpiredDetected>(_onSessionExpiredDetected);
+
+    // Listen to Supabase auth state changes
+    _authSubscription = supabaseClient.auth.onAuthStateChange.listen((data) {
+      final event = data.event;
+      if (event == sup.AuthChangeEvent.signedOut) {
+        if (state.status == AuthStatus.authenticated) {
+          add(SessionExpiredDetected());
+        }
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _authSubscription?.cancel();
+    return super.close();
   }
 
   void _onSessionExpiredDetected(SessionExpiredDetected event, Emitter<AuthState> emit) {
@@ -110,6 +131,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   }
 
   void _onClearStatus(ClearAuthStatus event, Emitter<AuthState> emit) {
-    emit(state.copyWith(successMessage: null, errorMessage: null));
+    emit(state.copyWith(clearSuccess: true, clearError: true));
   }
 }

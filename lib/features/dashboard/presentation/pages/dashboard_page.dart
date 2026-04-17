@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/constants/enums.dart';
-import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
@@ -127,141 +125,131 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state.status == AuthStatus.unauthenticated) {
-          context.read<TicketListBloc>().add(list_event.ResetTicketListState());
-          context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
-          context.read<NotificationBloc>().add(ResetNotificationState());
-          context.go(AppRoutes.login);
-        }
-      },
-      child: Scaffold(
-        body: BlocBuilder<AuthBloc, AuthState>(
-          builder: (context, state) {
-            return AnimatedBuilder(
-              animation: _fadeAnimation,
-              builder: (context, child) {
-                return Opacity(
-                  opacity: _fadeAnimation.value,
-                  child: child,
-                );
-              },
-              child: IndexedStack(
-                index: _currentIndex,
-                children: [
-                  state.user.role == UserRole.admin 
-                      ? const AdminHomeTab() 
-                      : (state.user.role == UserRole.technician ? const StaffDashboardPage() : DashboardHomeTab(
-                          onSeeAll: () => _onTabTapped(1),
-                        )),
-                  const TicketListPage(),
-                  const NotificationTab(),
-                  const ProfileTab(),
-                ],
-              ),
-            );
-          },
-        ),
-        bottomNavigationBar: Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-            border: Border(
-              top: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                width: 0.5,
-              ),
+    return Scaffold(
+      body: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
+          return AnimatedBuilder(
+            animation: _fadeAnimation,
+            builder: (context, child) {
+              return Opacity(
+                opacity: _fadeAnimation.value,
+                child: child,
+              );
+            },
+            child: IndexedStack(
+              index: _currentIndex,
+              children: [
+                state.user.role == UserRole.admin 
+                    ? const AdminHomeTab() 
+                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : DashboardHomeTab(
+                        onSeeAll: () => _onTabTapped(1),
+                      )),
+                const TicketListPage(),
+                const NotificationTab(),
+                const ProfileTab(),
+              ],
+            ),
+          );
+        },
+      ),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+          border: Border(
+            top: BorderSide(
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              width: 0.5,
             ),
           ),
-          child: SafeArea(
-            child: SizedBox(
-              height: 72,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                children: List.generate(_navItems.length, (index) {
-                  final item = _navItems[index];
-                  final isActive = _currentIndex == index;
-                  final isNotification = index == 2;
-                  
-                  return GestureDetector(
-                    onTap: () => _onTabTapped(index),
-                    behavior: HitTestBehavior.opaque,
-                    child: SizedBox(
-                      width: MediaQuery.of(context).size.width / 4,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Stack(
-                            clipBehavior: Clip.none,
-                            alignment: Alignment.center,
-                            children: [
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 250),
-                                curve: Curves.easeOutCubic,
-                                width: isActive ? 64 : 0,
-                                height: 32,
-                                decoration: BoxDecoration(
-                                  color: isActive 
-                                    ? AppColors.primary.withValues(alpha: 0.15) 
-                                    : Colors.transparent,
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                              ),
-                              Icon(
-                                isActive ? item['activeIcon'] as IconData : item['icon'] as IconData,
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 72,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: List.generate(_navItems.length, (index) {
+                final item = _navItems[index];
+                final isActive = _currentIndex == index;
+                final isNotification = index == 2;
+                
+                return GestureDetector(
+                  onTap: () => _onTabTapped(index),
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: MediaQuery.of(context).size.width / 4,
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Stack(
+                          clipBehavior: Clip.none,
+                          alignment: Alignment.center,
+                          children: [
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 250),
+                              curve: Curves.easeOutCubic,
+                              width: isActive ? 64 : 0,
+                              height: 32,
+                              decoration: BoxDecoration(
                                 color: isActive 
-                                    ? AppColors.primary 
-                                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
-                                size: 24,
+                                  ? AppColors.primary.withValues(alpha: 0.15) 
+                                  : Colors.transparent,
+                                borderRadius: BorderRadius.circular(16),
                               ),
-                              if (isNotification)
-                                BlocBuilder<NotificationBloc, NotificationState>(
-                                  builder: (context, state) {
-                                    final hasUnread = state.notifications.any((n) => !n.isRead);
-                                    if (!hasUnread) return const SizedBox.shrink();
-                                    return Positioned(
-                                      top: 2,
-                                      right: 18, // offset relative to icon
-                                      child: Container(
-                                        width: 8,
-                                        height: 8,
-                                        decoration: const BoxDecoration(
-                                          color: AppColors.danger,
-                                          shape: BoxShape.circle,
-                                        ),
+                            ),
+                            Icon(
+                              isActive ? item['activeIcon'] as IconData : item['icon'] as IconData,
+                              color: isActive 
+                                  ? AppColors.primary 
+                                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                              size: 24,
+                            ),
+                            if (isNotification)
+                              BlocBuilder<NotificationBloc, NotificationState>(
+                                builder: (context, state) {
+                                  final hasUnread = state.notifications.any((n) => !n.isRead);
+                                  if (!hasUnread) return const SizedBox.shrink();
+                                  return Positioned(
+                                    top: 2,
+                                    right: 18, // offset relative to icon
+                                    child: Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: const BoxDecoration(
+                                        color: AppColors.danger,
+                                        shape: BoxShape.circle,
                                       ),
-                                    );
-                                  },
-                                ),
-                            ],
-                          ),
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 200),
-                            curve: Curves.easeInOut,
-                            child: SizedBox(
-                              height: isActive ? 18 : 0,
-                              child: Opacity(
-                                opacity: isActive ? 1.0 : 0.0,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(top: 4.0),
-                                  child: Text(
-                                    item['label'] as String,
-                                    style: const TextStyle(
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.primary,
                                     ),
+                                  );
+                                },
+                              ),
+                          ],
+                        ),
+                        AnimatedSize(
+                          duration: const Duration(milliseconds: 200),
+                          curve: Curves.easeInOut,
+                          child: SizedBox(
+                            height: isActive ? 18 : 0,
+                            child: Opacity(
+                              opacity: isActive ? 1.0 : 0.0,
+                              child: Padding(
+                                padding: const EdgeInsets.only(top: 4.0),
+                                child: Text(
+                                  item['label'] as String,
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.w600,
+                                    color: AppColors.primary,
                                   ),
                                 ),
                               ),
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                  );
-                }),
-              ),
+                  ),
+                );
+              }),
             ),
           ),
         ),

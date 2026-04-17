@@ -93,15 +93,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state.status == AuthStatus.authenticated) {
-            // Flash green success brief delay
-            await Future.delayed(const Duration(milliseconds: 300));
-            if (!context.mounted) return;
-            final role = state.user.role;
-            if (role == UserRole.admin || role == UserRole.technician) {
-              context.go(AppRoutes.staffDashboard);
-            } else {
-              context.go(AppRoutes.dashboard);
-            }
+            // Kita tidak perlu memanggil context.go() manual di sini 
+            // karena GoRouter.redirect akan otomatis menangani perpindahan 
+            // halaman setelah status berubah menjadi authenticated.
           }
           if (state.status == AuthStatus.error) {
             _showErrorSnackBar(state.errorMessage ?? 'Login Gagal');

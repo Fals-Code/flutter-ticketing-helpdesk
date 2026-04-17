@@ -81,22 +81,11 @@ class _SplashPageState extends State<SplashPage> with SingleTickerProviderStateM
   }
 
   Future<void> _checkAuth() async {
-    // Splash durasi: 2.5 detik sebelum navigate
+    // Splash durasi: 2.5 detik untuk branding
     await Future.delayed(const Duration(milliseconds: 2500));
-    if (!mounted) return;
-
-    final authState = context.read<AuthBloc>().state;
-    
-    if (authState.status == AuthStatus.authenticated) {
-      final role = authState.user.role;
-      if (role == UserRole.admin || role == UserRole.technician) {
-        context.go(AppRoutes.staffDashboard);
-      } else {
-        context.go(AppRoutes.dashboard);
-      }
-    } else {
-      context.go(AppRoutes.login);
-    }
+    // Setelah delay, kita tidak perlu melakukan context.go() manual 
+    // karena GoRouter dengan refreshListenable akan otomatis memicu 
+    // redirect() ketika AuthBloc state sudah siap (authenticated/unauthenticated).
   }
 
   @override

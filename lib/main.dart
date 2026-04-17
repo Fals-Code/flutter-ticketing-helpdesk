@@ -15,6 +15,7 @@ import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/shared/widgets/global_error_boundary.dart';
 import 'package:uts/shared/theme/app_theme.dart';
@@ -152,6 +153,13 @@ class ETicketingApp extends StatelessWidget {
                 listener: (context, state) {
                   if (state.status == AuthStatus.sessionExpired) {
                     _showSessionExpiredDialog(context);
+                  }
+                  
+                  if (state.status == AuthStatus.unauthenticated) {
+                    // Reset all app states on logout
+                    context.read<TicketListBloc>().add(list_event.ResetTicketListState());
+                    context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
+                    context.read<NotificationBloc>().add(ResetNotificationState());
                   }
                 },
                 child: MediaQuery(

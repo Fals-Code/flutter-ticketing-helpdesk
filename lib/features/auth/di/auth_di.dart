@@ -16,6 +16,7 @@ Future<void> initAuthDependencies(GetIt sl) async {
         getCurrentUserUseCase: sl(),
         resetPasswordUseCase: sl(),
         updatePasswordUseCase: sl(),
+        supabaseClient: sl(),
       ));
 
   // UseCases

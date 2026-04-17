@@ -196,13 +196,6 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     final newTicket = TicketModel.fromJson(response);
     
-    // History is handled by DB Trigger usually, but if manual:
-    await _logHistory(
-      ticketId: newTicket.id,
-      newStatus: 'open',
-      changedBy: supabaseClient.auth.currentUser!.id,
-    );
-
     return newTicket;
   }
 
@@ -231,13 +224,6 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     
     final updatedTicket = TicketModel.fromJson(response);
 
-    // History is handled by DB Trigger, but we can verify or manual log if trigger doesn't exist
-    await _logHistory(
-      ticketId: ticketId,
-      newStatus: status.dbValue,
-      changedBy: supabaseClient.auth.currentUser!.id,
-    );
-
     // Notify User
     await _notifyUser(
       userId: updatedTicket.userId,
@@ -263,13 +249,6 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .single();
     
     final updatedTicket = TicketModel.fromJson(response);
-
-    // History
-    await _logHistory(
-      ticketId: ticketId,
-      newStatus: 'in_progress',
-      changedBy: supabaseClient.auth.currentUser!.id,
-    );
 
     // Notify User
     await _notifyUser(
@@ -297,13 +276,6 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .single();
       
       final updatedTicket = TicketModel.fromJson(response);
-
-      // Log to history
-      await _logHistory(
-        ticketId: ticketId,
-        newStatus: 'closed', // Rating usually happens at the end/closed state
-        changedBy: supabaseClient.auth.currentUser!.id,
-      );
 
       return updatedTicket;
     } on sup.PostgrestException catch (e) {
@@ -357,58 +329,74 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   @override
   Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId}) {
-    // We use a broader stream and filter on the client to avoid type errors 
-    // with SupabaseStreamFilterBuilder which often breaks during assignment.
-    return supabaseClient
-        .from('tickets')
-        .stream(primaryKey: ['id'])
-        .map((data) {
-          var filtered = data;
-          
-          if (userId != null) {
-            filtered = filtered.where((row) => row['user_id'] == userId).toList();
-          }
-          
-          if (assignedToId != null) {
-            filtered = filtered.where((row) => row['assigned_to'] == assignedToId).toList();
+    var query = supabaseClient.from('tickets').stream(primaryKey: ['id']);
+
+    if (userId != null) {
+      query = query.eq('user_id', userId);
+    }
+    
+    if (assignedToId != null) {
+      query = query.eq('assigned_to', assignedToId);
+    }
+
+    return query.asyncMap((data) async {
+      if (data.isEmpty) return [];
+
+      // Hydration: Fetch profile information for the tickets in the stream
+      final userIds = data
+          .map((e) => e['user_id'] as String)
+          .where((id) => id.isNotEmpty)
+          .toSet()
+          .toList();
+
+      if (userIds.isNotEmpty) {
+        try {
+          // Fetch profiles in batch
+          final List<dynamic> profilesResponse = await supabaseClient
+              .from('profiles')
+              .select('id, full_name, role')
+              .inFilter('id', userIds);
+
+          final profileMap = {
+            for (var profile in profilesResponse) profile['id']: profile
+          };
+
+          // Cache profiles while we are at it
+          for (var profile in profilesResponse) {
+            _profileCache[profile['id']] = profile;
           }
 
-          // Sort by created_at descending (newest first)
-          filtered.sort((a, b) {
-            final aTime = DateTime.parse(a['created_at']);
-            final bTime = DateTime.parse(b['created_at']);
-            return bTime.compareTo(aTime);
-          });
-
-          return filtered.map((json) {
+          return data.map((json) {
+            final profile = profileMap[json['user_id']];
+            if (profile != null) {
+              json['profiles'] = profile;
+            } else if (_profileCache.containsKey(json['user_id'])) {
+              json['profiles'] = _profileCache[json['user_id']];
+            }
+            
             try {
               return TicketModel.fromJson(json);
             } catch (e) {
-              debugPrint('Stream Mapping Error: $e');
+              debugPrint('Ticket Stream Mapping Error: $e');
               return null;
             }
           }).whereType<TicketModel>().toList();
-        });
+        } catch (e) {
+          debugPrint('Error hydrating ticket stream: $e');
+        }
+      }
+
+      // Fallback if hydration fails or no user IDs
+      return data.map((json) {
+        try {
+          return TicketModel.fromJson(json);
+        } catch (e) {
+          return null;
+        }
+      }).whereType<TicketModel>().toList();
+    });
   }
 
-  // Helper methods
-  Future<void> _logHistory({
-    required String ticketId,
-    required String newStatus,
-    required String changedBy,
-    String? oldStatus,
-  }) async {
-    try {
-      await supabaseClient.from('ticket_history').insert({
-        'ticket_id': ticketId,
-        'old_status': oldStatus,
-        'new_status': newStatus,
-        'changed_by': changedBy,
-      });
-    } catch (e) {
-      // Ignored: History logging issues shouldn't break the main flow if triggers fail
-    }
-  }
 
   Future<void> _notifyUser({
     required String userId,

@@ -17,6 +17,8 @@ import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
 import 'package:uts/features/auth/presentation/pages/change_password_page.dart';
+import 'package:uts/core/di/injection_container.dart';
+import 'app_router_refresh_listenable.dart';
 
 /// Named route constants untuk type-safe navigation.
 abstract class AppRoutes {
@@ -43,27 +45,41 @@ abstract class AppRoutes {
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
   debugLogDiagnostics: true,
+  refreshListenable: GoRouterRefreshStream(sl<AuthBloc>().stream),
   errorBuilder: (context, state) => _ErrorPage(error: state.error),
   redirect: (context, state) {
-    final authState = context.read<AuthBloc>().state;
-    final bool loggingIn = state.matchedLocation == AppRoutes.login || 
-                          state.matchedLocation == AppRoutes.register ||
-                          state.matchedLocation == AppRoutes.resetPassword;
+    final authState = sl<AuthBloc>().state;
+    final status = authState.status;
+    final location = state.matchedLocation;
+    
+    final bool isLoggingIn = location == AppRoutes.login || 
+                             location == AppRoutes.register ||
+                             location == AppRoutes.resetPassword;
+    
+    final bool isSplash = location == AppRoutes.splash;
 
-    if (authState.status == AuthStatus.authenticated) {
+    // 1. Handle Initialization & Loading
+    // Prevents "flashing" target pages before session is verified
+    if (status == AuthStatus.initial || status == AuthStatus.loading) {
+      return isSplash ? null : AppRoutes.splash;
+    }
+
+    // 2. Handle Authenticated State
+    if (status == AuthStatus.authenticated) {
       final role = authState.user.role;
       final bool isAdmin = role == UserRole.admin;
       final bool isStaff = role == UserRole.admin || role == UserRole.technician;
       
-      // If user is already logged in and tries to go to login/register, redirect to dashboard
-      // We exclude splash from here to let SplashPage handle its 2s delay
-      if (loggingIn) {
+      // If user is already logged in and tries to go to login/register, 
+      // check for 'from' parameter or go to role-based dashboard
+      if (isLoggingIn || isSplash) {
+        final from = state.uri.queryParameters['from'];
+        if (from != null && from.isNotEmpty) return from;
+        
         return isStaff ? AppRoutes.staffDashboard : AppRoutes.dashboard;
       }
       
-      final location = state.matchedLocation;
-
-      // RDAC Guard: Role 3 (Customer) Restrictions
+      // RBAC Guard: Role 3 (Customer) Restrictions
       if (!isStaff) {
         final blockedForCustomer = [
           AppRoutes.staffDashboard,
@@ -82,9 +98,16 @@ final GoRouter appRouter = GoRouter(
         ];
         if (blockedForStaff.contains(location)) return AppRoutes.staffDashboard;
       }
-    } else if (authState.status == AuthStatus.unauthenticated) {
-      if (!loggingIn) return AppRoutes.login;
+    } 
+    
+    // 3. Handle Unauthenticated State
+    else if (status == AuthStatus.unauthenticated || status == AuthStatus.sessionExpired) {
+      if (!isLoggingIn && !isSplash) {
+        // Preserve current location to redirect back after login
+        return '${AppRoutes.login}?from=${state.matchedLocation}';
+      }
     }
+
     return null;
   },
   routes: [

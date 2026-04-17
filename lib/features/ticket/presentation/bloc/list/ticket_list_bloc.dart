@@ -39,7 +39,29 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     CreateTicketRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true));
+    // 1. Create optimistic ticket
+    final optimisticTicket = TicketEntity(
+      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
+      title: event.title,
+      description: event.description,
+      status: TicketStatus.open, // Use open as base status
+      priority: TicketPriority.fromString(event.priority),
+      category: event.category,
+      createdAt: DateTime.now(),
+      userId: event.userId,
+      imageUrls: event.imagePaths, // Temporary use paths as URLs for preview
+    );
+
+    // 2. Insert into current list (optimistic update)
+    final originalTickets = [...state.tickets];
+    final updatedTickets = [optimisticTicket, ...originalTickets];
+    
+    emit(state.copyWith(
+      tickets: updatedTickets,
+      // We don't set isLoading: true here to avoid global loading overlay if any
+      // but we can set a specific flag if needed.
+    ));
+
     final result = await createTicketUseCase(CreateTicketParams(
       userId: event.userId,
       title: event.title,
@@ -50,11 +72,21 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     ));
 
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(
-        isLoading: false,
-        successMessage: 'Laporan berhasil dibuat',
-      )),
+      (failure) {
+        // 3. Rollback on failure
+        emit(state.copyWith(
+          tickets: originalTickets,
+          errorMessage: failure.message,
+        ));
+      },
+      (ticket) {
+        // 4. On success, the real-time stream will eventually replace 
+        // the optimistic ticket with the real one from DB.
+        // We just need to clear any error and show success.
+        emit(state.copyWith(
+          successMessage: 'Laporan berhasil dibuat',
+        ));
+      },
     );
   }
 

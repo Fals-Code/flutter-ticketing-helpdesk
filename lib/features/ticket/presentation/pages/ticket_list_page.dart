@@ -498,13 +498,12 @@ class _TicketListPageState extends State<TicketListPage> {
       return RefreshIndicator(
         onRefresh: () async => _fetchInitial(),
         child: ListView(
-          children: const [
-            SizedBox(height: 80),
-            EmptyStateWidget(
+          children: [
+            const SizedBox(height: 80),
+            EmptyStateWidget.emptyTickets(
               title: 'Belum Ada Tiket',
               subtitle:
                   'Buat tiket baru untuk memulai\nlayanan helpdesk.',
-              icon: Icons.confirmation_number_outlined,
             ),
           ],
         ),

@@ -177,7 +177,6 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                           hint: 'Apa masalah yang Anda hadapi?',
                           controller: _subjectController,
                           prefixIcon: Icons.title_rounded,
-                          borderRadius: 16,
                           validator: (v) => v == null || v.isEmpty ? 'Judul laporan wajib diisi' : null,
                         ),
                         const SizedBox(height: 32),
@@ -221,7 +220,6 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                           hint: 'Jelaskan detail kronologi atau kendala...',
                           controller: _descController,
                           maxLines: 5,
-                          borderRadius: 16,
                           prefixIcon: Icons.description_rounded,
                           keyboardType: TextInputType.multiline,
                           validator: (v) => v == null || v.isEmpty ? 'Harap jelaskan deskripsi masalah' : null,
@@ -240,7 +238,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> {
                         // Submit Button
                         SizedBox(
                           width: double.infinity,
-                          child: AppButton(
+                          child: AppButton.primary(
                             label: 'Kirim Laporan',
                             isLoading: state.isLoading,
                             onPressed: () {

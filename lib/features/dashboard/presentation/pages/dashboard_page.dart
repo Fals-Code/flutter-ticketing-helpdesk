@@ -21,7 +21,7 @@ import 'tabs/admin_home_tab.dart';
 import 'tabs/profile_tab.dart';
 import 'tabs/notification_tab.dart';
 
-/// Dashboard utama dengan bottom navigation bar dan stat overview.
+/// Dashboard utama dengan modern floating bottom navigation bar
 class DashboardPage extends StatefulWidget {
   const DashboardPage({super.key});
 
@@ -29,13 +29,32 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> {
+class _DashboardPageState extends State<DashboardPage> with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
+  
+  late AnimationController _fadeController;
+  late Animation<double> _fadeAnimation;
+  
+  bool _isTransitioning = false;
+  int _targetIndex = 0;
 
   @override
   void initState() {
     super.initState();
+    _fadeController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _fadeAnimation = Tween<double>(begin: 1.0, end: 0.0).animate(
+      CurvedAnimation(parent: _fadeController, curve: Curves.easeInOutCubic),
+    );
     _fetchInitialData();
+  }
+  
+  @override
+  void dispose() {
+    _fadeController.dispose();
+    super.dispose();
   }
 
   void _fetchInitialData() {
@@ -64,94 +83,186 @@ class _DashboardPageState extends State<DashboardPage> {
     {'label': AppStrings.navProfile, 'icon': Icons.person_outline, 'activeIcon': Icons.person_rounded},
   ];
 
+  void _onTabTapped(int index) async {
+    if (index == _currentIndex || _isTransitioning) return;
+    
+    setState(() {
+      _isTransitioning = true;
+      _targetIndex = index;
+    });
+    
+    await _fadeController.forward();
+    
+    if (!mounted) return;
+
+    setState(() {
+      _currentIndex = _targetIndex;
+    });
+    
+    // Trigger logic fetching data for tickets tab
+    if (index == 1) {
+      final authState = context.read<AuthBloc>().state;
+      if (authState.user.id.isNotEmpty) {
+        final user = authState.user;
+        final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
+        final isTechnician = user.role == UserRole.technician;
+        
+        context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 10));
+        if (isStaff) {
+          context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
+            page: 0, 
+            limit: 10,
+            assignedToId: isTechnician ? user.id : null,
+          ));
+        }
+      }
+    }
+    
+    await _fadeController.reverse();
+    setState(() => _isTransitioning = false);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state.status == AuthStatus.unauthenticated) {
-          // Clear states of other blocs
           context.read<TicketListBloc>().add(list_event.ResetTicketListState());
           context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
           context.read<NotificationBloc>().add(ResetNotificationState());
-          
-          // Redirect to login
           context.go(AppRoutes.login);
         }
       },
       child: Scaffold(
         body: BlocBuilder<AuthBloc, AuthState>(
           builder: (context, state) {
-            return IndexedStack(
-              index: _currentIndex,
-              children: [
-                state.user.role == UserRole.admin 
-                    ? const AdminHomeTab() 
-                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : DashboardHomeTab(
-                        onSeeAll: () => setState(() => _currentIndex = 1),
-                      )),
-                const TicketListPage(),
-                const NotificationTab(),
-                const ProfileTab(),
-              ],
+            return AnimatedBuilder(
+              animation: _fadeAnimation,
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _fadeAnimation.value,
+                  child: child,
+                );
+              },
+              child: IndexedStack(
+                index: _currentIndex,
+                children: [
+                  state.user.role == UserRole.admin 
+                      ? const AdminHomeTab() 
+                      : (state.user.role == UserRole.technician ? const StaffDashboardPage() : DashboardHomeTab(
+                          onSeeAll: () => _onTabTapped(1),
+                        )),
+                  const TicketListPage(),
+                  const NotificationTab(),
+                  const ProfileTab(),
+                ],
+              ),
             );
           },
         ),
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: _currentIndex,
-          onDestinationSelected: (i) {
-            setState(() => _currentIndex = i);
-            if (i == 1) {
-              final authState = context.read<AuthBloc>().state;
-              if (authState.user.isEmpty) return;
-              final user = authState.user;
-              final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
-              final isTechnician = user.role == UserRole.technician;
-              
-              // Refresh tickets when switching to Tickets tab
-              context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 10));
-              
-              if (isStaff) {
-                context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
-                  page: 0, 
-                  limit: 10,
-                  assignedToId: isTechnician ? user.id : null,
-                ));
-              }
-            }
-          },
-          destinations: _navItems.asMap().entries.map((entry) {
-            final index = entry.key;
-            final item = entry.value;
-            final isNotification = index == 2;
-            
-            return NavigationDestination(
-              icon: isNotification 
-                ? BlocBuilder<NotificationBloc, NotificationState>(
-                    builder: (context, state) {
-                      final unreadCount = state.notifications.where((n) => !n.isRead).length;
-                      return Badge(
-                        label: Text(unreadCount.toString()),
-                        isLabelVisible: unreadCount > 0,
-                        child: Icon(item['icon'] as IconData),
-                      );
-                    },
-                  )
-                : Icon(item['icon'] as IconData),
-              selectedIcon: isNotification
-                ? BlocBuilder<NotificationBloc, NotificationState>(
-                    builder: (context, state) {
-                      final unreadCount = state.notifications.where((n) => !n.isRead).length;
-                      return Badge(
-                        label: Text(unreadCount.toString()),
-                        isLabelVisible: unreadCount > 0,
-                        child: Icon(item['activeIcon'] as IconData, color: AppColors.primary),
-                      );
-                    },
-                  )
-                : Icon(item['activeIcon'] as IconData, color: AppColors.primary),
-              label: item['label'] as String,
-            );
-          }).toList(),
+        bottomNavigationBar: Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            border: Border(
+              top: BorderSide(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                width: 0.5,
+              ),
+            ),
+          ),
+          child: SafeArea(
+            child: SizedBox(
+              height: 72,
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: List.generate(_navItems.length, (index) {
+                  final item = _navItems[index];
+                  final isActive = _currentIndex == index;
+                  final isNotification = index == 2;
+                  
+                  return GestureDetector(
+                    onTap: () => _onTabTapped(index),
+                    behavior: HitTestBehavior.opaque,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width / 4,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Stack(
+                            clipBehavior: Clip.none,
+                            alignment: Alignment.center,
+                            children: [
+                              AnimatedContainer(
+                                duration: const Duration(milliseconds: 250),
+                                curve: Curves.easeOutCubic,
+                                width: isActive ? 64 : 0,
+                                height: 32,
+                                decoration: BoxDecoration(
+                                  color: isActive 
+                                    ? AppColors.primary.withValues(alpha: 0.15) 
+                                    : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                              ),
+                              Icon(
+                                isActive ? item['activeIcon'] as IconData : item['icon'] as IconData,
+                                color: isActive 
+                                    ? AppColors.primary 
+                                    : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                                size: 24,
+                              ),
+                              if (isNotification)
+                                BlocBuilder<NotificationBloc, NotificationState>(
+                                  builder: (context, state) {
+                                    final hasUnread = state.notifications.any((n) => !n.isRead);
+                                    if (!hasUnread) return const SizedBox.shrink();
+                                    return Positioned(
+                                      top: 2,
+                                      right: 18, // offset relative to icon
+                                      child: Container(
+                                        width: 8,
+                                        height: 8,
+                                        decoration: const BoxDecoration(
+                                          color: AppColors.danger,
+                                          shape: BoxShape.circle,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                ),
+                            ],
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 200),
+                            curve: Curves.easeInOut,
+                            child: SizedBox(
+                              height: isActive ? 18 : 0,
+                              child: Opacity(
+                                opacity: isActive ? 1.0 : 0.0,
+                                child: Padding(
+                                  padding: const EdgeInsets.only(top: 4.0),
+                                  child: Text(
+                                    item['label'] as String,
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: AppColors.primary,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
         ),
         floatingActionButton: _currentIndex == 1
             ? BlocBuilder<AuthBloc, AuthState>(
@@ -162,7 +273,10 @@ class _DashboardPageState extends State<DashboardPage> {
                     onPressed: () => context.push(AppRoutes.createTicket),
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
-                    child: const Icon(Icons.add),
+                    elevation: 4,
+                    highlightElevation: 8,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    child: const Icon(Icons.add_rounded, size: 28),
                   );
                 },
               )

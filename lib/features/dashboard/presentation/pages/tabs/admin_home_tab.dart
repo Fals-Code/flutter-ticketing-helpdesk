@@ -11,8 +11,63 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.d
 import 'package:uts/features/dashboard/presentation/pages/tabs/widgets/dashboard_widgets.dart';
 import 'package:uts/shared/theme/theme_cubit.dart';
 
-class AdminHomeTab extends StatelessWidget {
+class AdminHomeTab extends StatefulWidget {
   const AdminHomeTab({super.key});
+
+  @override
+  State<AdminHomeTab> createState() => _AdminHomeTabState();
+}
+
+class _AdminHomeTabState extends State<AdminHomeTab> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late List<Animation<Offset>> _slideAnimations;
+  late List<Animation<double>> _fadeAnimations;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+
+    _slideAnimations = [];
+    _fadeAnimations = [];
+
+    // Staggered sequence: Greeting (0), Summary Bar (1), Grid (2), Shortcuts (3)
+    for (int i = 0; i < 4; i++) {
+      final double start = i * 0.15;
+      final double end = (start + 0.4).clamp(0.0, 1.0);
+      _slideAnimations.add(
+        Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero).animate(
+          CurvedAnimation(parent: _animationController, curve: Interval(start, end, curve: Curves.easeOutCubic)),
+        ),
+      );
+      _fadeAnimations.add(
+        Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(parent: _animationController, curve: Interval(start, end, curve: Curves.easeOutCubic)),
+        ),
+      );
+    }
+    
+    _animationController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Widget _buildAnimatedSection(int index, Widget child) {
+    return SlideTransition(
+      position: _slideAnimations[index],
+      child: FadeTransition(
+        opacity: _fadeAnimations[index],
+        child: child,
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +83,7 @@ class AdminHomeTab extends StatelessWidget {
                 builder: (context, mode) {
                   return IconButton(
                     icon: Icon(
-                      mode == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                      mode == ThemeMode.dark ? Icons.light_mode_rounded : Icons.dark_mode_rounded,
                     ),
                     onPressed: () => context.read<ThemeCubit>().toggleTheme(),
                     tooltip: mode == ThemeMode.dark ? 'Mode Terang' : 'Mode Gelap',
@@ -50,70 +105,105 @@ class AdminHomeTab extends StatelessWidget {
               context.read<TicketListBloc>().add(const list_event.FetchAllTicketsRequested(page: 0, limit: 5));
             },
             child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  GreetingBanner(isDark: isDark),
+                  _buildAnimatedSection(0, GreetingBanner(isDark: isDark)),
                   const SizedBox(height: 32),
+                  
                   // Summary Bar
-                  Container(
-                    padding: const EdgeInsets.all(16),
+                  _buildAnimatedSection(1, Container(
+                    padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppColors.primary,
-                      borderRadius: BorderRadius.circular(16),
+                      gradient: LinearGradient(
+                        colors: [AppColors.primary, AppColors.primary.withValues(alpha: 0.8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.3),
-                          blurRadius: 12,
-                          offset: const Offset(0, 6),
+                          color: AppColors.primary.withValues(alpha: 0.25),
+                          blurRadius: 16,
+                          offset: const Offset(0, 8),
                         ),
                       ],
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _AdminSummaryItem(label: 'Total', value: state.stats.total, icon: Icons.analytics),
-                        _AdminSummaryItem(label: 'Pending', value: state.stats.open + state.stats.inProgress, icon: Icons.hourglass_top),
-                        _AdminSummaryItem(label: 'Selesai', value: state.stats.resolved, icon: Icons.task_alt),
+                        _AdminSummaryItem(label: 'TOTAL TIKET', value: state.stats.total, icon: Icons.analytics_outlined),
+                        Container(width: 1, height: 40, color: Colors.white24),
+                        _AdminSummaryItem(label: 'PENDING', value: state.stats.open + state.stats.inProgress, icon: Icons.hourglass_top_rounded),
+                        Container(width: 1, height: 40, color: Colors.white24),
+                        _AdminSummaryItem(label: 'SELESAI', value: state.stats.resolved, icon: Icons.task_alt_rounded),
                       ],
                     ),
-                  ),
+                  )),
                   const SizedBox(height: 32),
-                  const Text('Statistik Sistem', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    crossAxisCount: 2,
-                    crossAxisSpacing: 16,
-                    mainAxisSpacing: 16,
-                    childAspectRatio: 1.3,
+                  
+                  _buildAnimatedSection(2, Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      StatCard(label: 'Terbuka', value: state.stats.open.toString(), color: AppColors.statusOpen, icon: Icons.folder_open, isDark: isDark),
-                      StatCard(label: 'Diproses', value: state.stats.inProgress.toString(), color: AppColors.statusInProgress, icon: Icons.sync, isDark: isDark),
-                      StatCard(label: 'Selesai', value: state.stats.resolved.toString(), color: AppColors.statusResolved, icon: Icons.check_circle, isDark: isDark),
-                      StatCard(label: 'Ditutup', value: state.stats.closed.toString(), color: Colors.grey, icon: Icons.archive, isDark: isDark),
+                      const Text(
+                        'STATISTIK SISTEM', 
+                        style: TextStyle(
+                          fontSize: 11, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        )
+                      ),
+                      const SizedBox(height: 16),
+                      GridView.count(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 12,
+                        mainAxisSpacing: 12,
+                        childAspectRatio: 1.25,
+                        children: [
+                          StatCard(label: 'Terbuka', value: state.stats.open.toString(), color: AppColors.statusOpen, icon: Icons.folder_open_outlined, isDark: isDark),
+                          StatCard(label: 'Diproses', value: state.stats.inProgress.toString(), color: AppColors.statusInProgress, icon: Icons.sync_rounded, isDark: isDark),
+                          StatCard(label: 'Selesai', value: state.stats.resolved.toString(), color: AppColors.statusResolved, icon: Icons.check_circle_outline, isDark: isDark),
+                          StatCard(label: 'Skala Prioritas', value: state.stats.closed.toString(), color: const Color(0xFF64748B), icon: Icons.flag_outlined, isDark: isDark),
+                        ],
+                      ),
                     ],
-                  ),
+                  )),
                   const SizedBox(height: 32),
-                  const Text('Shortcut Navigasi', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-                  Row(
+                  
+                  _buildAnimatedSection(3, Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _AdminShortcut(label: 'Kelola Tiket', icon: Icons.confirmation_number, color: Colors.blue, onTap: () => context.push(AppRoutes.ticketManagement)),
-                      const SizedBox(width: 12),
-                      _AdminShortcut(label: 'Laporan', icon: Icons.bar_chart, color: Colors.purple, onTap: () => context.push(AppRoutes.adminReports)),
+                      const Text(
+                        'SHORTCUT NAVIGASI', 
+                        style: TextStyle(
+                          fontSize: 11, 
+                          fontWeight: FontWeight.bold,
+                          letterSpacing: 1.5,
+                        )
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          _AdminShortcut(label: 'Kelola Tiket', icon: Icons.confirmation_number_outlined, color: AppColors.primary, onTap: () => context.push(AppRoutes.ticketManagement)),
+                          const SizedBox(width: 12),
+                          _AdminShortcut(label: 'Laporan', icon: Icons.bar_chart_rounded, color: const Color(0xFF8B5CF6), onTap: () => context.push(AppRoutes.adminReports)),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          _AdminShortcut(label: 'Pengguna', icon: Icons.people_outline, color: const Color(0xFFF59E0B), onTap: () => context.push(AppRoutes.userManagement)),
+                          const SizedBox(width: 12),
+                          _AdminShortcut(label: 'Pengaturan', icon: Icons.settings_outlined, color: const Color(0xFF10B981), onTap: () => context.push(AppRoutes.adminSettings)),
+                        ],
+                      ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      _AdminShortcut(label: 'Pengguna', icon: Icons.people, color: Colors.orange, onTap: () => context.push(AppRoutes.userManagement)),
-                      const SizedBox(width: 12),
-                      _AdminShortcut(label: 'Pengaturan', icon: Icons.settings, color: Colors.teal, onTap: () => context.push(AppRoutes.adminSettings)),
-                    ],
-                  ),
+                  )),
+                  const SizedBox(height: 80),
                 ],
               ),
             ),
@@ -135,10 +225,21 @@ class _AdminSummaryItem extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Icon(icon, color: Colors.white70, size: 20),
+        Icon(icon, color: Colors.white70, size: 24),
         const SizedBox(height: 8),
-        Text(value.toString(), style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10)),
+        TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: 0, end: value.toDouble()),
+          duration: const Duration(milliseconds: 800),
+          curve: Curves.easeOutCubic,
+          builder: (context, val, child) {
+            return Text(
+              val.toInt().toString(), 
+              style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold, height: 1)
+            );
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, letterSpacing: 0.5, fontWeight: FontWeight.w600)),
       ],
     );
   }
@@ -154,22 +255,45 @@ class _AdminShortcut extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: color.withValues(alpha: 0.2)),
-          ),
-          child: Column(
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 8),
-              Text(label, style: TextStyle(color: color, fontWeight: FontWeight.bold, fontSize: 13)),
-            ],
+      child: Material(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          splashColor: color.withValues(alpha: 0.1),
+          highlightColor: color.withValues(alpha: 0.05),
+          child: Container(
+            padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: color.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  label, 
+                  style: TextStyle(
+                    color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight, 
+                    fontWeight: FontWeight.w600, 
+                    fontSize: 13,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

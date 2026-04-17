@@ -1,48 +1,76 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
 
-/// Tombol utama dengan gradient dan animasi hover.
+enum AppButtonType { primary, secondary, ghost, danger }
+enum AppButtonSize { small, normal, large }
+
 class AppButton extends StatefulWidget {
   final String label;
   final VoidCallback? onPressed;
   final bool isLoading;
-  final bool isOutlined;
   final IconData? icon;
   final double? width;
-  final double height;
-  final Color? backgroundColor;
-  final Color? textColor;
+  final AppButtonType type;
+  final AppButtonSize size;
 
-  const AppButton({
+  const AppButton.primary({
     super.key,
     required this.label,
     this.onPressed,
     this.isLoading = false,
-    this.isOutlined = false,
     this.icon,
     this.width,
-    this.height = 44,
-    this.backgroundColor,
-    this.textColor,
-  });
+    this.size = AppButtonSize.normal,
+  }) : type = AppButtonType.primary;
+
+  const AppButton.secondary({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.size = AppButtonSize.normal,
+  }) : type = AppButtonType.secondary;
+
+  const AppButton.ghost({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.size = AppButtonSize.normal,
+  }) : type = AppButtonType.ghost;
+
+  const AppButton.danger({
+    super.key,
+    required this.label,
+    this.onPressed,
+    this.isLoading = false,
+    this.icon,
+    this.width,
+    this.size = AppButtonSize.normal,
+  }) : type = AppButtonType.danger;
 
   @override
   State<AppButton> createState() => _AppButtonState();
 }
 
-class _AppButtonState extends State<AppButton>
-    with SingleTickerProviderStateMixin {
+class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
+  bool _isHovered = false;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 150),
+      duration: const Duration(milliseconds: 120),
     );
-    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.98).animate(
+    _scaleAnimation = Tween<double>(begin: 1.0, end: 0.97).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
   }
@@ -53,110 +81,159 @@ class _AppButtonState extends State<AppButton>
     super.dispose();
   }
 
+  bool get _isDisabled => widget.onPressed == null || widget.isLoading;
+
+  double get _height {
+    switch (widget.size) {
+      case AppButtonSize.small:
+        return AppDimensions.buttonHeightSM;
+      case AppButtonSize.large:
+        return AppDimensions.buttonHeightLG;
+      case AppButtonSize.normal:
+      default:
+        return AppDimensions.buttonHeight;
+    }
+  }
+
+  double get _fontSize {
+    switch (widget.size) {
+      case AppButtonSize.small:
+        return 12;
+      case AppButtonSize.large:
+        return 16;
+      case AppButtonSize.normal:
+      default:
+        return 14;
+    }
+  }
+
+  BoxDecoration _getDecoration(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    switch (widget.type) {
+      case AppButtonType.primary:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF6366F1), // Primary
+              Color(0xFF4F46E5), // Slightly darker primary
+            ],
+          ),
+          boxShadow: [
+            if (!isDark && !_isDisabled)
+              BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.2),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+          ],
+        );
+      case AppButtonType.secondary:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+          border: Border.all(color: AppColors.primary, width: 1.5),
+          color: _isHovered ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
+        );
+      case AppButtonType.ghost:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+          color: _isHovered
+              ? (isDark ? AppColors.surfaceDark2 : AppColors.backgroundLight)
+              : Colors.transparent,
+        );
+      case AppButtonType.danger:
+        return BoxDecoration(
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+          color: AppColors.danger,
+        );
+    }
+  }
+
+  Color _getTextColor(BuildContext context) {
+    switch (widget.type) {
+      case AppButtonType.primary:
+      case AppButtonType.danger:
+        return AppColors.white;
+      case AppButtonType.secondary:
+      case AppButtonType.ghost:
+        return AppColors.primary;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.isOutlined) return _buildOutlined(context);
-    return _buildFilled(context);
-  }
+    final textColor = _getTextColor(context);
 
-  Widget _buildFilled(BuildContext context) {
-    final bgColor = widget.backgroundColor ?? AppColors.primary;
-    final txtColor = widget.textColor ?? Colors.white;
-
-    return GestureDetector(
-      onTapDown: (_) => widget.onPressed != null ? _controller.forward() : null,
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: SizedBox(
-          width: widget.width ?? double.infinity,
-          height: widget.height,
-          child: ElevatedButton(
-            onPressed: widget.isLoading ? null : widget.onPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: bgColor,
-              foregroundColor: txtColor,
-              elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+    // Layout button content
+    Widget content = Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        if (widget.isLoading)
+          SizedBox(
+            width: 16,
+            height: 16,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              valueColor: AlwaysStoppedAnimation<Color>(textColor),
             ),
-            child: widget.isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
-                    ),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, size: 18),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        widget.label,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
+          )
+        else if (widget.icon != null) ...[
+          Icon(widget.icon, size: _fontSize + 4, color: textColor),
+          const SizedBox(width: AppDimensions.space8),
+        ],
+        if (!widget.isLoading || widget.icon == null) ...[
+          if (widget.isLoading) const SizedBox(width: AppDimensions.space8),
+          Flexible(
+            child: Text(
+              widget.label,
+              style: TextStyle(
+                fontSize: _fontSize,
+                fontWeight: FontWeight.w600,
+                color: textColor,
+                height: 1.2,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
           ),
-        ),
+        ]
+      ],
+    );
+
+    // Apply Opacity for disabled state
+    Widget buttonWidget = AnimatedOpacity(
+      duration: const Duration(milliseconds: 200),
+      opacity: _isDisabled ? 0.4 : 1.0,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        width: widget.width,
+        height: _height,
+        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+        decoration: _getDecoration(context),
+        alignment: Alignment.center,
+        child: content,
       ),
     );
-  }
 
-  Widget _buildOutlined(BuildContext context) {
-    return GestureDetector(
-      onTapDown: (_) => widget.onPressed != null ? _controller.forward() : null,
-      onTapUp: (_) => _controller.reverse(),
-      onTapCancel: () => _controller.reverse(),
-      child: ScaleTransition(
-        scale: _scaleAnimation,
-        child: SizedBox(
-          width: widget.width ?? double.infinity,
-          height: widget.height,
-          child: OutlinedButton(
-            onPressed: widget.isLoading ? null : widget.onPressed,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: AppColors.primary,
-              side: const BorderSide(color: AppColors.primary, width: 1.5),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              elevation: 0,
-            ),
-            child: widget.isLoading
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (widget.icon != null) ...[
-                        Icon(widget.icon, size: 18),
-                        const SizedBox(width: 8),
-                      ],
-                      Text(
-                        widget.label,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ],
-                  ),
-          ),
+    return MouseRegion(
+      onEnter: (_) => setState(() => _isHovered = true),
+      onExit: (_) => setState(() => _isHovered = false),
+      cursor: _isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      child: GestureDetector(
+        onTapDown: _isDisabled ? null : (_) => _controller.forward(),
+        onTapUp: _isDisabled
+            ? null
+            : (_) {
+                _controller.reverse();
+                widget.onPressed?.call();
+              },
+        onTapCancel: () => _controller.reverse(),
+        child: ScaleTransition(
+          scale: _scaleAnimation,
+          child: buttonWidget,
         ),
       ),
     );

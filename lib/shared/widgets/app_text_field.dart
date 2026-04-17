@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_dimensions.dart';
 
-/// Text field kustom yang konsisten dengan design system aplikasi.
+/// Text field kustom yang konsisten dengan design system aplikasi terbaru.
+/// Menggunakan style clean dengan label di atas input field.
 class AppTextField extends StatefulWidget {
   final String label;
   final String? hint;
+  final String? helperText;
   final TextEditingController? controller;
   final bool isPassword;
   final TextInputType keyboardType;
@@ -16,13 +19,14 @@ class AppTextField extends StatefulWidget {
   final int maxLines;
   final FocusNode? focusNode;
   final TextInputAction textInputAction;
-  final double borderRadius;
   final void Function(String)? onSubmitted;
+  final bool isSuccess;
 
   const AppTextField({
     super.key,
     required this.label,
     this.hint,
+    this.helperText,
     this.controller,
     this.isPassword = false,
     this.keyboardType = TextInputType.text,
@@ -34,8 +38,8 @@ class AppTextField extends StatefulWidget {
     this.maxLines = 1,
     this.focusNode,
     this.textInputAction = TextInputAction.next,
-    this.borderRadius = 8,
     this.onSubmitted,
+    this.isSuccess = false,
   });
 
   @override
@@ -48,23 +52,25 @@ class _AppTextFieldState extends State<AppTextField> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Label
+        // Top Label (Not floating)
         Text(
           widget.label,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 14,
             fontWeight: FontWeight.w500,
-            color: _isFocused
-                ? AppColors.primary
-                : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+            color: _isFocused ? AppColors.primary : primaryTextColor,
           ),
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: AppDimensions.space8),
 
         // Input field
         Focus(
@@ -80,64 +86,70 @@ class _AppTextFieldState extends State<AppTextField> {
             maxLines: widget.isPassword ? 1 : widget.maxLines,
             textInputAction: widget.textInputAction,
             onFieldSubmitted: widget.onSubmitted,
-            style: const TextStyle(fontSize: 14),
+            style: TextStyle(fontSize: 14, color: primaryTextColor),
             decoration: InputDecoration(
               hintText: widget.hint,
-              fillColor: isDark ? AppColors.surfaceDark : const Color(0xFFFAFAFA),
-              filled: true,
-              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              helperText: widget.helperText,
+              helperMaxLines: 2,
               prefixIcon: widget.prefixIcon != null
                   ? Padding(
-                      padding: const EdgeInsets.only(right: 20, left: 16),
+                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
                       child: Icon(
                         widget.prefixIcon,
-                        size: 20,
-                        color: _isFocused
-                            ? AppColors.primary
-                            : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                        size: AppDimensions.iconMD,
+                        color: _isFocused ? AppColors.primary : secondaryTextColor,
                       ),
                     )
                   : null,
               prefixIconConstraints: const BoxConstraints(
-                minWidth: 56,
+                minWidth: 48,
                 minHeight: 24,
               ),
-              suffixIcon: widget.isPassword
-                  ? IconButton(
-                      icon: Icon(
-                        _obscureText
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
-                        size: 18,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight,
-                      ),
-                      onPressed: () =>
-                          setState(() => _obscureText = !_obscureText),
+              suffixIcon: _buildSuffixIcon(isDark, secondaryTextColor),
+              // Success border adjustments
+              enabledBorder: widget.isSuccess
+                  ? OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide: const BorderSide(color: AppColors.success, width: 1.5),
                     )
-                  : widget.suffixWidget,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
-              ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: BorderSide(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
-                ),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(widget.borderRadius),
-                borderSide: const BorderSide(color: AppColors.primary, width: 2),
-              ),
+                  : null,
+              focusedBorder: widget.isSuccess
+                  ? OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide: const BorderSide(color: AppColors.success, width: 2),
+                    )
+                  : null,
             ),
           ),
         ),
       ],
     );
   }
-}
 
+  Widget? _buildSuffixIcon(bool isDark, Color secondaryColor) {
+    if (widget.isPassword) {
+      return IconButton(
+        icon: Icon(
+          _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          size: AppDimensions.iconMD,
+          color: secondaryColor,
+        ),
+        onPressed: () => setState(() => _obscureText = !_obscureText),
+        splashRadius: 20,
+      );
+    }
+
+    if (widget.isSuccess) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(horizontal: AppDimensions.space12),
+        child: Icon(
+          Icons.check_circle_outline,
+          size: AppDimensions.iconMD,
+          color: AppColors.success,
+        ),
+      );
+    }
+
+    return widget.suffixWidget;
+  }
+}

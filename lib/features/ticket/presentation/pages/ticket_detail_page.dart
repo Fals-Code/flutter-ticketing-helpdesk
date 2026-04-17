@@ -267,7 +267,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 BlocBuilder<TicketDetailBloc,
                     detail_state.TicketDetailState>(
                   builder: (context, state) {
-                    return AppButton(
+                    return AppButton.primary(
                       label: 'Beri Penilaian',
                       icon: Icons.star_rounded,
                       isLoading: state.isRatingSubmitting,
@@ -590,10 +590,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                     children: [
                       if (ticket.status == TicketStatus.open)
                         Expanded(
-                          child: AppButton(
+                          child: AppButton.primary(
                             label: 'Mulai Kerjakan',
                             icon: Icons.play_arrow_rounded,
-                            backgroundColor: AppColors.statusInProgress,
                             onPressed: () => context
                                 .read<TicketDetailBloc>()
                                 .add(
@@ -605,10 +604,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         ),
                       if (ticket.status == TicketStatus.inProgress)
                         Expanded(
-                          child: AppButton(
+                          child: AppButton.primary(
                             label: 'Tandai Selesai',
                             icon: Icons.check_circle_outline_rounded,
-                            backgroundColor: AppColors.statusResolved,
                             onPressed: () => context
                                 .read<TicketDetailBloc>()
                                 .add(

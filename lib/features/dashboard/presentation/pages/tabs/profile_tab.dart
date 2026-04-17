@@ -134,10 +134,8 @@ class ProfileTab extends StatelessWidget {
 
                 const SizedBox(height: AppDimensions.spaceXXL),
 
-                AppButton(
+                AppButton.danger(
                   label: AppStrings.logout,
-                  backgroundColor: AppColors.priorityHigh.withValues(alpha: 0.08),
-                  textColor: AppColors.priorityHigh,
                   icon: Icons.logout_rounded,
                   onPressed: () {
                     context.read<AuthBloc>().add(LogoutRequested());

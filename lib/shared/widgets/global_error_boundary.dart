@@ -85,7 +85,7 @@ class _ErrorUI extends StatelessWidget {
                   ),
             ),
             const SizedBox(height: 32),
-            AppButton(
+            AppButton.primary(
               label: 'Coba Lagi',
               onPressed: onRetry,
               icon: Icons.refresh_rounded,

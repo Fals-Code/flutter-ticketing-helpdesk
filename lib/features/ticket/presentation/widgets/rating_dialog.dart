@@ -103,7 +103,7 @@ class _RatingDialogState extends State<RatingDialog> {
                 ),
                 const SizedBox(width: AppDimensions.marginM),
                 Expanded(
-                  child: AppButton(
+                  child: AppButton.primary(
                     label: 'Kirim',
                     onPressed: _rating == 0
                         ? null

@@ -24,9 +24,16 @@ class AdminHomeTab extends StatelessWidget {
           appBar: AppBar(
             title: const Text('Admin Console'),
             actions: [
-              IconButton(
-                icon: Icon(isDark ? Icons.light_mode : Icons.dark_mode),
-                onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+              BlocBuilder<ThemeCubit, ThemeMode>(
+                builder: (context, mode) {
+                  return IconButton(
+                    icon: Icon(
+                      mode == ThemeMode.dark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+                    ),
+                    onPressed: () => context.read<ThemeCubit>().toggleTheme(),
+                    tooltip: mode == ThemeMode.dark ? 'Mode Terang' : 'Mode Gelap',
+                  );
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.refresh_rounded),

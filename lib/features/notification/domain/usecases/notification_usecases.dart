@@ -23,16 +23,6 @@ class MarkNotificationAsRead {
   }
 }
 
-class DeleteNotifications {
-  final NotificationRepository repository;
-
-  DeleteNotifications(this.repository);
-
-  Future<Either<Failure, void>> call(List<String> ids) {
-    return repository.deleteNotifications(ids);
-  }
-}
-
 class WatchNotifications {
   final NotificationRepository repository;
 

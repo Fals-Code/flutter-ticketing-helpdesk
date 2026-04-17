@@ -6,6 +6,7 @@ import 'package:uts/features/notification/data/datasources/notification_remote_d
 import 'package:uts/features/notification/data/repositories/notification_repository_impl.dart';
 import 'package:uts/features/notification/domain/repositories/notification_repository.dart';
 import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
+import 'package:uts/features/notification/domain/usecases/delete_notification_usecases.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 
 Future<void> initNotificationDependencies(GetIt sl) async {
@@ -22,8 +23,10 @@ Future<void> initNotificationDependencies(GetIt sl) async {
   // UseCases
   sl.registerLazySingleton(() => GetNotifications(sl()));
   sl.registerLazySingleton(() => MarkNotificationAsRead(sl()));
-  sl.registerLazySingleton(() => DeleteNotifications(sl()));
   sl.registerLazySingleton(() => WatchNotifications(sl()));
+  sl.registerLazySingleton(() => DeleteNotification(sl()));
+  sl.registerLazySingleton(() => DeleteMultipleNotifications(sl()));
+  sl.registerLazySingleton(() => DeleteAllNotifications(sl()));
 
   // Services
   sl.registerLazySingleton(() => LocalNotificationService());
@@ -34,8 +37,10 @@ Future<void> initNotificationDependencies(GetIt sl) async {
     () => NotificationBloc(
       getNotifications: sl(),
       markNotificationAsRead: sl(),
-      deleteNotifications: sl(),
       watchNotifications: sl(),
+      deleteNotification: sl(),
+      deleteMultipleNotifications: sl(),
+      deleteAllNotifications: sl(),
       localNotificationService: sl(),
     ),
   );

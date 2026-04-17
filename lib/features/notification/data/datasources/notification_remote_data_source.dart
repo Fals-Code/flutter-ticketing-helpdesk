@@ -4,8 +4,10 @@ import '../models/notification_model.dart';
 abstract class NotificationRemoteDataSource {
   Future<List<NotificationModel>> getNotifications();
   Future<void> markAsRead(String notificationId);
-  Future<void> deleteNotifications(List<String> ids);
   Stream<List<NotificationModel>> watchNotifications();
+  Future<void> deleteNotification(String notificationId);
+  Future<void> deleteNotifications(List<String> notificationIds);
+  Future<void> deleteAllNotifications();
 }
 
 class SupabaseNotificationRemoteDataSourceImpl
@@ -58,21 +60,6 @@ class SupabaseNotificationRemoteDataSourceImpl
   }
 
   @override
-  Future<void> deleteNotifications(List<String> ids) async {
-    try {
-      if (ids.isEmpty) return;
-      await supabaseClient
-          .from('notifications')
-          .delete()
-          .inFilter('id', ids);
-    } on PostgrestException catch (e) {
-      throw Exception('Database error deleting notifications: ${e.message}');
-    } catch (e) {
-      throw Exception('Failed to delete notifications: $e');
-    }
-  }
-
-  @override
   Stream<List<NotificationModel>> watchNotifications() {
     try {
       return supabaseClient
@@ -85,6 +72,42 @@ class SupabaseNotificationRemoteDataSourceImpl
               .toList());
     } catch (e) {
       return Stream.value([]);
+    }
+  }
+
+  @override
+  Future<void> deleteNotification(String notificationId) async {
+    try {
+      await supabaseClient
+          .from('notifications')
+          .delete()
+          .eq('id', notificationId);
+    } catch (e) {
+      throw Exception('Failed to delete notification: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteNotifications(List<String> notificationIds) async {
+    try {
+      await supabaseClient
+          .from('notifications')
+          .delete()
+          .inFilter('id', notificationIds);
+    } catch (e) {
+      throw Exception('Failed to delete notifications: $e');
+    }
+  }
+
+  @override
+  Future<void> deleteAllNotifications() async {
+    try {
+      await supabaseClient
+          .from('notifications')
+          .delete()
+          .eq('user_id', supabaseClient.auth.currentUser!.id);
+    } catch (e) {
+      throw Exception('Failed to delete all notifications: $e');
     }
   }
 }

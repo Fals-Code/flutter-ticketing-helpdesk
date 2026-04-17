@@ -4,6 +4,7 @@ import 'dart:developer' as developer;
 import 'package:equatable/equatable.dart';
 import '../../domain/entities/notification_entity.dart';
 import '../../domain/usecases/notification_usecases.dart';
+import '../../domain/usecases/delete_notification_usecases.dart';
 import 'package:uts/core/services/local_notification_service.dart';
 
 // Events
@@ -33,57 +34,78 @@ class NotificationStreamUpdated extends NotificationEvent {
 
 class MarkAllReadRequested extends NotificationEvent {}
 
-class DeleteNotificationsRequested extends NotificationEvent {
-  final List<String> notificationIds;
-  const DeleteNotificationsRequested(this.notificationIds);
+class ResetNotificationState extends NotificationEvent {}
+
+// New Selection Events
+class ToggleSelectionModeRequested extends NotificationEvent {}
+
+class ToggleNotificationSelectionRequested extends NotificationEvent {
+  final String notificationId;
+  const ToggleNotificationSelectionRequested(this.notificationId);
   @override
-  List<Object?> get props => [notificationIds];
+  List<Object?> get props => [notificationId];
 }
 
-class ResetNotificationState extends NotificationEvent {}
+class SelectAllNotificationsRequested extends NotificationEvent {}
+
+class DeleteSelectedNotificationsRequested extends NotificationEvent {}
+
+class DeleteAllNotificationsRequested extends NotificationEvent {}
 
 // State
 class NotificationState extends Equatable {
   final bool isLoading;
   final List<NotificationEntity> notifications;
   final String? errorMessage;
+  final bool selectionMode;
+  final Set<String> selectedIds;
 
   const NotificationState({
     this.isLoading = false,
     this.notifications = const [],
     this.errorMessage,
+    this.selectionMode = false,
+    this.selectedIds = const {},
   });
 
   NotificationState copyWith({
     bool? isLoading,
     List<NotificationEntity>? notifications,
     String? errorMessage,
+    bool? selectionMode,
+    Set<String>? selectedIds,
   }) {
     return NotificationState(
       isLoading: isLoading ?? this.isLoading,
       notifications: notifications ?? this.notifications,
       errorMessage: errorMessage,
+      selectionMode: selectionMode ?? this.selectionMode,
+      selectedIds: selectedIds ?? this.selectedIds,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, notifications, errorMessage];
+  List<Object?> get props => [isLoading, notifications, errorMessage, selectionMode, selectedIds];
 }
 
 // Bloc
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final GetNotifications getNotifications;
   final MarkNotificationAsRead markNotificationAsRead;
-  final DeleteNotifications deleteNotifications;
   final WatchNotifications watchNotifications;
+  final DeleteNotification deleteNotification;
+  final DeleteMultipleNotifications deleteMultipleNotifications;
+  final DeleteAllNotifications deleteAllNotifications;
   final LocalNotificationService localNotificationService;
   StreamSubscription? _notificationSubscription;
 
   NotificationBloc({
     required this.getNotifications,
     required this.markNotificationAsRead,
-    required this.deleteNotifications,
     required this.watchNotifications,
+    required this.deleteNotification,
+    required this.deleteMultipleNotifications,
+    required this.deleteAllNotifications,
     required this.localNotificationService,
   }) : super(const NotificationState()) {
     on<FetchNotificationsRequested>(_onFetchNotifications);
@@ -91,8 +113,14 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<StartNotificationSubscription>(_onStartSubscription);
     on<NotificationStreamUpdated>(_onStreamUpdated);
     on<MarkAllReadRequested>(_onMarkAllRead);
-    on<DeleteNotificationsRequested>(_onDeleteNotifications);
     on<ResetNotificationState>(_onResetState);
+    
+    // Selection handlers
+    on<ToggleSelectionModeRequested>(_onToggleSelectionMode);
+    on<ToggleNotificationSelectionRequested>(_onToggleSelection);
+    on<SelectAllNotificationsRequested>(_onSelectAll);
+    on<DeleteSelectedNotificationsRequested>(_onDeleteSelected);
+    on<DeleteAllNotificationsRequested>(_onDeleteAll);
   }
 
   void _onStartSubscription(
@@ -109,7 +137,6 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     NotificationStreamUpdated event,
     Emitter<NotificationState> emit,
   ) {
-    // Detect new unread notifications to show popup
     final currentIds = state.notifications.map((n) => n.id).toSet();
 
     for (var notification in event.notifications) {
@@ -151,7 +178,6 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkReadRequested event,
     Emitter<NotificationState> emit,
   ) async {
-    // Optimistic local update first
     final originalList = state.notifications;
     final updatedList = originalList.map((n) {
       if (n.id == event.notificationId) {
@@ -161,17 +187,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     }).toList();
     emit(state.copyWith(notifications: updatedList));
 
-    // Persist to database
     final result = await markNotificationAsRead(event.notificationId);
     result.fold(
       (failure) {
-        // Revert on failure
         developer.log('Failed to mark notification as read! ${failure.message}', name: 'NotificationBloc');
         emit(state.copyWith(notifications: originalList));
       },
-      (_) {
-        // Already updated optimistically, nothing else needed
-      },
+      (_) {},
     );
   }
 
@@ -185,36 +207,78 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         .toList();
     if (unreadIds.isEmpty) return;
 
-    // Instant local feedback
     final updatedList = state.notifications.map((n) {
       if (!n.isRead) return n.copyWith(isRead: true);
       return n;
     }).toList();
     emit(state.copyWith(notifications: updatedList));
 
-    // Persist ALL unread to database concurrently
     await Future.wait(
       unreadIds.map((id) => markNotificationAsRead(id)),
     );
   }
 
-  Future<void> _onDeleteNotifications(
-    DeleteNotificationsRequested event,
-    Emitter<NotificationState> emit,
-  ) async {
-    final originalList = state.notifications;
-    final updatedList = originalList
-        .where((n) => !event.notificationIds.contains(n.id))
-        .toList();
-    emit(state.copyWith(notifications: updatedList));
+  // Selection Logic
+  void _onToggleSelectionMode(ToggleSelectionModeRequested event, Emitter<NotificationState> emit) {
+    final newMode = !state.selectionMode;
+    emit(state.copyWith(
+      selectionMode: newMode,
+      selectedIds: newMode ? {} : {}, // Clear on close
+    ));
+  }
 
-    final result = await deleteNotifications(event.notificationIds);
+  void _onToggleSelection(ToggleNotificationSelectionRequested event, Emitter<NotificationState> emit) {
+    final current = Set<String>.from(state.selectedIds);
+    if (current.contains(event.notificationId)) {
+      current.remove(event.notificationId);
+    } else {
+      current.add(event.notificationId);
+    }
+    emit(state.copyWith(selectedIds: current));
+  }
+
+  void _onSelectAll(SelectAllNotificationsRequested event, Emitter<NotificationState> emit) {
+    if (state.selectedIds.length == state.notifications.length) {
+      emit(state.copyWith(selectedIds: {}));
+    } else {
+      final allIds = state.notifications.map((n) => n.id).toSet();
+      emit(state.copyWith(selectedIds: allIds));
+    }
+  }
+
+  Future<void> _onDeleteSelected(DeleteSelectedNotificationsRequested event, Emitter<NotificationState> emit) async {
+    if (state.selectedIds.isEmpty) return;
+    
+    final idsToDelete = List<String>.from(state.selectedIds);
+    emit(state.copyWith(isLoading: true));
+    
+    final result = await deleteMultipleNotifications(idsToDelete);
     result.fold(
-      (failure) {
-        developer.log('Failed to delete notifications! ${failure.message}', name: 'NotificationBloc');
-        emit(state.copyWith(notifications: originalList));
+      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (_) {
+        emit(state.copyWith(
+          isLoading: false,
+          selectionMode: false,
+          selectedIds: {},
+        ));
+        // State will be refreshed by subscription
       },
-      (_) {},
+    );
+  }
+
+  Future<void> _onDeleteAll(DeleteAllNotificationsRequested event, Emitter<NotificationState> emit) async {
+    emit(state.copyWith(isLoading: true));
+    final result = await deleteAllNotifications();
+    result.fold(
+      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (_) {
+        emit(state.copyWith(
+          isLoading: false,
+          selectionMode: false,
+          selectedIds: {},
+        ));
+        // State will be refreshed by subscription
+      },
     );
   }
 

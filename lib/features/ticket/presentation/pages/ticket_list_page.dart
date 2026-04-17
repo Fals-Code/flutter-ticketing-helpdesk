@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/shared/widgets/empty_state_widget.dart';
@@ -134,7 +133,11 @@ class _TicketListPageState extends State<TicketListPage> {
     );
 
     if (picked != null && mounted) {
-      bloc.add(list_event.FilterDateRangeChanged(picked.start, picked.end));
+      // Set end date to end of the day (23:59:59) to include all tickets on that day
+      final startOfDay = DateTime(picked.start.year, picked.start.month, picked.start.day, 0, 0, 0);
+      final endOfDay = DateTime(picked.end.year, picked.end.month, picked.end.day, 23, 59, 59);
+      
+      bloc.add(list_event.FilterDateRangeChanged(startOfDay, endOfDay));
     }
   }
 
@@ -204,8 +207,7 @@ class _TicketListPageState extends State<TicketListPage> {
                   if (user.role == UserRole.admin)
                     BlocBuilder<TicketStatsBloc, TicketStatsState>(
                       builder: (context, statsState) {
-                        return _buildAdminStatsBar(
-                            statsState, isDark);
+                        return _buildAdminStatsBar(statsState, isDark);
                       },
                     ),
                   Expanded(
@@ -284,19 +286,21 @@ class _TicketListPageState extends State<TicketListPage> {
                             : Colors.black38,
                       ),
                       border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(
-                          vertical: 12),
+                      contentPadding:
+                          const EdgeInsets.symmetric(vertical: 12),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              _buildDateFilterButton(context, state, isDark, hasDateFilter),
+              _buildDateFilterButton(
+                  context, state, isDark, hasDateFilter),
             ],
           ),
           const SizedBox(height: 10),
           // Date active indicator
-          if (hasDateFilter) _buildActiveDateChip(context, state, isDark),
+          if (hasDateFilter)
+            _buildActiveDateChip(context, state, isDark),
           // Status filters
           SizedBox(
             height: 34,
@@ -336,8 +340,9 @@ class _TicketListPageState extends State<TicketListPage> {
           const SizedBox(height: 10),
           Divider(
             height: 1,
-            color:
-                isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
+            color: isDark
+                ? AppColors.borderDark
+                : const Color(0xFFEEEEF2),
           ),
         ],
       ),
@@ -440,7 +445,8 @@ class _TicketListPageState extends State<TicketListPage> {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          padding:
+              const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
           decoration: BoxDecoration(
             color: isSelected
                 ? color.withValues(alpha: 0.15)
@@ -496,7 +502,8 @@ class _TicketListPageState extends State<TicketListPage> {
             SizedBox(height: 80),
             EmptyStateWidget(
               title: 'Belum Ada Tiket',
-              subtitle: 'Buat tiket baru untuk memulai\nlayanan helpdesk.',
+              subtitle:
+                  'Buat tiket baru untuk memulai\nlayanan helpdesk.',
               icon: Icons.confirmation_number_outlined,
             ),
           ],
@@ -538,8 +545,8 @@ class _TicketListPageState extends State<TicketListPage> {
       color: isDark ? AppColors.surfaceDark : Colors.white,
       child: Row(
         children: [
-          _buildMiniStat('Terbuka', stats.open, AppColors.statusOpen,
-              isDark),
+          _buildMiniStat(
+              'Terbuka', stats.open, AppColors.statusOpen, isDark),
           const SizedBox(width: 8),
           _buildMiniStat('Diproses', stats.inProgress,
               AppColors.statusInProgress, isDark),
@@ -586,9 +593,7 @@ class _TicketListPageState extends State<TicketListPage> {
                   label,
                   style: TextStyle(
                     fontSize: 10,
-                    color: isDark
-                        ? Colors.white54
-                        : Colors.black45,
+                    color: isDark ? Colors.white54 : Colors.black45,
                   ),
                 ),
               ],
@@ -658,7 +663,7 @@ class _TicketCard extends StatelessWidget {
                           decoration: BoxDecoration(
                               color: isDark
                                   ? Colors.white30
-                                  : Colors.black30,
+                                  : Colors.black.withValues(alpha: 0.3),
                               shape: BoxShape.circle)),
                       const SizedBox(width: 6),
                       Text(
@@ -710,7 +715,8 @@ class _TicketCard extends StatelessWidget {
                   children: [
                     _Badge(
                       label: ticket.category,
-                      color: AppColors.primary.withValues(alpha: 0.1),
+                      color:
+                          AppColors.primary.withValues(alpha: 0.1),
                       textColor: AppColors.primary,
                     ),
                     const SizedBox(width: 6),

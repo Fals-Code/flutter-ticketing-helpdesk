@@ -35,21 +35,39 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteNotifications(List<String> ids) async {
+  Stream<List<NotificationEntity>> watchNotifications() {
+    return remoteDataSource.watchNotifications().map(
+          (models) => models.map((m) => m.toEntity()).toList(),
+        );
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteNotification(String notificationId) async {
     try {
-      await remoteDataSource.deleteNotifications(ids);
+      await remoteDataSource.deleteNotification(notificationId);
       return const Right(null);
-    } on ServerException {
-      return const Left(ServerFailure());
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
   }
 
   @override
-  Stream<List<NotificationEntity>> watchNotifications() {
-    return remoteDataSource.watchNotifications().map(
-          (models) => models.map((m) => m.toEntity()).toList(),
-        );
+  Future<Either<Failure, void>> deleteNotifications(List<String> notificationIds) async {
+    try {
+      await remoteDataSource.deleteNotifications(notificationIds);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, void>> deleteAllNotifications() async {
+    try {
+      await remoteDataSource.deleteAllNotifications();
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
   }
 }

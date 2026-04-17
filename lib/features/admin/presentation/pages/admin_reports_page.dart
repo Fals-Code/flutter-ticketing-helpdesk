@@ -46,8 +46,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         ));
   }
 
-  Future<void> _exportReport(AdminReport report,
-      {required bool asPdf}) async {
+  Future<void> _exportReport(AdminReport report, {required bool asPdf}) async {
     setState(() => _isExporting = true);
     try {
       if (asPdf) {
@@ -57,17 +56,116 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         await _exportService.exportToCsv(report,
             startDate: _startDate, endDate: _endDate);
       }
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Text(asPdf ? 'Laporan PDF berhasil diekspor' : 'Laporan CSV berhasil diekspor'),
+              ],
+            ),
+            backgroundColor: AppColors.statusResolved,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-              content: Text('Gagal export: $e'),
-              backgroundColor: Colors.red),
+            content: Row(
+              children: [
+                const Icon(Icons.error_outline, color: Colors.white, size: 18),
+                const SizedBox(width: 10),
+                Expanded(child: Text('Gagal export: $e')),
+              ],
+            ),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
         );
       }
     } finally {
       if (mounted) setState(() => _isExporting = false);
     }
+  }
+
+  void _showExportBottomSheet(AdminReport report) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white24 : Colors.black12,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Unduh Laporan',
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Pilih format file yang ingin diunduh',
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 24),
+            // PDF Button
+            _ExportOptionTile(
+              icon: Icons.picture_as_pdf_rounded,
+              iconColor: Colors.red.shade600,
+              iconBgColor: Colors.red.withValues(alpha: 0.1),
+              title: 'Unduh sebagai PDF',
+              subtitle: 'Format laporan siap cetak dengan tabel dan grafik',
+              isDark: isDark,
+              onTap: () {
+                Navigator.pop(context);
+                _exportReport(report, asPdf: true);
+              },
+            ),
+            const SizedBox(height: 12),
+            // CSV Button
+            _ExportOptionTile(
+              icon: Icons.table_chart_rounded,
+              iconColor: Colors.green.shade600,
+              iconBgColor: Colors.green.withValues(alpha: 0.1),
+              title: 'Unduh sebagai CSV',
+              subtitle: 'Format spreadsheet untuk diolah di Excel atau Google Sheets',
+              isDark: isDark,
+              onTap: () {
+                Navigator.pop(context);
+                _exportReport(report, asPdf: false);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _selectDateRange() async {
@@ -139,75 +237,32 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         surfaceTintColor: Colors.transparent,
         elevation: 0,
         actions: [
-          BlocBuilder<AdminBloc, AdminState>(
-            builder: (context, adminState) {
-              final report = adminState.report;
-              if (_isExporting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16),
-                  child: Center(
-                    child: SizedBox(
-                        width: 18,
-                        height: 18,
-                        child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: AppColors.primary)),
-                  ),
-                );
-              }
-              return PopupMenuButton<String>(
-                icon: const Icon(Icons.download_rounded, size: 20),
-                tooltip: 'Export Laporan',
-                enabled: report != null,
-                onSelected: (value) {
-                  if (report == null) return;
-                  _exportReport(report, asPdf: value == 'pdf');
-                },
-                itemBuilder: (_) => const [
-                  PopupMenuItem(
-                    value: 'pdf',
-                    child: Row(children: [
-                      Icon(Icons.picture_as_pdf_rounded,
-                          color: Colors.red, size: 18),
-                      SizedBox(width: 10),
-                      Text('Export PDF', style: TextStyle(fontSize: 14)),
-                    ]),
-                  ),
-                  PopupMenuItem(
-                    value: 'csv',
-                    child: Row(children: [
-                      Icon(Icons.table_chart_rounded,
-                          color: Colors.green, size: 18),
-                      SizedBox(width: 10),
-                      Text('Export CSV', style: TextStyle(fontSize: 14)),
-                    ]),
-                  ),
-                ],
-              );
-            },
-          ),
           IconButton(
             icon: const Icon(Icons.refresh_rounded, size: 20),
             onPressed: _refreshData,
+            tooltip: 'Segarkan data',
           ),
         ],
       ),
       body: BlocBuilder<AdminBloc, AdminState>(
         builder: (context, adminState) {
-          return BlocBuilder<TicketStatsBloc,
-              stats_state.TicketStatsState>(
+          return BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
             builder: (context, statsState) {
               if (adminState.status == AdminStatus.loading &&
                   adminState.report == null) {
                 return const Center(child: LoadingWidget());
               }
 
+              if (adminState.status == AdminStatus.error &&
+                  adminState.report == null) {
+                return _buildErrorState(adminState.errorMessage, isDark);
+              }
+
               return RefreshIndicator(
                 onRefresh: () async => _refreshData(),
                 color: AppColors.primary,
                 child: SingleChildScrollView(
-                  padding:
-                      const EdgeInsets.all(AppDimensions.spaceLG),
+                  padding: const EdgeInsets.all(AppDimensions.spaceLG),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -216,37 +271,36 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                       const SizedBox(height: 24),
 
                       // Stats Grid
-                      _buildSectionTitle(
-                          'Ringkasan Tiket', isDark),
+                      _buildSectionTitle('Ringkasan Tiket', isDark),
                       const SizedBox(height: 14),
                       _buildStatsGrid(statsState),
                       const SizedBox(height: 28),
 
                       // Team Performance
-                      _buildSectionTitle(
-                          'Performa Tim', isDark),
+                      _buildSectionTitle('Performa Tim', isDark),
                       const SizedBox(height: 14),
                       if (adminState.report != null)
                         _buildPerformanceList(
-                            adminState.report!.teamPerformance,
-                            isDark)
+                            adminState.report!.teamPerformance, isDark)
                       else
-                        _buildEmptyCard(
-                            'Data tidak tersedia', isDark),
+                        _buildEmptyCard('Data tidak tersedia', isDark),
                       const SizedBox(height: 28),
 
                       // Category Distribution
-                      _buildSectionTitle(
-                          'Distribusi Kategori', isDark),
+                      _buildSectionTitle('Distribusi Kategori', isDark),
                       const SizedBox(height: 14),
                       if (adminState.report != null)
                         _buildCategoryChart(
-                            adminState
-                                .report!.categoryDistribution,
-                            isDark)
+                            adminState.report!.categoryDistribution, isDark)
                       else
-                        _buildEmptyCard(
-                            'Data tidak tersedia', isDark),
+                        _buildEmptyCard('Data tidak tersedia', isDark),
+
+                      const SizedBox(height: 32),
+
+                      // Download Button — always visible at bottom
+                      if (adminState.report != null)
+                        _buildDownloadButton(adminState.report!, isDark),
+
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -255,6 +309,142 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             },
           );
         },
+      ),
+    );
+  }
+
+  Widget _buildErrorState(String? message, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded,
+                  size: 48, color: Colors.red),
+            ),
+            const SizedBox(height: 20),
+            Text(
+              'Gagal Memuat Laporan',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: isDark ? Colors.white : Colors.black87,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message ?? 'Terjadi kesalahan saat mengambil data laporan.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: isDark ? Colors.white54 : Colors.black45,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ElevatedButton.icon(
+              onPressed: _refreshData,
+              icon: const Icon(Icons.refresh_rounded),
+              label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: Colors.white,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Big, prominent download/export button at the bottom of the page
+  Widget _buildDownloadButton(AdminReport report, bool isDark) {
+    return Container(
+      width: double.infinity,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        gradient: LinearGradient(
+          colors: [
+            AppColors.primary,
+            AppColors.primary.withValues(alpha: 0.8),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.35),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: _isExporting ? null : () => _showExportBottomSheet(report),
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 18, horizontal: 24),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                if (_isExporting)
+                  const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: Colors.white,
+                    ),
+                  )
+                else
+                  const Icon(Icons.download_rounded,
+                      color: Colors.white, size: 22),
+                const SizedBox(width: 12),
+                Text(
+                  _isExporting ? 'Sedang Mengekspor...' : 'Unduh Laporan',
+                  style: GoogleFonts.poppins(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w600,
+                    letterSpacing: 0.3,
+                  ),
+                ),
+                if (!_isExporting) ...[
+                  const Spacer(),
+                  Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.2),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Text(
+                      'PDF / CSV',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -275,9 +465,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
           border: Border.all(
             color: hasFilter
                 ? AppColors.primary.withValues(alpha: 0.3)
-                : (isDark
-                    ? AppColors.borderDark
-                    : const Color(0xFFEEEEF2)),
+                : (isDark ? AppColors.borderDark : const Color(0xFFEEEEF2)),
           ),
         ),
         child: Row(
@@ -298,9 +486,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                 size: 18,
                 color: hasFilter
                     ? AppColors.primary
-                    : (isDark
-                        ? Colors.white54
-                        : Colors.black45),
+                    : (isDark ? Colors.white54 : Colors.black45),
               ),
             ),
             const SizedBox(width: 14),
@@ -313,9 +499,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     style: TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w600,
-                      color: isDark
-                          ? Colors.white38
-                          : Colors.black38,
+                      color: isDark ? Colors.white38 : Colors.black38,
                       letterSpacing: 0.3,
                     ),
                   ),
@@ -329,9 +513,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                       fontWeight: FontWeight.w600,
                       color: hasFilter
                           ? AppColors.primary
-                          : (isDark
-                              ? Colors.white
-                              : Colors.black87),
+                          : (isDark ? Colors.white : Colors.black87),
                     ),
                   ),
                 ],
@@ -422,9 +604,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             color: isDark ? AppColors.surfaceDark : Colors.white,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isDark
-                  ? AppColors.borderDark
-                  : const Color(0xFFEEEEF2),
+              color:
+                  isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
             ),
           ),
           child: Column(
@@ -480,9 +661,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark
-              ? AppColors.borderDark
-              : const Color(0xFFEEEEF2),
+          color: isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
         ),
       ),
       child: ListView.separated(
@@ -491,9 +670,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         itemCount: performance.length,
         separatorBuilder: (context, index) => Divider(
           height: 1,
-          color: isDark
-              ? AppColors.borderDark
-              : const Color(0xFFEEEEF2),
+          color:
+              isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
         ),
         itemBuilder: (context, index) {
           final item = performance[index];
@@ -580,9 +758,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark
-              ? AppColors.borderDark
-              : const Color(0xFFEEEEF2),
+          color: isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
         ),
       ),
       child: Column(
@@ -631,8 +807,7 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                       item.category,
                       style: TextStyle(
                         fontSize: 13,
-                        color:
-                            isDark ? Colors.white70 : Colors.black70,
+                        color: isDark ? Colors.white70 : Colors.black.withValues(alpha: 0.7),
                       ),
                     ),
                   ),
@@ -674,17 +849,112 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark
-              ? AppColors.borderDark
-              : const Color(0xFFEEEEF2),
+          color: isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
         ),
       ),
       child: Center(
-        child: Text(
-          message,
-          style: TextStyle(
-            color: isDark ? Colors.white38 : Colors.black38,
-            fontSize: 13,
+        child: Column(
+          children: [
+            Icon(
+              Icons.inbox_outlined,
+              size: 36,
+              color: isDark ? Colors.white24 : Colors.black26,
+            ),
+            const SizedBox(height: 10),
+            Text(
+              message,
+              style: TextStyle(
+                color: isDark ? Colors.white38 : Colors.black38,
+                fontSize: 13,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Reusable export option tile for the bottom sheet
+class _ExportOptionTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Color iconBgColor;
+  final String title;
+  final String subtitle;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _ExportOptionTile({
+    required this.icon,
+    required this.iconColor,
+    required this.iconBgColor,
+    required this.title,
+    required this.subtitle,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          decoration: BoxDecoration(
+            color: isDark
+                ? Colors.white.withValues(alpha: 0.05)
+                : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(
+              color: isDark ? AppColors.borderDark : const Color(0xFFEEEEF2),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: iconBgColor,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(icon, color: iconColor, size: 22),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? Colors.white54 : Colors.black45,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: isDark ? Colors.white38 : Colors.black38,
+                size: 20,
+              ),
+            ],
           ),
         ),
       ),

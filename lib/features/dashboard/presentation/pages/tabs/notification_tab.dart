@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_dimensions.dart';
+import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
@@ -15,178 +16,87 @@ class NotificationTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : const Color(0xFFF7F8FA),
-      appBar: _buildAppBar(context, isDark),
-      body: BlocBuilder<NotificationBloc, NotificationState>(
-        builder: (context, state) {
-          if (state.isLoading && state.notifications.isEmpty) {
-            return const Center(
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                color: AppColors.primary,
-              ),
-            );
-          }
+    return BlocBuilder<NotificationBloc, NotificationState>(
+      builder: (context, state) {
+        return Scaffold(
+          appBar: AppBar(
+            leading: state.selectionMode
+                ? IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => context.read<NotificationBloc>().add(ToggleSelectionModeRequested()),
+                  )
+                : null,
+            title: Text(
+              state.selectionMode 
+                  ? '${state.selectedIds.length} terpilih' 
+                  : AppStrings.navNotifications
+            ),
+            actions: [
+              if (state.notifications.isNotEmpty)
+                _NotificationPopupMenu(state: state),
+            ],
+          ),
+          body: state.isLoading && state.notifications.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : state.notifications.isEmpty
+                  ? _EmptyState(isDark: isDark)
+                  : RefreshIndicator(
+                      onRefresh: () async {
+                        context.read<NotificationBloc>().add(FetchNotificationsRequested());
+                      },
+                      child: ListView.separated(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.spaceMD,
+                          vertical: AppDimensions.spaceMD,
+                        ),
+                        itemCount: state.notifications.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: AppDimensions.spaceSM),
+                        itemBuilder: (context, index) {
+                          final notification = state.notifications[index];
+                          final isSelected = state.selectedIds.contains(notification.id);
+                          
+                          return _NotificationCard(
+                            notification: notification, 
+                            isDark: isDark,
+                            isSelectionMode: state.selectionMode,
+                            isSelected: isSelected,
+                          );
+                        },
+                      ),
+                    ),
+          floatingActionButton: state.selectionMode && state.selectedIds.isNotEmpty
+              ? FloatingActionButton.extended(
+                  onPressed: () => _showDeleteConfirm(context, selected: true),
+                  label: const Text('Hapus yang dipilih'),
+                  icon: const Icon(Icons.delete_outline),
+                  backgroundColor: Colors.redAccent,
+                )
+              : null,
+        );
+      },
+    );
+  }
 
-          if (state.notifications.isEmpty) {
-            return _buildEmptyState(context, isDark);
-          }
-
-          final unread = state.notifications.where((n) => !n.isRead).toList();
-          final read = state.notifications.where((n) => n.isRead).toList();
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              context.read<NotificationBloc>().add(FetchNotificationsRequested());
+  void _showDeleteConfirm(BuildContext context, {required bool selected}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(selected ? 'Hapus Terpilih' : 'Hapus Semua'),
+        content: Text(selected 
+            ? 'Apakah Anda yakin ingin menghapus notifikasi yang dipilih?' 
+            : 'Apakah Anda yakin ingin menghapus semua notifikasi?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              if (selected) {
+                context.read<NotificationBloc>().add(DeleteSelectedNotificationsRequested());
+              } else {
+                context.read<NotificationBloc>().add(DeleteAllNotificationsRequested());
+              }
+              Navigator.pop(context);
             },
-            color: AppColors.primary,
-            child: CustomScrollView(
-              slivers: [
-                if (unread.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _buildSectionHeader('Belum Dibaca', unread.length, isDark),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => _NotificationCard(
-                        notification: unread[index],
-                        isDark: isDark,
-                      ),
-                      childCount: unread.length,
-                    ),
-                  ),
-                ],
-                if (read.isNotEmpty) ...[
-                  SliverToBoxAdapter(
-                    child: _buildSectionHeader('Sudah Dibaca', null, isDark),
-                  ),
-                  SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) => _NotificationCard(
-                        notification: read[index],
-                        isDark: isDark,
-                      ),
-                      childCount: read.length,
-                    ),
-                  ),
-                ],
-                const SliverToBoxAdapter(child: SizedBox(height: 24)),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
-
-  PreferredSizeWidget _buildAppBar(BuildContext context, bool isDark) {
-    return AppBar(
-      title: const Text(
-        'Notifikasi',
-        style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
-      ),
-      backgroundColor: isDark ? AppColors.backgroundDark : const Color(0xFFF7F8FA),
-      surfaceTintColor: Colors.transparent,
-      elevation: 0,
-      actions: [
-        BlocBuilder<NotificationBloc, NotificationState>(
-          builder: (context, state) {
-            final unreadCount = state.notifications.where((n) => !n.isRead).length;
-            if (unreadCount == 0) return const SizedBox.shrink();
-            return TextButton.icon(
-              onPressed: () =>
-                  context.read<NotificationBloc>().add(MarkAllReadRequested()),
-              icon: const Icon(Icons.done_all_rounded, size: 16),
-              label: const Text('Tandai Semua', style: TextStyle(fontSize: 12)),
-              style: TextButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                padding: const EdgeInsets.symmetric(horizontal: 12),
-              ),
-            );
-          },
-        ),
-        IconButton(
-          icon: const Icon(Icons.refresh_rounded, size: 20),
-          onPressed: () =>
-              context.read<NotificationBloc>().add(FetchNotificationsRequested()),
-          tooltip: 'Muat ulang',
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title, int? count, bool isDark) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-      child: Row(
-        children: [
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white54 : Colors.black45,
-              letterSpacing: 0.5,
-            ),
-          ),
-          if (count != null) ...[
-            const SizedBox(width: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.primary,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                '$count',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(BuildContext context, bool isDark) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            width: 80,
-            height: 80,
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.notifications_none_rounded,
-              size: 36,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Text(
-            'Tidak ada notifikasi',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Update tiket akan muncul di sini',
-            style: TextStyle(
-              fontSize: 14,
-              color: isDark ? Colors.white54 : Colors.black45,
-            ),
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -194,216 +104,276 @@ class NotificationTab extends StatelessWidget {
   }
 }
 
-class _NotificationCard extends StatelessWidget {
-  final NotificationEntity notification;
+class _NotificationPopupMenu extends StatelessWidget {
+  final NotificationState state;
+  const _NotificationPopupMenu({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    return PopupMenuButton<String>(
+      onSelected: (value) {
+        final bloc = context.read<NotificationBloc>();
+        switch (value) {
+          case 'read_all':
+            bloc.add(MarkAllReadRequested());
+            break;
+          case 'pilih':
+            bloc.add(ToggleSelectionModeRequested());
+            break;
+          case 'select_all':
+            bloc.add(SelectAllNotificationsRequested());
+            break;
+          case 'delete_all':
+            _showDeleteConfirmDialog(context, bloc, selected: false);
+            break;
+          case 'delete_selected':
+            _showDeleteConfirmDialog(context, bloc, selected: true);
+            break;
+        }
+      },
+      itemBuilder: (context) {
+        final hasUnread = state.notifications.any((n) => !n.isRead);
+        final isAllSelected = state.selectedIds.length == state.notifications.length;
+        
+        return [
+          if (!state.selectionMode) ...[
+            PopupMenuItem(
+              value: 'read_all',
+              enabled: hasUnread,
+              child: const Row(
+                children: [
+                  Icon(Icons.done_all, size: 20),
+                  SizedBox(width: 12),
+                  Text('Baca Semua'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'pilih',
+              child: Row(
+                children: [
+                  Icon(Icons.checklist, size: 20),
+                  SizedBox(width: 12),
+                  Text('Pilih'),
+                ],
+              ),
+            ),
+          ],
+          if (state.selectionMode) ...[
+             PopupMenuItem(
+              value: 'select_all',
+              child: Row(
+                children: [
+                  Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 20),
+                  SizedBox(width: 12),
+                  Text(isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'),
+                ],
+              ),
+            ),
+            if (state.selectedIds.isNotEmpty)
+              const PopupMenuItem(
+                value: 'delete_selected',
+                child: Row(
+                  children: [
+                    Icon(Icons.delete_sweep, size: 20, color: Colors.red),
+                    SizedBox(width: 12),
+                    Text('Hapus yang dipilih', style: TextStyle(color: Colors.red)),
+                  ],
+                ),
+              ),
+          ],
+          if (!state.selectionMode || state.selectedIds.isEmpty)
+            const PopupMenuItem(
+              value: 'delete_all',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_forever, size: 20, color: Colors.red),
+                  SizedBox(width: 12),
+                  Text('Hapus Semua', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+        ];
+      },
+    );
+  }
+
+  void _showDeleteConfirmDialog(BuildContext context, NotificationBloc bloc, {required bool selected}) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(selected ? 'Hapus Terpilih' : 'Hapus Semua'),
+        content: Text(selected 
+            ? 'Hapus ${state.selectedIds.length} notifikasi terpilih?' 
+            : 'Apakah Anda yakin ingin menghapus semua notifikasi?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Batal')),
+          TextButton(
+            onPressed: () {
+              if (selected) {
+                bloc.add(DeleteSelectedNotificationsRequested());
+              } else {
+                bloc.add(DeleteAllNotificationsRequested());
+              }
+              Navigator.pop(context);
+            },
+            child: const Text('Hapus', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EmptyState extends StatelessWidget {
   final bool isDark;
+  const _EmptyState({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.notifications_none, size: 64, color: AppColors.primary.withValues(alpha: 0.4)),
+          const SizedBox(height: 16),
+          Text('Belum ada notifikasi.', style: Theme.of(context).textTheme.titleMedium),
+        ],
+      ),
+    );
+  }
+}
+
+class _NotificationCard extends StatelessWidget {
+  final NotificationEntity notification; 
+  final bool isDark;
+  final bool isSelectionMode;
+  final bool isSelected;
 
   const _NotificationCard({
-    required this.notification,
+    required this.notification, 
     required this.isDark,
+    required this.isSelectionMode,
+    required this.isSelected,
   });
 
   @override
   Widget build(BuildContext context) {
     final unread = !notification.isRead;
-    final timeStr = _formatTime(notification.createdAt);
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-      child: Material(
-        color: Colors.transparent,
-        borderRadius: BorderRadius.circular(14),
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: () {
-            // Mark as read first
-            if (unread) {
-              context
-                  .read<NotificationBloc>()
-                  .add(MarkReadRequested(notification.id));
-            }
-            // Then navigate
-            if (notification.ticketId != null && notification.ticketId!.isNotEmpty) {
-              context.push(
-                AppRoutes.ticketDetail.replaceAll(':id', notification.ticketId!),
-              );
-            }
-          },
-          child: Container(
-            padding: const EdgeInsets.all(14),
+    
+    return GestureDetector(
+      onLongPress: () {
+        if (!isSelectionMode) {
+          context.read<NotificationBloc>().add(ToggleSelectionModeRequested());
+          context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id));
+        }
+      },
+      onTap: () {
+        if (isSelectionMode) {
+          context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id));
+        } else {
+          context.read<NotificationBloc>().add(MarkReadRequested(notification.id));
+          if (notification.ticketId != null) {
+            context.push(AppRoutes.ticketDetail.replaceAll(':id', notification.ticketId!));
+          }
+        }
+      },
+      child: Stack(
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: unread
-                  ? (isDark
-                      ? AppColors.primary.withValues(alpha: 0.12)
-                      : AppColors.primary.withValues(alpha: 0.05))
-                  : (isDark ? AppColors.surfaceDark : Colors.white),
-              borderRadius: BorderRadius.circular(14),
+              color: isSelected
+                  ? AppColors.primary.withValues(alpha: 0.1)
+                  : unread 
+                      ? AppColors.primary.withValues(alpha: 0.04) 
+                      : (isDark ? AppColors.surfaceDark : Colors.white),
+              borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: unread
-                    ? AppColors.primary.withValues(alpha: 0.25)
-                    : (isDark
-                        ? AppColors.borderDark
-                        : const Color(0xFFEEEEF2)),
-                width: 1,
+                color: isSelected
+                    ? AppColors.primary
+                    : unread 
+                        ? AppColors.primary.withValues(alpha: 0.2) 
+                        : (isDark ? AppColors.borderDark : AppColors.borderLight),
               ),
+              boxShadow: isSelected ? [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.1),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                )
+              ] : null,
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildIcon(unread),
-                const SizedBox(width: 12),
+                if (isSelectionMode) ...[
+                  Checkbox(
+                    value: isSelected,
+                    onChanged: (_) => context.read<NotificationBloc>().add(ToggleNotificationSelectionRequested(notification.id)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                    activeColor: AppColors.primary,
+                  ),
+                  const SizedBox(width: 8),
+                ],
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: unread ? AppColors.primary.withValues(alpha: 0.1) : Colors.grey.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    unread ? Icons.notifications_active : Icons.notifications_none,
+                    size: 18,
+                    color: unread ? AppColors.primary : Colors.grey,
+                  ),
+                ),
+                const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Row(
-                        children: [
-                          Expanded(
-                            child: Text(
-                              notification.title,
-                              style: TextStyle(
-                                fontWeight: unread
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                fontSize: 14,
-                                color: isDark ? Colors.white : Colors.black87,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            timeStr,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color:
-                                  isDark ? Colors.white38 : Colors.black38,
-                            ),
-                          ),
-                        ],
+                      Text(
+                        notification.title,
+                        style: TextStyle(
+                          fontWeight: unread ? FontWeight.w700 : FontWeight.w600,
+                          fontSize: 14,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         notification.message,
                         style: TextStyle(
-                          color: isDark
-                              ? Colors.white60
-                              : Colors.black54,
+                          color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
                           fontSize: 13,
                           height: 1.4,
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
                       ),
-                      if (notification.ticketId != null) ...[
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: AppColors.primary.withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(
-                                    Icons.confirmation_number_outlined,
-                                    size: 11,
-                                    color: AppColors.primary,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    '#${notification.ticketId!.substring(0, 8).toUpperCase()}',
-                                    style: const TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const Spacer(),
-                            if (unread)
-                              GestureDetector(
-                                onTap: () => context
-                                    .read<NotificationBloc>()
-                                    .add(MarkReadRequested(notification.id)),
-                                child: Container(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 8, vertical: 3),
-                                  decoration: BoxDecoration(
-                                    color: Colors.transparent,
-                                    borderRadius: BorderRadius.circular(6),
-                                    border: Border.all(
-                                      color: AppColors.primary.withValues(alpha: 0.3),
-                                    ),
-                                  ),
-                                  child: const Text(
-                                    'Tandai dibaca',
-                                    style: TextStyle(
-                                      color: AppColors.primary,
-                                      fontSize: 11,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                          ],
+                      const SizedBox(height: 12),
+                      Text(
+                        DateFormat('dd MMM, HH:mm').format(notification.createdAt),
+                        style: const TextStyle(
+                          color: Colors.grey,
+                          fontSize: 11,
                         ),
-                      ],
+                      ),
                     ],
                   ),
                 ),
-                if (unread)
+                if (unread && !isSelectionMode)
                   Container(
-                    margin: const EdgeInsets.only(left: 8, top: 3),
-                    width: 7,
-                    height: 7,
-                    decoration: const BoxDecoration(
-                      color: AppColors.primary,
-                      shape: BoxShape.circle,
-                    ),
+                    margin: const EdgeInsets.only(top: 4, left: 8),
+                    width: 6,
+                    height: 6,
+                    decoration: const BoxDecoration(color: AppColors.primary, shape: BoxShape.circle),
                   ),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
-  }
-
-  Widget _buildIcon(bool unread) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: unread
-            ? AppColors.primary.withValues(alpha: 0.15)
-            : Colors.grey.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        unread
-            ? Icons.notifications_active_rounded
-            : Icons.notifications_none_rounded,
-        size: 20,
-        color: unread ? AppColors.primary : Colors.grey,
-      ),
-    );
-  }
-
-  String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 1) return 'Baru saja';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m lalu';
-    if (diff.inHours < 24) return '${diff.inHours}j lalu';
-    if (diff.inDays < 7) return '${diff.inDays}h lalu';
-    return DateFormat('dd MMM').format(dt);
   }
 }

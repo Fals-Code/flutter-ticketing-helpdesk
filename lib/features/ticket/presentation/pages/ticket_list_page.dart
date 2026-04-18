@@ -206,7 +206,7 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
                           ),
                       ],
                       bottom: PreferredSize(
-                        preferredSize: Size.fromHeight(listState.startDate != null ? 104 : 76),
+                        preferredSize: Size.fromHeight(listState.startDate != null ? 144 : 108),
                         child: _buildFilterBar(context, listState, isDark),
                       ),
                     ),
@@ -324,7 +324,7 @@ class _TicketListPageState extends State<TicketListPage> with TickerProviderStat
           const SizedBox(height: 12),
           if (hasDateFilter) _buildActiveDateChip(context, state, isDark),
           SizedBox(
-            height: 32,
+            height: 40,
             child: ListView(
               scrollDirection: Axis.horizontal,
               clipBehavior: Clip.none,

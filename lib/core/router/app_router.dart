@@ -63,6 +63,11 @@ final GoRouter appRouter = GoRouter(
       return isSplash ? null : AppRoutes.splash;
     }
 
+    // 2. Handle Error or unexpected states from Splash
+    if (isSplash && status == AuthStatus.error) {
+      return AppRoutes.login;
+    }
+
     // 2. Handle Authenticated State
     if (status == AuthStatus.authenticated) {
       final role = authState.user.role;

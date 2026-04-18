@@ -1,11 +1,16 @@
 import 'dart:ui';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:go_router/go_router.dart';
 import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
+import '../../../../core/constants/enums.dart';
 import '../../../../shared/widgets/loading_widget.dart';
 import '../../../../shared/widgets/aurora_background.dart';
+import '../../presentation/bloc/auth_bloc.dart';
+import '../../presentation/bloc/auth_state.dart';
 import 'package:uts/core/router/app_router.dart';
 
 class SplashPage extends StatefulWidget {
@@ -24,6 +29,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   late Animation<double> _textFade;
   late Animation<Offset> _textSlide;
   late Animation<double> _shimmerAnimation;
+
+  bool _minDelayPassed = false;
+  bool _isNavigating = false;
 
   @override
   void initState() {
@@ -74,7 +82,7 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     );
 
     _entranceController.forward();
-    _checkAuth();
+    _startTimer();
   }
 
   @override
@@ -84,104 +92,135 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     super.dispose();
   }
 
-  Future<void> _checkAuth() async {
-    // Branding time
-    await Future.delayed(const Duration(milliseconds: 2500));
+  void _startTimer() {
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() => _minDelayPassed = true);
+        _checkAndNavigate();
+      }
+    });
+  }
+
+  void _checkAndNavigate() {
+    if (_isNavigating || !_minDelayPassed) return;
+
+    final state = context.read<AuthBloc>().state;
     
-    // Failsafe: Re-trigger router refresh to ensure redirect logic fires
-    // If the transition happened before the delay, refresh will catch the conclusive state.
-    if (mounted) {
+    // Conclusive states
+    if (state.status == AuthStatus.authenticated || 
+        state.status == AuthStatus.unauthenticated ||
+        state.status == AuthStatus.error) {
+      
+      _isNavigating = true;
+      
+      // Trigger redirect evaluation
       appRouter.refresh();
+      
+      // Secondary explicit navigation as failsafe if router refresh is too slow
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && GoRouterState.of(context).matchedLocation == '/') {
+          if (state.status == AuthStatus.authenticated) {
+            context.go(state.user.role == UserRole.user ? '/dashboard' : '/staff-dashboard');
+          } else {
+            context.go('/login');
+          }
+        }
+      });
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AuroraBackground(
-        child: Center(
-          child: AnimatedBuilder(
-            animation: Listenable.merge([_entranceController, _idleController]),
-            builder: (context, child) {
-              return Opacity(
-                opacity: _cardFade.value,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 40),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(32),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(32),
-                          border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.1),
-                            width: 1.5,
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.2),
-                              blurRadius: 40,
-                              offset: const Offset(0, 20),
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        _checkAndNavigate();
+      },
+      child: Scaffold(
+        body: AuroraBackground(
+          child: Center(
+            child: AnimatedBuilder(
+              animation: Listenable.merge([_entranceController, _idleController]),
+              builder: (context, child) {
+                return Opacity(
+                  opacity: _cardFade.value,
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 40),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(32),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(32),
+                            border: Border.all(
+                              color: Colors.white.withValues(alpha: 0.1),
+                              width: 1.5,
                             ),
-                          ],
-                        ),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            // Floating Logo Container
-                            Transform.translate(
-                              offset: Offset(0, sin(_idleController.value * 2 * 3.14159) * 8),
-                              child: Transform.scale(
-                                scale: _logoScale.value,
-                                child: _buildLogoIcon(),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 40,
+                                offset: const Offset(0, 20),
                               ),
-                            ),
-                            const SizedBox(height: 32),
-                            
-                            // Branding Info
-                            FadeTransition(
-                              opacity: _textFade,
-                              child: SlideTransition(
-                                position: _textSlide,
-                                child: Column(
-                                  children: [
-                                    _buildShimmerText(),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'YOUR IT HELPDESK SOLUTION',
-                                      style: GoogleFonts.plusJakartaSans(
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w800,
-                                        color: Colors.white.withValues(alpha: 0.4),
-                                        letterSpacing: 3.0,
-                                      ),
-                                    ),
-                                  ],
+                            ],
+                          ),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Floating Logo Container
+                              Transform.translate(
+                                offset: Offset(0, sin(_idleController.value * 2 * 3.14159) * 8),
+                                child: Transform.scale(
+                                  scale: _logoScale.value,
+                                  child: _buildLogoIcon(),
                                 ),
                               ),
-                            ),
-                            
-                            const SizedBox(height: 48),
-                            
-                            // Footer Loading
-                            Opacity(
-                              opacity: _textFade.value,
-                              child: const LoadingWidget(
-                                size: 6,
-                                color: Colors.white54,
+                              const SizedBox(height: 32),
+                              
+                              // Branding Info
+                              FadeTransition(
+                                opacity: _textFade,
+                                child: SlideTransition(
+                                  position: _textSlide,
+                                  child: Column(
+                                    children: [
+                                      _buildShimmerText(),
+                                      const SizedBox(height: 8),
+                                      Text(
+                                        'YOUR IT HELPDESK SOLUTION',
+                                        style: GoogleFonts.plusJakartaSans(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.white.withValues(alpha: 0.4),
+                                          letterSpacing: 3.0,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ],
+                              
+                              const SizedBox(height: 48),
+                              
+                              // Footer Loading
+                              Opacity(
+                                opacity: _textFade.value,
+                                child: const LoadingWidget(
+                                  size: 6,
+                                  color: Colors.white54,
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
                       ),
                     ),
                   ),
-                ),
-              );
-            },
+                );
+              },
+            ),
           ),
         ),
       ),

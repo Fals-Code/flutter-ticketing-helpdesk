@@ -6,6 +6,7 @@ import '../../../../core/constants/app_colors.dart';
 import '../../../../core/constants/app_dimensions.dart';
 import '../../../../shared/widgets/loading_widget.dart';
 import '../../../../shared/widgets/aurora_background.dart';
+import 'package:uts/core/router/app_router.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -86,7 +87,12 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
   Future<void> _checkAuth() async {
     // Branding time
     await Future.delayed(const Duration(milliseconds: 2500));
-    // Redirect logic remains managed by GoRouter + AuthBloc listenable
+    
+    // Failsafe: Re-trigger router refresh to ensure redirect logic fires
+    // If the transition happened before the delay, refresh will catch the conclusive state.
+    if (mounted) {
+      appRouter.refresh();
+    }
   }
 
   @override

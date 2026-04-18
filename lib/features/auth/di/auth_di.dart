@@ -9,7 +9,7 @@ import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 
 Future<void> initAuthDependencies(GetIt sl) async {
   // BLoC
-  sl.registerFactory(() => AuthBloc(
+  sl.registerLazySingleton(() => AuthBloc(
         loginUseCase: sl(),
         registerUseCase: sl(),
         logoutUseCase: sl(),

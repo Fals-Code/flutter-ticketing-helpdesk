@@ -1,5 +1,6 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/core/di/injection_container.dart';
 import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
@@ -8,6 +9,7 @@ import 'local_notification_service.dart';
 class FCMService {
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final LocalNotificationService _localNotifications;
+  final SupabaseClient _supabase = sl<SupabaseClient>();
 
   FCMService(this._localNotifications);
 
@@ -23,11 +25,24 @@ class FCMService {
       debugPrint('User granted permission');
     }
 
-    // 2. Get Token (Optional/For Debugging)
-    String? token = await _fcm.getToken();
-    debugPrint("FCM Token: $token");
+    // 2. Initial Token Sync (if already logged in)
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId != null) {
+      final token = await _fcm.getToken();
+      if (token != null) {
+        await syncTokenToSupabase(userId, token);
+      }
+    }
 
-    // 3. Handle Foreground Messages
+    // 3. Listen for Token Refresh
+    _fcm.onTokenRefresh.listen((newToken) async {
+      final currentUserId = _supabase.auth.currentUser?.id;
+      if (currentUserId != null) {
+        await syncTokenToSupabase(currentUserId, newToken);
+      }
+    });
+
+    // 4. Handle Foreground Messages
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       debugPrint("Foreground message received: ${message.notification?.title}");
       final String ticketId = message.data['ticketId'] ?? '';
@@ -41,17 +56,35 @@ class FCMService {
       );
     });
 
-    // 4. Handle Tap when app is in Background
+    // 5. Handle Tap when app is in Background
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint("Message clicked! (Background)");
       _handleMessageTap(message);
     });
 
-    // 5. Handle Tap when app was killed (Terminated)
+    // 6. Handle Tap when app was killed (Terminated)
     RemoteMessage? initialMessage = await _fcm.getInitialMessage();
     if (initialMessage != null) {
       debugPrint("Message clicked! (Terminated)");
       _handleMessageTap(initialMessage);
+    }
+  }
+
+  /// Syncs the FCM token to the Supabase profiles table.
+  /// This ensures the server knows which device to send push notifications to.
+  Future<void> syncTokenToSupabase(String userId, [String? token]) async {
+    try {
+      final fcmToken = token ?? await _fcm.getToken();
+      if (fcmToken == null) return;
+
+      await _supabase
+          .from('profiles')
+          .update({'fcm_token': fcmToken})
+          .eq('id', userId);
+      
+      debugPrint("FCM Token synced to Supabase for user $userId");
+    } catch (e) {
+      debugPrint("Error syncing FCM token: $e");
     }
   }
 

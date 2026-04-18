@@ -4,7 +4,6 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/constants/env_constants.dart';
 import 'package:uts/core/di/injection_container.dart';
@@ -42,16 +41,19 @@ Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
   WidgetsFlutterBinding.ensureInitialized();
 
+  // 1. VALIDASI KEAMANAN & ENVIRONMENT
+  // Jika URL kosong, berarti konfigurasi IDE (Android Studio/VS Code) belum benar.
+  if (EnvConstants.supabaseUrl.isEmpty) {
+    runApp(const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: _ConfigErrorPage(),
+    ));
+    return;
+  }
+
   // 0. Initialize Firebase
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
-
-  // Load environment variables
-  try {
-    await dotenv.load(fileName: ".env");
-  } catch (e) {
-    debugPrint("Warning: .env file not found or failed to load. Ensure it is added to assets in pubspec.yaml.");
-  }
 
   // Lock to portrait mode (sesuai SRS requirement mobile)
   await SystemChrome.setPreferredOrientations([
@@ -87,6 +89,104 @@ Future<void> main() async {
   await initializeDateFormatting('id', null);
 
   runApp(const ETicketingApp());
+}
+
+/// Halaman Diagnostik jika konfigurasi --dart-define belum disetting.
+class _ConfigErrorPage extends StatelessWidget {
+  const _ConfigErrorPage();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.security_outlined, color: Colors.red, size: 64),
+              const SizedBox(height: 24),
+              const Text(
+                "Keamanan Aktif: Konfigurasi Belum Terpasang",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                "Aplikasi berjalan dalam mode aman (Security Mode). Supabase URL tidak terdeteksi di dalam binary.",
+                style: TextStyle(fontSize: 16, color: Colors.black54),
+              ),
+              const SizedBox(height: 32),
+              _buildStep(
+                "1",
+                "Buka 'Edit Configurations' di Android Studio.",
+              ),
+              _buildStep(
+                "2",
+                "Cari kolom 'Additional run args'.",
+              ),
+              _buildStep(
+                "3",
+                "Masukkan baris berikut ini:",
+                isCode: true,
+                code: "--dart-define-from-file=define_config.json",
+              ),
+              _buildStep(
+                "4",
+                "Klik 'OK' dan STOP aplikasi sebelum dijalankan kembali.",
+              ),
+              const Spacer(),
+              const Center(
+                child: Text(
+                  "E-Ticketing Helpdesk Security Module",
+                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStep(String num, String text, {bool isCode = false, String? code}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              CircleAvatar(
+                radius: 12,
+                backgroundColor: Colors.black,
+                child: Text(num, style: const TextStyle(color: Colors.white, fontSize: 12)),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500))),
+            ],
+          ),
+          if (isCode) ...[
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: SelectableText(
+                code!,
+                style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+            ),
+          ]
+        ],
+      ),
+    );
+  }
 }
 
 

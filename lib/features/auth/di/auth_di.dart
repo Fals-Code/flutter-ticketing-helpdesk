@@ -29,7 +29,10 @@ Future<void> initAuthDependencies(GetIt sl) async {
 
   // Repository
   sl.registerLazySingleton<AuthRepository>(
-    () => AuthRepositoryImpl(remoteDataSource: sl()),
+    () => AuthRepositoryImpl(
+      remoteDataSource: sl(),
+      fcmService: sl(),
+    ),
   );
 
   // Data Sources

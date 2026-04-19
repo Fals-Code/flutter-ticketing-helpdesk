@@ -65,3 +65,12 @@ class UpdateAvatarRequested extends AuthEvent {
   @override
   List<Object?> get props => [image];
 }
+
+/// Event untuk memperbarui data profil (nama, email).
+class UpdateProfileRequested extends AuthEvent {
+  final String fullName;
+  final String? email;
+  const UpdateProfileRequested({required this.fullName, this.email});
+  @override
+  List<Object?> get props => [fullName, email];
+}

@@ -6,6 +6,7 @@ import 'package:uts/features/auth/domain/repositories/auth_repository.dart';
 import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
 import 'package:uts/features/auth/domain/usecases/update_avatar_usecase.dart';
+import 'package:uts/features/auth/domain/usecases/update_profile_usecase.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 
 Future<void> initAuthDependencies(GetIt sl) async {
@@ -18,6 +19,7 @@ Future<void> initAuthDependencies(GetIt sl) async {
         resetPasswordUseCase: sl(),
         updatePasswordUseCase: sl(),
         updateAvatarUseCase: sl(),
+        updateProfileUseCase: sl(),
         supabaseClient: sl(),
       ));
 
@@ -29,6 +31,7 @@ Future<void> initAuthDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => ResetPasswordUseCase(sl()));
   sl.registerLazySingleton(() => UpdatePasswordUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAvatarUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateProfileUseCase(sl()));
 
   // Repository
   sl.registerLazySingleton<AuthRepository>(

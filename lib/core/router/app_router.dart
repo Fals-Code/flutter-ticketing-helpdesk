@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/auth/domain/entities/user_entity.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/pages/login_page.dart';
 import 'package:uts/features/auth/presentation/pages/register_page.dart';
@@ -16,6 +17,7 @@ import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
 import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
 import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
 import 'package:uts/features/auth/presentation/pages/change_password_page.dart';
+import 'package:uts/features/auth/presentation/pages/edit_profile_page.dart';
 import 'package:uts/core/di/injection_container.dart';
 import 'app_router_refresh_listenable.dart';
 
@@ -38,6 +40,7 @@ abstract class AppRoutes {
   static const String ticketManagement = '/ticket-management';
   static const String userManagement = '/user-management';
   static const String changePassword = '/change-password';
+  static const String editProfile = '/profile/edit';
 }
 
 /// Konfigurasi GoRouter — navigasi deklaratif.
@@ -58,8 +61,14 @@ final GoRouter appRouter = GoRouter(
     final bool isSplash = location == AppRoutes.splash;
 
     // 1. Handle Initialization & Loading
-    // Prevents "flashing" target pages before session is verified
-    if (status == AuthStatus.initial || status == AuthStatus.loading) {
+    if (status == AuthStatus.initial) {
+      return isSplash ? null : AppRoutes.splash;
+    }
+
+    if (status == AuthStatus.loading) {
+      // Stay on current page if we already have a session (e.g. background updates)
+      // or if we are on auth pages (login/register/etc)
+      if (authState.user != AuthUser.empty || isLoggingIn) return null;
       return isSplash ? null : AppRoutes.splash;
     }
 
@@ -155,6 +164,14 @@ final GoRouter appRouter = GoRouter(
       name: 'change-password',
       pageBuilder: (context, state) => const CustomTransitionPage(
         child: ChangePasswordPage(),
+        transitionsBuilder: _slideUpTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.editProfile,
+      name: 'edit-profile',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: EditProfilePage(),
         transitionsBuilder: _slideUpTransition,
       ),
     ),

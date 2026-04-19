@@ -16,6 +16,12 @@ abstract class AuthRemoteDataSource {
   
   /// Perbarui field avatar_url di tabel profiles.
   Future<void> updateAvatarUrl(String url);
+
+  /// Perbarui nama lengkap di tabel profiles.
+  Future<void> updateProfile({required String fullName});
+
+  /// Perbarui email melalui Supabase Auth (memerlukan konfirmasi email baru).
+  Future<void> updateEmail(String newEmail);
 }
 
 /// Implementasi AuthRemoteDataSource menggunakan Supabase.
@@ -137,12 +143,19 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final fileName = 'profile_image.jpg';
     final path = 'avatars/${user.id}/$fileName';
 
-    // Upload with upsert: true
-    await supabaseClient.storage.from('avatars').upload(
-      path,
-      image,
-      fileOptions: const sup.FileOptions(upsert: true, contentType: 'image/jpeg'),
-    );
+    print('DEBUG: Memulai upload foto ke Supabase Storage: $path');
+    try {
+      // Upload with upsert: true
+      await supabaseClient.storage.from('avatars').upload(
+        path,
+        image,
+        fileOptions: const sup.FileOptions(upsert: true, contentType: 'image/jpeg'),
+      );
+      print('DEBUG: Upload berhasil!');
+    } catch (e) {
+      print('DEBUG: Error saat upload storage: $e');
+      rethrow;
+    }
 
     // Get public URL
     final String publicUrl = supabaseClient.storage.from('avatars').getPublicUrl(path);
@@ -156,9 +169,48 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final user = supabaseClient.auth.currentUser;
     if (user == null) throw Exception('User tidak terautentikasi');
 
-    await supabaseClient
-        .from('profiles')
-        .update({'avatar_url': url})
-        .eq('id', user.id);
+    print('DEBUG: Memperbarui avatar_url di tabel profiles untuk user: ${user.id}');
+    try {
+      await supabaseClient
+          .from('profiles')
+          .update({'avatar_url': url})
+          .eq('id', user.id);
+      print('DEBUG: Update database berhasil!');
+    } catch (e) {
+      print('DEBUG: Error saat update database profile: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateProfile({required String fullName}) async {
+    final user = supabaseClient.auth.currentUser;
+    if (user == null) throw Exception('User tidak terautentikasi');
+
+    print('DEBUG: Memperbarui full_name di tabel profiles untuk user: ${user.id}');
+    try {
+      await supabaseClient
+          .from('profiles')
+          .update({'full_name': fullName})
+          .eq('id', user.id);
+      print('DEBUG: Update full_name berhasil!');
+    } catch (e) {
+      print('DEBUG: Error saat update full_name: $e');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<void> updateEmail(String newEmail) async {
+    print('DEBUG: Memperbarui email melalui Supabase Auth: $newEmail');
+    try {
+      await supabaseClient.auth.updateUser(
+        sup.UserAttributes(email: newEmail),
+      );
+      print('DEBUG: Permintaan update email berhasil dikirim!');
+    } catch (e) {
+      print('DEBUG: Error saat update email: $e');
+      rethrow;
+    }
   }
 }

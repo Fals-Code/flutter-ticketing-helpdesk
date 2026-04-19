@@ -123,4 +123,26 @@ class AuthRepositoryImpl implements AuthRepository {
       return Left(UnknownFailure(message: e.toString()));
     }
   }
+
+  @override
+  Future<Either<Failure, Unit>> updateProfile({
+    required String fullName,
+    String? email,
+  }) async {
+    try {
+      // 1. Update nama di tabel profiles
+      await remoteDataSource.updateProfile(fullName: fullName);
+
+      // 2. Update email via Supabase Auth jika berubah
+      if (email != null && email.isNotEmpty) {
+        await remoteDataSource.updateEmail(email);
+      }
+
+      return const Right(unit);
+    } on sup.AuthException catch (e) {
+      return Left(ServerFailure(message: e.message, code: 400));
+    } catch (e) {
+      return Left(UnknownFailure(message: 'Gagal memperbarui profil: $e'));
+    }
+  }
 }

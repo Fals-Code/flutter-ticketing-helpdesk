@@ -33,4 +33,11 @@ abstract class AuthRepository {
   /// Unggah dan perbarui foto profil.
   /// Mengembalikan URL foto yang baru.
   Future<Either<Failure, String>> updateAvatar(File image);
+
+  /// Perbarui nama lengkap user di tabel profiles.
+  /// Jika [email] disediakan, juga perbarui email via Supabase Auth.
+  Future<Either<Failure, Unit>> updateProfile({
+    required String fullName,
+    String? email,
+  });
 }

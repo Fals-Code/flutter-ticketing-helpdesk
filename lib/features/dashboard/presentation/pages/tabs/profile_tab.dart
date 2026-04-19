@@ -123,6 +123,14 @@ class ProfileTab extends StatelessWidget {
               AppStrings.navProfile,
               style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
             ),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.edit_rounded),
+                tooltip: 'Edit Profil',
+                onPressed: () => context.push(AppRoutes.editProfile),
+              ),
+              const SizedBox(width: 4),
+            ],
           ),
           body: SingleChildScrollView(
             physics: const BouncingScrollPhysics(),

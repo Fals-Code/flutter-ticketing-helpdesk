@@ -4,10 +4,11 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sup show AuthChangeEv
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
 import 'package:uts/features/auth/domain/usecases/update_avatar_usecase.dart';
+import 'package:uts/features/auth/domain/usecases/update_profile_usecase.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 
 /// AuthBloc mengelola status autentikasi global aplikasi.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -18,6 +19,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final ResetPasswordUseCase resetPasswordUseCase;
   final UpdatePasswordUseCase updatePasswordUseCase;
   final UpdateAvatarUseCase updateAvatarUseCase;
+  final UpdateProfileUseCase updateProfileUseCase;
   final sup.SupabaseClient supabaseClient;
   StreamSubscription<dynamic>? _authSubscription;
 
@@ -29,6 +31,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.resetPasswordUseCase,
     required this.updatePasswordUseCase,
     required this.updateAvatarUseCase,
+    required this.updateProfileUseCase,
     required this.supabaseClient,
   }) : super(const AuthState()) {
     on<AppStarted>(_onAppStarted);
@@ -38,6 +41,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
     on<UpdateAvatarRequested>(_onUpdateAvatarRequested);
+    on<UpdateProfileRequested>(_onUpdateProfileRequested);
     on<ClearAuthStatus>(_onClearStatus);
     on<SessionExpiredDetected>(_onSessionExpiredDetected);
 
@@ -147,20 +151,68 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     UpdateAvatarRequested event,
     Emitter<AuthState> emit,
   ) async {
+    print('AuthBloc: Menerima permintaan update avatar...');
     emit(state.copyWith(status: AuthStatus.loading));
+
     final result = await updateAvatarUseCase(event.image);
-    
+
     result.fold(
-      (failure) => emit(state.copyWith(
-        status: AuthStatus.error, 
-        errorMessage: failure.message
-      )),
+      (failure) {
+        print('AuthBloc: Update avatar gagal: ${failure.message}');
+        emit(state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: failure.message,
+        ));
+        // Kembalikan ke authenticated agar tidak dianggap unauthenticated oleh router
+        emit(state.copyWith(status: AuthStatus.authenticated));
+      },
       (newUrl) {
+        print('AuthBloc: Update avatar sukses! URL: $newUrl');
         final updatedUser = state.user.copyWith(avatarUrl: newUrl);
         emit(state.copyWith(
           user: updatedUser,
           status: AuthStatus.authenticated,
           successMessage: 'Foto profil berhasil diperbarui!',
+        ));
+      },
+    );
+  }
+
+  Future<void> _onUpdateProfileRequested(
+    UpdateProfileRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    print('AuthBloc: Update profil - nama: ${event.fullName}, email berubah: ${event.email != null}');
+    emit(state.copyWith(status: AuthStatus.loading));
+
+    final result = await updateProfileUseCase(
+      UpdateProfileParams(fullName: event.fullName, email: event.email),
+    );
+
+    result.fold(
+      (failure) {
+        print('AuthBloc: Update profil gagal: ${failure.message}');
+        emit(state.copyWith(
+          status: AuthStatus.error,
+          errorMessage: failure.message,
+        ));
+        emit(state.copyWith(status: AuthStatus.authenticated));
+      },
+      (_) {
+        print('AuthBloc: Update profil sukses!');
+        final updatedUser = state.user.copyWith(fullName: event.fullName);
+        final emailChanged = event.email != null &&
+            event.email!.isNotEmpty &&
+            event.email != state.user.email;
+
+        final successMsg = emailChanged
+            ? 'Profil diperbarui! Cek kotak masuk email baru Anda untuk konfirmasi perubahan email.'
+            : 'Profil berhasil diperbarui!';
+
+        emit(state.copyWith(
+          user: updatedUser,
+          status: AuthStatus.authenticated,
+          successMessage: successMsg,
         ));
       },
     );

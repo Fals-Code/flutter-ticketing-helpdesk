@@ -33,7 +33,8 @@ class UserModel extends AuthUser {
       role: role,
       token: token,
       avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
-      isEmailVerified: json['email_confirmed_at'] != null || json['emailConfirmedAt'] != null,
+      isEmailVerified: (json['email_confirmed_at'] != null && json['email_confirmed_at'].toString().isNotEmpty) || 
+                       (json['emailConfirmedAt'] != null && json['emailConfirmedAt'].toString().isNotEmpty),
     );
   }
 

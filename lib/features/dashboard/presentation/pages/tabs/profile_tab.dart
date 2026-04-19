@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -10,6 +11,8 @@ import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:uts/core/services/toast_service.dart';
 
 class ProfileTab extends StatelessWidget {
   const ProfileTab({super.key});
@@ -29,12 +32,84 @@ class ProfileTab extends StatelessWidget {
     return palette[hash.abs() % palette.length];
   }
 
+  Future<void> _pickAndUploadImage(BuildContext context) async {
+    final picker = ImagePicker();
+    
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (context) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('Pilih Sumber Foto', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16)),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  _buildSourceOption(context, Icons.camera_alt_rounded, 'Kamera', ImageSource.camera),
+                  _buildSourceOption(context, Icons.photo_library_rounded, 'Galeri', ImageSource.gallery),
+                ],
+              ),
+              const SizedBox(height: 12),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (source != null) {
+      final pickedFile = await picker.pickImage(
+        source: source,
+        imageQuality: 70,
+        maxWidth: 800,
+        maxHeight: 800,
+      );
+
+      if (pickedFile != null && context.mounted) {
+        context.read<AuthBloc>().add(UpdateAvatarRequested(File(pickedFile.path)));
+      }
+    }
+  }
+
+  Widget _buildSourceOption(BuildContext context, IconData icon, String label, ImageSource source) {
+    return InkWell(
+      onTap: () => Navigator.pop(context, source),
+      borderRadius: BorderRadius.circular(16),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: AppColors.primary, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return BlocBuilder<AuthBloc, AuthState>(
-      builder: (context, state) {
+    return BlocListener<AuthBloc, AuthState>(
+      listenWhen: (prev, curr) => prev.status != curr.status,
+      listener: (context, state) {
+        if (state.status == AuthStatus.error && state.errorMessage != null) {
+           ToastService().show(context, message: state.errorMessage!, type: ToastType.error);
+           context.read<AuthBloc>().add(ClearAuthStatus());
+        }
+        if (state.successMessage != null) {
+           ToastService().show(context, message: state.successMessage!, type: ToastType.success);
+           context.read<AuthBloc>().add(ClearAuthStatus());
+        }
+      },
+      child: BlocBuilder<AuthBloc, AuthState>(
+        builder: (context, state) {
         final user = state.user;
         final name = user.fullName ?? 'Pengguna';
         final avatarColor = _getNameColor(name);
@@ -76,27 +151,45 @@ class ProfileTab extends StatelessWidget {
                               color: avatarColor.withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                               border: Border.all(color: avatarColor.withValues(alpha: 0.2), width: 2),
+                              image: user.avatarUrl != null 
+                                ? DecorationImage(
+                                    image: NetworkImage(user.avatarUrl!), 
+                                    fit: BoxFit.cover
+                                  ) 
+                                : null,
                             ),
-                            child: Center(
-                              child: Text(
-                                name.substring(0, 1).toUpperCase(),
-                                style: GoogleFonts.plusJakartaSans(
-                                  fontSize: 32, 
-                                  fontWeight: FontWeight.w800, 
-                                  color: avatarColor
+                            child: user.avatarUrl == null || state.status == AuthStatus.loading
+                                ? Center(
+                                    child: state.status == AuthStatus.loading
+                                        ? const SizedBox(
+                                            width: 24, height: 24,
+                                            child: CircularProgressIndicator(strokeWidth: 2.5)
+                                          )
+                                        : Text(
+                                            name.substring(0, 1).toUpperCase(),
+                                            style: GoogleFonts.plusJakartaSans(
+                                              fontSize: 32, 
+                                              fontWeight: FontWeight.w800, 
+                                              color: avatarColor
+                                            ),
+                                          ),
+                                  )
+                                : null,
+                          ),
+                          if (state.status != AuthStatus.loading)
+                            InkWell(
+                              onTap: () => _pickAndUploadImage(context),
+                              borderRadius: BorderRadius.circular(20),
+                              child: Container(
+                                padding: const EdgeInsets.all(6),
+                                decoration: BoxDecoration(
+                                  color: isDark ? AppColors.surfaceDark2 : Colors.white,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
                                 ),
+                                child: Icon(Icons.camera_alt_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black54),
                               ),
                             ),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: BoxDecoration(
-                              color: isDark ? AppColors.surfaceDark2 : Colors.white,
-                              shape: BoxShape.circle,
-                              boxShadow: [BoxShadow(color: Colors.black26, blurRadius: 4)],
-                            ),
-                            child: Icon(Icons.camera_alt_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black54),
-                          ),
                         ],
                       ),
                       const SizedBox(height: 16),
@@ -200,8 +293,9 @@ class ProfileTab extends StatelessWidget {
           ),
         );
       },
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildRoleBadge(UserRole role) {
     Color color;

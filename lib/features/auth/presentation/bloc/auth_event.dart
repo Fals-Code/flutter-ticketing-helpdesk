@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:equatable/equatable.dart';
 
 abstract class AuthEvent extends Equatable {
@@ -56,3 +57,11 @@ class ClearAuthStatus extends AuthEvent {}
 
 /// Event saat sesi berakhir (401 Unauthorized).
 class SessionExpiredDetected extends AuthEvent {}
+
+/// Event untuk memperbarui foto profil.
+class UpdateAvatarRequested extends AuthEvent {
+  final File image;
+  const UpdateAvatarRequested(this.image);
+  @override
+  List<Object?> get props => [image];
+}

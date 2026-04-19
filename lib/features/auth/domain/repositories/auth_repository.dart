@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import '../../../../core/error/failures.dart';
 import '../entities/user_entity.dart';
@@ -28,4 +29,8 @@ abstract class AuthRepository {
 
   /// Perbarui kata sandi user yang sedang login.
   Future<Either<Failure, Unit>> updatePassword(String newPassword);
+
+  /// Unggah dan perbarui foto profil.
+  /// Mengembalikan URL foto yang baru.
+  Future<Either<Failure, String>> updateAvatar(File image);
 }

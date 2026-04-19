@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import '../../../../core/error/failures.dart';
@@ -101,6 +102,23 @@ class AuthRepositoryImpl implements AuthRepository {
       return const Right(unit);
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 400));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
+  Future<Either<Failure, String>> updateAvatar(File image) async {
+    try {
+      // 1. Upload ke storage
+      final String publicUrl = await remoteDataSource.uploadAvatar(image);
+      
+      // 2. Update database profiles
+      await remoteDataSource.updateAvatarUrl(publicUrl);
+      
+      return Right(publicUrl);
+    } on sup.StorageException catch (e) {
+      return Left(ServerFailure(message: 'Gagal mengunggah foto: ${e.message}', code: 500));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }

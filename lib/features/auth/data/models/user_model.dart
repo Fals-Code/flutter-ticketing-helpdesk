@@ -10,6 +10,8 @@ class UserModel extends AuthUser {
     super.fullName,
     required super.role,
     super.token,
+    super.avatarUrl,
+    super.isEmailVerified = false,
   });
 
   /// Factory untuk membuat UserModel dari Map JSON.
@@ -30,6 +32,8 @@ class UserModel extends AuthUser {
       fullName: json['fullName'] ?? json['full_name'] ?? json['user_metadata']?['full_name'],
       role: role,
       token: token,
+      avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
+      isEmailVerified: json['email_confirmed_at'] != null || json['emailConfirmedAt'] != null,
     );
   }
 
@@ -41,6 +45,8 @@ class UserModel extends AuthUser {
       'fullName': fullName,
       'role': role.name,
       'token': token,
+      'avatarUrl': avatarUrl,
+      'isEmailVerified': isEmailVerified,
     };
   }
 
@@ -51,6 +57,8 @@ class UserModel extends AuthUser {
       fullName: fullName,
       role: role,
       token: token,
+      avatarUrl: avatarUrl,
+      isEmailVerified: isEmailVerified,
     );
   }
 }

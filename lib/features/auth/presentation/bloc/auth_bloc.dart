@@ -7,6 +7,7 @@ import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
+import 'package:uts/features/auth/domain/usecases/update_avatar_usecase.dart';
 
 /// AuthBloc mengelola status autentikasi global aplikasi.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
@@ -16,6 +17,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final GetCurrentUserUseCase getCurrentUserUseCase;
   final ResetPasswordUseCase resetPasswordUseCase;
   final UpdatePasswordUseCase updatePasswordUseCase;
+  final UpdateAvatarUseCase updateAvatarUseCase;
   final sup.SupabaseClient supabaseClient;
   StreamSubscription<dynamic>? _authSubscription;
 
@@ -26,6 +28,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     required this.getCurrentUserUseCase,
     required this.resetPasswordUseCase,
     required this.updatePasswordUseCase,
+    required this.updateAvatarUseCase,
     required this.supabaseClient,
   }) : super(const AuthState()) {
     on<AppStarted>(_onAppStarted);
@@ -34,6 +37,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<LogoutRequested>(_onLogoutRequested);
     on<ResetPasswordRequested>(_onResetPasswordRequested);
     on<AuthPasswordUpdateRequested>(_onAuthPasswordUpdateRequested);
+    on<UpdateAvatarRequested>(_onUpdateAvatarRequested);
     on<ClearAuthStatus>(_onClearStatus);
     on<SessionExpiredDetected>(_onSessionExpiredDetected);
 
@@ -90,7 +94,16 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     ));
     result.fold(
       (failure) => emit(state.copyWith(status: AuthStatus.error, errorMessage: failure.message)),
-      (user) => emit(state.copyWith(status: AuthStatus.authenticated, user: user)),
+      (user) {
+        if (!user.isEmailVerified) {
+          emit(state.copyWith(
+            status: AuthStatus.unauthenticated,
+            successMessage: 'VERIFY_EMAIL_REQUIRED',
+          ));
+        } else {
+          emit(state.copyWith(status: AuthStatus.authenticated, user: user));
+        }
+      },
     );
   }
 
@@ -127,6 +140,29 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         status: AuthStatus.success,
         successMessage: 'Kata sandi berhasil diperbarui!',
       )),
+    );
+  }
+
+  Future<void> _onUpdateAvatarRequested(
+    UpdateAvatarRequested event,
+    Emitter<AuthState> emit,
+  ) async {
+    emit(state.copyWith(status: AuthStatus.loading));
+    final result = await updateAvatarUseCase(event.image);
+    
+    result.fold(
+      (failure) => emit(state.copyWith(
+        status: AuthStatus.error, 
+        errorMessage: failure.message
+      )),
+      (newUrl) {
+        final updatedUser = state.user.copyWith(avatarUrl: newUrl);
+        emit(state.copyWith(
+          user: updatedUser,
+          status: AuthStatus.authenticated,
+          successMessage: 'Foto profil berhasil diperbarui!',
+        ));
+      },
     );
   }
 

@@ -23,6 +23,7 @@ dependencies:
   flutter_bloc: ^8.1.6
   bloc: ^8.1.4
   equatable: ^2.0.5
+  collection: ^1.19.0
 
   # Navigation
   go_router: ^14.2.7

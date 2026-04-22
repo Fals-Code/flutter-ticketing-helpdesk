@@ -7,8 +7,6 @@ class TicketModel extends TicketEntity {
     required super.title,
     required super.description,
     required super.status,
-    super.priority = TicketPriority.medium,
-
     required super.category,
     required super.createdAt,
     super.updatedAt,
@@ -27,8 +25,6 @@ class TicketModel extends TicketEntity {
       title: entity.title,
       description: entity.description,
       status: entity.status,
-      priority: entity.priority,
-
       category: entity.category,
       createdAt: entity.createdAt,
       updatedAt: entity.updatedAt,
@@ -51,7 +47,8 @@ class TicketModel extends TicketEntity {
     } else if (profilesData is List && profilesData.isNotEmpty) {
       creatorProfile = profilesData.first;
     }
-    final userName = creatorProfile != null ? creatorProfile['full_name'] : 'Pengguna';
+    final userName =
+        creatorProfile != null ? creatorProfile['full_name'] : 'Pengguna';
 
     // 2. Parse Technician Profile (join via technician:assigned_to)
     final technicianData = json['technician'];
@@ -61,18 +58,20 @@ class TicketModel extends TicketEntity {
     } else if (technicianData is List && technicianData.isNotEmpty) {
       staffProfile = technicianData.first;
     }
-    final assignedToName = staffProfile != null ? staffProfile['full_name'] : 'Belum ditugaskan';
+    final assignedToName =
+        staffProfile != null ? staffProfile['full_name'] : 'Belum ditugaskan';
 
     return TicketModel(
       id: json['id'] ?? '',
       title: json['title'] ?? '',
       description: json['description'] ?? '',
       status: TicketStatus.fromString(json['status'] ?? 'open'),
-      priority: TicketPriority.fromString(json['priority']),
-
       category: json['category'] ?? 'General',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
-      updatedAt: json['updated_at'] != null ? DateTime.parse(json['updated_at']) : null,
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
+      updatedAt: json['updated_at'] != null
+          ? DateTime.parse(json['updated_at'])
+          : null,
       userId: json['user_id'] ?? '',
       userName: userName,
       assignedTo: json['assigned_to'],
@@ -83,17 +82,15 @@ class TicketModel extends TicketEntity {
     );
   }
 
-
   Map<String, dynamic> toJson() {
     return {
       'title': title,
       'description': description,
-      'status': status.dbValue,
-      'priority': priority.dbValue,
-
+      'status': status.name,
       'category': category,
       'user_id': userId,
-      'assigned_to': (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
+      'assigned_to':
+          (assignedTo == null || assignedTo!.isEmpty) ? null : assignedTo,
       'images': super.imageUrls,
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
       if (rating != null) 'rating': rating,
@@ -107,8 +104,6 @@ class TicketModel extends TicketEntity {
       title: title,
       description: description,
       status: status,
-      priority: priority,
-
       category: category,
       createdAt: createdAt,
       updatedAt: updatedAt,

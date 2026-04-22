@@ -14,7 +14,8 @@ class GetTicketsUseCase
   GetTicketsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> call(GetTicketsParams params) async {
+  Future<Either<Failure, List<TicketEntity>>> call(
+      GetTicketsParams params) async {
     return await repository.getTickets(
       page: params.page,
       limit: params.limit,
@@ -27,7 +28,8 @@ class GetTicketsUseCase
   }
 }
 
-class CreateTicketUseCase implements UseCase<Either<Failure, TicketEntity>, CreateTicketParams> {
+class CreateTicketUseCase
+    implements UseCase<Either<Failure, TicketEntity>, CreateTicketParams> {
   final TicketRepository repository;
   CreateTicketUseCase(this.repository);
 
@@ -38,13 +40,13 @@ class CreateTicketUseCase implements UseCase<Either<Failure, TicketEntity>, Crea
       title: params.title,
       description: params.description,
       category: params.category,
-      priority: params.priority,
       imagePaths: params.imagePaths,
     );
   }
 }
 
-class GetTicketDetailUseCase implements UseCase<Either<Failure, TicketEntity>, String> {
+class GetTicketDetailUseCase
+    implements UseCase<Either<Failure, TicketEntity>, String> {
   final TicketRepository repository;
   GetTicketDetailUseCase(this.repository);
 
@@ -65,7 +67,8 @@ class GetTicketCommentsUseCase
   }
 }
 
-class AddCommentUseCase implements UseCase<Either<Failure, CommentEntity>, AddCommentParams> {
+class AddCommentUseCase
+    implements UseCase<Either<Failure, CommentEntity>, AddCommentParams> {
   final TicketRepository repository;
   AddCommentUseCase(this.repository);
 
@@ -78,7 +81,8 @@ class AddCommentUseCase implements UseCase<Either<Failure, CommentEntity>, AddCo
   }
 }
 
-class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, String?> {
+class GetTicketStatsUseCase
+    implements UseCase<Either<Failure, TicketStats>, String?> {
   final TicketRepository repository;
   GetTicketStatsUseCase(this.repository);
 
@@ -88,22 +92,27 @@ class GetTicketStatsUseCase implements UseCase<Either<Failure, TicketStats>, Str
   }
 }
 
-class GetTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, String> {
+class GetTicketHistoryUseCase
+    implements UseCase<Either<Failure, List<TicketHistoryEntity>>, String> {
   final TicketRepository repository;
   GetTicketHistoryUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> call(String ticketId) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(
+      String ticketId) async {
     return await repository.getTicketHistory(ticketId);
   }
 }
 
-class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketHistoryEntity>>, GetHistoryParams> {
+class GetAllTicketHistoryUseCase
+    implements
+        UseCase<Either<Failure, List<TicketHistoryEntity>>, GetHistoryParams> {
   final TicketRepository repository;
   GetAllTicketHistoryUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> call(GetHistoryParams params) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> call(
+      GetHistoryParams params) async {
     return await repository.getAllTicketHistory(
       changedBy: params.changedBy,
       startDate: params.startDate,
@@ -112,7 +121,8 @@ class GetAllTicketHistoryUseCase implements UseCase<Either<Failure, List<TicketH
   }
 }
 
-class SubmitRatingUseCase implements UseCase<Either<Failure, TicketEntity>, SubmitRatingParams> {
+class SubmitRatingUseCase
+    implements UseCase<Either<Failure, TicketEntity>, SubmitRatingParams> {
   final TicketRepository repository;
   SubmitRatingUseCase(this.repository);
 
@@ -158,7 +168,16 @@ class GetTicketsParams extends Equatable {
   final String? assignedToId;
 
   @override
-  List<Object?> get props => [page, limit, status, searchQuery, category, assignedToId, startDate, endDate];
+  List<Object?> get props => [
+        page,
+        limit,
+        status,
+        searchQuery,
+        category,
+        assignedToId,
+        startDate,
+        endDate,
+      ];
 }
 
 class CreateTicketParams extends Equatable {
@@ -166,7 +185,6 @@ class CreateTicketParams extends Equatable {
   final String title;
   final String description;
   final String category;
-  final String priority;
   final List<String> imagePaths;
 
   const CreateTicketParams({
@@ -174,12 +192,11 @@ class CreateTicketParams extends Equatable {
     required this.title,
     required this.description,
     required this.category,
-    this.priority = 'medium',
     required this.imagePaths,
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
+  List<Object?> get props => [userId, title, description, category, imagePaths];
 }
 
 class AddCommentParams extends Equatable {

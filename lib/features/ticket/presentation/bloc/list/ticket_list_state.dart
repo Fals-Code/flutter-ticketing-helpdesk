@@ -21,6 +21,8 @@ class TicketListState extends Equatable {
   final int currentPage;
   final int allTicketsPage;
 
+  final String? assignedToId;
+
   const TicketListState({
     this.isLoading = false,
     this.tickets = const [],
@@ -37,6 +39,7 @@ class TicketListState extends Equatable {
     this.isOffline = false,
     this.currentPage = 0,
     this.allTicketsPage = 0,
+    this.assignedToId,
   });
 
   TicketListState copyWith({
@@ -57,6 +60,7 @@ class TicketListState extends Equatable {
     bool? isOffline,
     int? currentPage,
     int? allTicketsPage,
+    String? assignedToId,
   }) {
     return TicketListState(
       isLoading: isLoading ?? this.isLoading,
@@ -74,6 +78,7 @@ class TicketListState extends Equatable {
       isOffline: isOffline ?? this.isOffline,
       currentPage: currentPage ?? this.currentPage,
       allTicketsPage: allTicketsPage ?? this.allTicketsPage,
+      assignedToId: assignedToId ?? this.assignedToId,
     );
   }
 
@@ -94,5 +99,6 @@ class TicketListState extends Equatable {
         isOffline,
         currentPage,
         allTicketsPage,
+        assignedToId,
       ];
 }

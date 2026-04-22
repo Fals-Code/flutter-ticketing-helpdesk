@@ -31,14 +31,14 @@ abstract class TicketRepository {
   Future<Either<Failure, List<TicketEntity>>> getTickets({
     required int page,
     required int limit,
+    String? status,
     String? searchQuery,
     String? category,
-    String? status,
     DateTime? startDate,
     DateTime? endDate,
   });
 
-  /// Mengambil SEMUA daftar tiket di sistem (Paginated - untuk Admin/Staff).
+  /// Mengambil semua tiket (untuk Admin/Staff).
   Future<Either<Failure, List<TicketEntity>>> getAllTickets({
     required int page,
     required int limit,
@@ -59,7 +59,6 @@ abstract class TicketRepository {
     required String title,
     required String description,
     required String category,
-    String priority = 'medium',
     required List<String> imagePaths,
   });
 
@@ -86,7 +85,8 @@ abstract class TicketRepository {
   });
 
   /// Mengambil daftar komentar/reply untuk tiket tertentu.
-  Future<Either<Failure, List<CommentEntity>>> getTicketComments(String ticketId);
+  Future<Either<Failure, List<CommentEntity>>> getTicketComments(
+      String ticketId);
 
   /// Menambahkan komentar/reply ke tiket.
   Future<Either<Failure, CommentEntity>> addComment({
@@ -95,7 +95,8 @@ abstract class TicketRepository {
   });
 
   /// Mengambil riwayat status perjalanan tiket (FR-011).
-  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId);
+  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(
+      String ticketId);
 
   /// Mengambil SEMUA riwayat perjalanan tiket di sistem (Admin/Staff only).
   Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({
@@ -108,7 +109,8 @@ abstract class TicketRepository {
   Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId});
 
   /// Aliran data tiket secara realtime.
-  Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId});
+  Stream<List<TicketEntity>> watchTickets(
+      {String? userId, String? assignedToId});
 
   /// Aliran data komentar secara realtime.
   Stream<List<CommentEntity>> watchTicketComments(String ticketId);

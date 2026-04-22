@@ -38,6 +38,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   bool _isDescExpanded = false;
   int _charCount = 0;
 
+  late TicketDetailBloc _ticketDetailBloc;
+
   @override
   void initState() {
     super.initState();
@@ -45,10 +47,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       setState(() => _charCount = _commentController.text.length);
     });
 
-    final detailBloc = context.read<TicketDetailBloc>();
-    detailBloc.add(detail_event.FetchTicketDetailRequested(widget.ticketId));
-    detailBloc.add(detail_event.StartTicketCommentsSubscription(widget.ticketId));
-    detailBloc.add(detail_event.FetchTicketActivitiesRequested(widget.ticketId));
+    _ticketDetailBloc = context.read<TicketDetailBloc>();
+
+    _ticketDetailBloc.add(detail_event.FetchTicketDetailRequested(widget.ticketId));
+    _ticketDetailBloc.add(detail_event.StartTicketCommentsSubscription(widget.ticketId));
+    _ticketDetailBloc.add(detail_event.FetchTicketActivitiesRequested(widget.ticketId));
 
     final authState = context.read<AuthBloc>().state;
     if (authState.status == AuthStatus.authenticated &&
@@ -61,9 +64,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   void dispose() {
     _commentController.dispose();
     _scrollController.dispose();
-    if (mounted) {
-      context.read<TicketDetailBloc>().add(detail_event.ResetTicketDetailState());
-    }
+
+    _ticketDetailBloc.add(detail_event.ResetTicketDetailState());
+
     super.dispose();
   }
 

@@ -28,8 +28,6 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
     on<SearchTicketsRequested>(_onSearchQueryChanged);
     on<FilterStatusChanged>(_onFilterStatusChanged);
-    on<FilterCategoryChanged>(_onFilterCategoryChanged);
-    on<FilterDateRangeChanged>(_onFilterDateRangeChanged);
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
     on<ResetTicketListState>(_onResetState);
@@ -55,18 +53,17 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
       title: event.title,
       description: event.description,
-      status: TicketStatus.open, 
-      priority: TicketPriority.fromString(event.priority),
+      status: TicketStatus.open,
       category: event.category,
       createdAt: DateTime.now(),
       userId: event.userId,
-      imageUrls: event.imagePaths, 
+      imageUrls: event.imagePaths,
     );
 
     // 2. Insert into current list (optimistic update)
     final originalTickets = [...state.tickets];
     final updatedTickets = [optimisticTicket, ...originalTickets];
-    
+
     emit(state.copyWith(
       tickets: updatedTickets,
       successMessage: null, // Clear messages
@@ -78,7 +75,6 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       title: event.title,
       description: event.description,
       category: event.category,
-      priority: event.priority,
       imagePaths: event.imagePaths,
     ));
 
@@ -111,7 +107,11 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     ).listen(
       (tickets) {
         final filteredTickets = _applyFilters(tickets);
-        emit(state.copyWith(tickets: filteredTickets));
+        if (event.isStaff) {
+          emit(state.copyWith(allTickets: filteredTickets));
+        } else {
+          emit(state.copyWith(tickets: filteredTickets));
+        }
       },
     );
   }
@@ -121,9 +121,14 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     Emitter<TicketListState> emit,
   ) async {
     final bool isInitial = event.page == 0;
-    
+
     if (isInitial) {
-      emit(state.copyWith(isLoading: true, tickets: [], currentPage: 0, isLastPage: false, errorMessage: null));
+      emit(state.copyWith(
+          isLoading: true,
+          tickets: [],
+          currentPage: 0,
+          isLastPage: false,
+          errorMessage: null));
     } else {
       emit(state.copyWith(isLoading: true, errorMessage: null));
     }
@@ -133,12 +138,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         page: event.page,
         limit: event.limit,
         searchQuery: state.searchQuery,
-        category: state.categoryFilter,
-        status: state.statusFilter == TicketStatusFilter.all 
-            ? null 
+        status: state.statusFilter == TicketStatusFilter.all
+            ? null
             : _mapStatusFilter(state.statusFilter),
-        startDate: state.startDate,
-        endDate: state.endDate,
       ),
     );
 
@@ -160,10 +162,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       },
       (newTickets) {
         if (isInitial) {
-          localDataSource.cacheTickets(newTickets.map((t) => TicketModel.fromEntity(t)).toList());
+          localDataSource.cacheTickets(
+              newTickets.map((t) => TicketModel.fromEntity(t)).toList());
         }
-        
-        final allTickets = isInitial ? newTickets : [...state.tickets, ...newTickets];
+
+        final allTickets =
+            isInitial ? newTickets : [...state.tickets, ...newTickets];
         emit(state.copyWith(
           isLoading: false,
           tickets: allTickets,
@@ -181,31 +185,39 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   ) async {
     final bool isInitial = event.page == 0;
 
+    final assignedToId = event.assignedToId ?? state.assignedToId;
+
     if (isInitial) {
-      emit(state.copyWith(isLoading: true, allTickets: [], allTicketsPage: 0, isLastPageAll: false, errorMessage: null));
+      emit(state.copyWith(
+          isLoading: true,
+          allTickets: [],
+          allTicketsPage: 0,
+          isLastPageAll: false,
+          errorMessage: null,
+          assignedToId: assignedToId));
     } else {
-      emit(state.copyWith(isLoading: true, errorMessage: null));
+      emit(state.copyWith(
+          isLoading: true, errorMessage: null, assignedToId: assignedToId));
     }
 
     final result = await getAllTicketsUseCase(
       GetTicketsParams(
         page: event.page,
         limit: event.limit,
-        status: state.statusFilter == TicketStatusFilter.all 
-            ? null 
+        status: state.statusFilter == TicketStatusFilter.all
+            ? null
             : _mapStatusFilter(state.statusFilter),
         searchQuery: state.searchQuery,
-        category: state.categoryFilter,
-        assignedToId: event.assignedToId,
-        startDate: state.startDate,
-        endDate: state.endDate,
+        assignedToId: assignedToId,
       ),
     );
 
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (newTickets) {
-        final currentTickets = isInitial ? newTickets : [...state.allTickets, ...newTickets];
+        final currentTickets =
+            isInitial ? newTickets : [...state.allTickets, ...newTickets];
         emit(state.copyWith(
           isLoading: false,
           allTickets: currentTickets,
@@ -234,30 +246,8 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     add(const FetchAllTicketsRequested(page: 0));
   }
 
-  Future<void> _onFilterCategoryChanged(
-    FilterCategoryChanged event,
-    Emitter<TicketListState> emit,
-  ) async {
-    emit(state.copyWith(categoryFilter: event.category));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
-  }
-
-  Future<void> _onFilterDateRangeChanged(
-    FilterDateRangeChanged event,
-    Emitter<TicketListState> emit,
-  ) async {
-    emit(state.copyWith(
-      startDate: event.startDate, 
-      endDate: event.endDate,
-      clearStartDate: event.startDate == null,
-      clearEndDate: event.endDate == null,
-    ));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
-  }
-
-  void _onResetState(ResetTicketListState event, Emitter<TicketListState> emit) {
+  void _onResetState(
+      ResetTicketListState event, Emitter<TicketListState> emit) {
     _ticketSubscription?.cancel();
     emit(const TicketListState());
   }
@@ -280,18 +270,17 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           if (ticketStatusName != mappedStatus) return false;
         }
       }
-      if (state.categoryFilter != null && state.categoryFilter != 'General') {
-        if (ticket.category != state.categoryFilter) return false;
-      }
       final query = state.searchQuery.toLowerCase();
       if (query.isNotEmpty) {
-        if (!ticket.title.toLowerCase().contains(query) && !ticket.description.toLowerCase().contains(query)) return false;
+        if (!ticket.title.toLowerCase().contains(query) &&
+            !ticket.description.toLowerCase().contains(query)) {
+          return false;
+        }
       }
-      if (state.startDate != null) {
-        if (ticket.createdAt.isBefore(state.startDate!)) return false;
-      }
-      if (state.endDate != null) {
-        if (ticket.createdAt.isAfter(state.endDate!)) return false;
+      if (state.assignedToId != null) {
+        if (ticket.assignedTo != state.assignedToId) {
+          return false;
+        }
       }
       return true;
     }).toList();
@@ -299,11 +288,16 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
 
   String _mapStatusFilter(TicketStatusFilter filter) {
     switch (filter) {
-      case TicketStatusFilter.open: return 'open';
-      case TicketStatusFilter.inProgress: return 'in_progress';
-      case TicketStatusFilter.resolved: return 'resolved';
-      case TicketStatusFilter.closed: return 'closed';
-      case TicketStatusFilter.all: return 'all';
+      case TicketStatusFilter.open:
+        return 'open';
+      case TicketStatusFilter.inProgress:
+        return 'in_progress';
+      case TicketStatusFilter.resolved:
+        return 'resolved';
+      case TicketStatusFilter.closed:
+        return 'closed';
+      case TicketStatusFilter.all:
+        return 'all';
     }
   }
 }

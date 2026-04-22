@@ -13,7 +13,6 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.da
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
 import 'package:uts/core/router/app_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uts/core/constants/enums.dart';
 
 class CreateTicketPage extends StatefulWidget {
   const CreateTicketPage({super.key});
@@ -151,7 +150,6 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
       title: _subjectController.text.trim(),
       description: _descController.text.trim(),
       category: _selectedCategory,
-      priority: TicketPriority.medium.name,
       imagePaths: _imagePaths,
     ));
   }

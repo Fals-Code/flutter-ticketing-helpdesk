@@ -8,8 +8,19 @@ import '../models/ticket_history_model.dart';
 import 'package:uts/core/constants/enums.dart';
 
 abstract class TicketRemoteDataSource {
-  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status, DateTime? startDate, DateTime? endDate});
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId, DateTime? startDate, DateTime? endDate});
+  Future<List<TicketModel>> getTickets(int page, int limit,
+      {String? searchQuery,
+      String? category,
+      String? status,
+      DateTime? startDate,
+      DateTime? endDate});
+  Future<List<TicketModel>> getAllTickets(int page, int limit,
+      {String? status,
+      String? searchQuery,
+      String? category,
+      String? assignedToId,
+      DateTime? startDate,
+      DateTime? endDate});
   Future<List<Map<String, dynamic>>> getStaffUsers();
   Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths);
   Future<TicketModel> getTicketDetail(String ticketId);
@@ -17,11 +28,14 @@ abstract class TicketRemoteDataSource {
   Future<CommentModel> addComment(CommentModel comment);
   Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
-  Future<TicketModel> submitRating(String ticketId, int rating, String feedback);
+  Future<TicketModel> submitRating(
+      String ticketId, int rating, String feedback);
   Future<List<TicketHistoryModel>> getTicketHistory(String ticketId);
-  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate});
+  Future<List<TicketHistoryModel>> getAllTicketHistory(
+      {String? changedBy, DateTime? startDate, DateTime? endDate});
   Future<Map<String, int>> getTicketStats({String? assignedToId});
-  Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId});
+  Stream<List<TicketModel>> watchTickets(
+      {String? userId, String? assignedToId});
   Stream<List<CommentModel>> watchTicketComments(String ticketId);
 }
 
@@ -39,7 +53,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         'get_ticket_stats',
         params: assignedToId != null ? {'for_staff_id': assignedToId} : {},
       );
-      
+
       final Map<String, int> stats = {
         'total': 0,
         'open': 0,
@@ -51,7 +65,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       for (var row in response) {
         final String status = (row['status'] as String).toLowerCase();
         final int count = row['count'] as int;
-        
+
         if (stats.containsKey(status)) {
           stats[status] = count;
         }
@@ -67,7 +81,12 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getTickets(int page, int limit, {String? searchQuery, String? category, String? status, DateTime? startDate, DateTime? endDate}) async {
+  Future<List<TicketModel>> getTickets(int page, int limit,
+      {String? searchQuery,
+        String? category,
+        String? status,
+        DateTime? startDate,
+        DateTime? endDate}) async { // Pastikan tidak ada parameter priority
     final from = page * limit;
     final to = from + limit - 1;
 
@@ -78,7 +97,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     if (status != null && status != 'all') {
       if (status.contains(',')) {
-        query = query.inFilter('status', status.split(',').map((s) => s.trim().toLowerCase()).toList());
+        query = query.inFilter('status',
+            status.split(',').map((s) => s.trim().toLowerCase()).toList());
       } else {
         query = query.eq('status', status.toLowerCase());
       }
@@ -87,7 +107,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       query = query.eq('category', category);
     }
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+      query = query
+          .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
     }
     if (startDate != null) {
       query = query.gte('created_at', startDate.toIso8601String());
@@ -96,22 +117,30 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       query = query.lte('created_at', endDate.toIso8601String());
     }
 
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(from, to);
+    final response =
+    await query.order('created_at', ascending: false).range(from, to);
 
-    return (response as List).map((json) {
+    return (response as List)
+        .map((json) {
       try {
         return TicketModel.fromJson(json);
       } catch (e) {
         debugPrint('Error parsing ticket: $e');
         return null;
       }
-    }).whereType<TicketModel>().toList();
+    })
+        .whereType<TicketModel>()
+        .toList();
   }
 
   @override
-  Future<List<TicketModel>> getAllTickets(int page, int limit, {String? status, String? searchQuery, String? category, String? assignedToId, DateTime? startDate, DateTime? endDate}) async {
+  Future<List<TicketModel>> getAllTickets(int page, int limit,
+      {String? status,
+        String? searchQuery,
+        String? category,
+        String? assignedToId,
+        DateTime? startDate,
+        DateTime? endDate}) async { // Pastikan tidak ada parameter priority
     final from = page * limit;
     final to = from + limit - 1;
 
@@ -122,10 +151,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     if (assignedToId != null) {
       query = query.eq('assigned_to', assignedToId);
     }
-    
+
     if (status != null && status != 'all') {
       if (status.contains(',')) {
-        query = query.inFilter('status', status.split(',').map((s) => s.trim().toLowerCase()).toList());
+        query = query.inFilter('status',
+            status.split(',').map((s) => s.trim().toLowerCase()).toList());
       } else {
         query = query.eq('status', status.toLowerCase());
       }
@@ -134,7 +164,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       query = query.eq('category', category);
     }
     if (searchQuery != null && searchQuery.isNotEmpty) {
-      query = query.or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+      query = query
+          .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
     }
     if (startDate != null) {
       query = query.gte('created_at', startDate.toIso8601String());
@@ -143,18 +174,20 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       query = query.lte('created_at', endDate.toIso8601String());
     }
 
-    final response = await query
-        .order('created_at', ascending: false)
-        .range(from, to);
+    final response =
+    await query.order('created_at', ascending: false).range(from, to);
 
-    return (response as List).map((json) {
+    return (response as List)
+        .map((json) {
       try {
         return TicketModel.fromJson(json);
       } catch (e) {
         debugPrint('Error parsing ticket: $e');
         return null;
       }
-    }).whereType<TicketModel>().toList();
+    })
+        .whereType<TicketModel>()
+        .toList();
   }
 
   @override
@@ -163,12 +196,13 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .from('profiles')
         .select('id, full_name, email, role')
         .eq('role', 2);
-    
+
     return List<Map<String, dynamic>>.from(response);
   }
 
   @override
-  Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths) async {
+  Future<TicketModel> createTicket(
+      TicketModel ticket, List<String> imagePaths) async {
     List<String> uploadedUrls = [];
 
     // Upload images to Supabase Storage
@@ -179,8 +213,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         final fileName = '${const Uuid().v4()}.$fileExt';
         final storagePath = 'ticket_images/$fileName';
 
-        await supabaseClient.storage.from(_bucketName).upload(storagePath, file);
-        final url = supabaseClient.storage.from(_bucketName).getPublicUrl(storagePath);
+        await supabaseClient.storage
+            .from(_bucketName)
+            .upload(storagePath, file);
+        final url =
+            supabaseClient.storage.from(_bucketName).getPublicUrl(storagePath);
         uploadedUrls.add(url);
       }
     } catch (e) {
@@ -201,7 +238,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .single();
 
     final newTicket = TicketModel.fromJson(response);
-    
+
     return newTicket;
   }
 
@@ -217,7 +254,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status) async {
+  Future<TicketModel> updateTicketStatus(
+      String ticketId, TicketStatus status) async {
     final response = await supabaseClient
         .from('tickets')
         .update({
@@ -227,7 +265,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .eq('id', ticketId)
         .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .single();
-    
+
     final updatedTicket = TicketModel.fromJson(response);
 
     // Notify User
@@ -246,20 +284,22 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     // 1. Get current status to check if closed
     final currentTicket = await getTicketDetail(ticketId);
     if (currentTicket.status == TicketStatus.closed) {
-      throw Exception('Tiket yang sudah ditutup tidak dapat didelegasikan ulang.');
+      throw Exception(
+          'Tiket yang sudah ditutup tidak dapat didelegasikan ulang.');
     }
 
     final response = await supabaseClient
         .from('tickets')
         .update({
           'assigned_to': technicianId,
-          'status': 'in_progress', // Auto update status to In Progress when assigned
+          'status':
+              'in_progress', // Auto update status to In Progress when assigned
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
         .select('*, profiles:user_id(*), technician:assigned_to(*)')
         .single();
-    
+
     final updatedTicket = TicketModel.fromJson(response);
 
     // Notify User
@@ -274,7 +314,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<TicketModel> submitRating(String ticketId, int rating, String feedback) async {
+  Future<TicketModel> submitRating(
+      String ticketId, int rating, String feedback) async {
     try {
       final response = await supabaseClient
           .from('tickets')
@@ -287,7 +328,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .eq('id', ticketId)
           .select('*, profiles:user_id(*), technician:assigned_to(*)')
           .single();
-      
+
       final updatedTicket = TicketModel.fromJson(response);
 
       // Notify User
@@ -314,20 +355,23 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           .select('*, profiles!ticket_history_changed_by_fkey(full_name)')
           .eq('ticket_id', ticketId)
           .order('created_at', ascending: false);
-      
-      return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
+
+      return (response as List)
+          .map((json) => TicketHistoryModel.fromJson(json))
+          .toList();
     } catch (e) {
       rethrow;
     }
   }
 
   @override
-  Future<List<TicketHistoryModel>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate}) async {
+  Future<List<TicketHistoryModel>> getAllTicketHistory(
+      {String? changedBy, DateTime? startDate, DateTime? endDate}) async {
     try {
       var query = supabaseClient
           .from('ticket_history')
           .select('*, profiles:ticket_history_changed_by_fkey(full_name)');
-      
+
       if (changedBy != null) {
         query = query.eq('changed_by', changedBy);
       }
@@ -338,24 +382,26 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         query = query.lte('created_at', endDate.toIso8601String());
       }
 
-      final response = await query
-          .order('created_at', ascending: false)
-          .limit(50);
-      
-      return (response as List).map((json) => TicketHistoryModel.fromJson(json)).toList();
+      final response =
+          await query.order('created_at', ascending: false).limit(50);
+
+      return (response as List)
+          .map((json) => TicketHistoryModel.fromJson(json))
+          .toList();
     } catch (e) {
       rethrow;
     }
   }
 
   @override
-  Stream<List<TicketModel>> watchTickets({String? userId, String? assignedToId}) {
+  Stream<List<TicketModel>> watchTickets(
+      {String? userId, String? assignedToId}) {
     dynamic query = supabaseClient.from('tickets').stream(primaryKey: ['id']);
 
     if (userId != null) {
       query = query.eq('user_id', userId);
     }
-    
+
     if (assignedToId != null) {
       query = query.eq('assigned_to', assignedToId);
     }
@@ -387,37 +433,42 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
             _profileCache[profile['id']] = profile;
           }
 
-          return data.map((json) {
-            final profile = profileMap[json['user_id']];
-            if (profile != null) {
-              json['profiles'] = profile;
-            } else if (_profileCache.containsKey(json['user_id'])) {
-              json['profiles'] = _profileCache[json['user_id']];
-            }
-            
-            try {
-              return TicketModel.fromJson(json);
-            } catch (e) {
-              debugPrint('Ticket Stream Mapping Error: $e');
-              return null;
-            }
-          }).whereType<TicketModel>().toList();
+          return data
+              .map((json) {
+                final profile = profileMap[json['user_id']];
+                if (profile != null) {
+                  json['profiles'] = profile;
+                } else if (_profileCache.containsKey(json['user_id'])) {
+                  json['profiles'] = _profileCache[json['user_id']];
+                }
+
+                try {
+                  return TicketModel.fromJson(json);
+                } catch (e) {
+                  debugPrint('Ticket Stream Mapping Error: $e');
+                  return null;
+                }
+              })
+              .whereType<TicketModel>()
+              .toList();
         } catch (e) {
           debugPrint('Error hydrating ticket stream: $e');
         }
       }
 
       // Fallback if hydration fails or no user IDs
-      return data.map((json) {
-        try {
-          return TicketModel.fromJson(json);
-        } catch (e) {
-          return null;
-        }
-      }).whereType<TicketModel>().toList();
+      return data
+          .map((json) {
+            try {
+              return TicketModel.fromJson(json);
+            } catch (e) {
+              return null;
+            }
+          })
+          .whereType<TicketModel>()
+          .toList();
     });
   }
-
 
   Future<void> _notifyUser({
     required String userId,
@@ -446,7 +497,9 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .eq('ticket_id', ticketId)
         .order('created_at', ascending: true);
 
-    return (response as List).map((json) => CommentModel.fromJson(json)).toList();
+    return (response as List)
+        .map((json) => CommentModel.fromJson(json))
+        .toList();
   }
 
   @override
@@ -454,7 +507,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final commentData = comment.toJson();
     // Injection of current authenticated user ID
     commentData['user_id'] = supabaseClient.auth.currentUser!.id;
-    
+
     final response = await supabaseClient
         .from('comments')
         .insert(commentData)
@@ -473,20 +526,24 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .order('created_at', ascending: true)
         .asyncMap((data) async {
           // 1. Parse raw comments
-          final List<CommentModel> comments = data.map((json) {
-            try {
-              return CommentModel.fromJson(json);
-            } catch (e) {
-              debugPrint('Comment Stream Parsing Error: $e');
-              return null;
-            }
-          }).whereType<CommentModel>().toList();
+          final List<CommentModel> comments = data
+              .map((json) {
+                try {
+                  return CommentModel.fromJson(json);
+                } catch (e) {
+                  debugPrint('Comment Stream Parsing Error: $e');
+                  return null;
+                }
+              })
+              .whereType<CommentModel>()
+              .toList();
 
           if (comments.isEmpty) return comments;
 
           // 2. Identify unique user IDs that are not in cache
           final userIds = comments.map((c) => c.userId).toSet();
-          final missingUserIds = userIds.where((id) => !_profileCache.containsKey(id)).toList();
+          final missingUserIds =
+              userIds.where((id) => !_profileCache.containsKey(id)).toList();
 
           // 3. Fetch missing profiles
           if (missingUserIds.isNotEmpty) {
@@ -495,7 +552,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
                   .from('profiles')
                   .select('id, full_name, role')
                   .inFilter('id', missingUserIds);
-              
+
               for (var profile in profilesResponse) {
                 _profileCache[profile['id']] = profile;
               }
@@ -509,8 +566,8 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
             final profile = _profileCache[comment.userId];
             if (profile != null) {
               final roleInt = profile['role'] as int?;
-              final roleName = roleInt != null 
-                  ? UserRole.fromInt(roleInt).name 
+              final roleName = roleInt != null
+                  ? UserRole.fromInt(roleInt).name
                   : (profile['role']?.toString() ?? 'user');
 
               return comment.copyWith(

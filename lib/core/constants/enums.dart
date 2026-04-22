@@ -158,3 +158,11 @@ enum TicketStatusFilter {
   closed
 }
 
+/// Filter Prioritas Tiket untuk List
+enum TicketPriorityFilter {
+  all,
+  low,
+  medium,
+  high
+}
+

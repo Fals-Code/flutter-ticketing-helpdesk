@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:supabase_flutter/supabase_flutter.dart' as sup show AuthChangeEvent, SupabaseClient;
+import 'package:supabase_flutter/supabase_flutter.dart' as sup
+    show AuthChangeEvent, SupabaseClient;
 import 'package:uts/core/usecases/usecase.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
@@ -62,7 +64,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     return super.close();
   }
 
-  void _onSessionExpiredDetected(SessionExpiredDetected event, Emitter<AuthState> emit) {
+  void _onSessionExpiredDetected(
+      SessionExpiredDetected event, Emitter<AuthState> emit) {
     emit(state.copyWith(
       status: AuthStatus.sessionExpired,
       errorMessage: 'Sesi Anda telah berakhir. Silakan masuk kembali.',
@@ -73,23 +76,28 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     final result = await getCurrentUserUseCase(const NoParams());
     result.fold(
       (_) => emit(state.copyWith(status: AuthStatus.unauthenticated)),
-      (user) => emit(state.copyWith(status: AuthStatus.authenticated, user: user)),
+      (user) =>
+          emit(state.copyWith(status: AuthStatus.authenticated, user: user)),
     );
   }
 
-  Future<void> _onLoginSubmitted(LoginSubmitted event, Emitter<AuthState> emit) async {
+  Future<void> _onLoginSubmitted(
+      LoginSubmitted event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     final result = await loginUseCase(LoginParams(
       email: event.email,
       password: event.password,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(status: AuthStatus.error, errorMessage: failure.message)),
-      (user) => emit(state.copyWith(status: AuthStatus.authenticated, user: user)),
+      (failure) => emit(state.copyWith(
+          status: AuthStatus.error, errorMessage: failure.message)),
+      (user) =>
+          emit(state.copyWith(status: AuthStatus.authenticated, user: user)),
     );
   }
 
-  Future<void> _onRegisterSubmitted(RegisterSubmitted event, Emitter<AuthState> emit) async {
+  Future<void> _onRegisterSubmitted(
+      RegisterSubmitted event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     final result = await registerUseCase(RegisterParams(
       email: event.email,
@@ -97,7 +105,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       fullName: event.fullName,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(status: AuthStatus.error, errorMessage: failure.message)),
+      (failure) => emit(state.copyWith(
+          status: AuthStatus.error, errorMessage: failure.message)),
       (user) {
         if (!user.isEmailVerified) {
           emit(state.copyWith(
@@ -111,17 +120,20 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     );
   }
 
-  Future<void> _onLogoutRequested(LogoutRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onLogoutRequested(
+      LogoutRequested event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     await logoutUseCase(const NoParams());
     emit(const AuthState(status: AuthStatus.unauthenticated));
   }
 
-  Future<void> _onResetPasswordRequested(ResetPasswordRequested event, Emitter<AuthState> emit) async {
+  Future<void> _onResetPasswordRequested(
+      ResetPasswordRequested event, Emitter<AuthState> emit) async {
     emit(state.copyWith(status: AuthStatus.loading));
     final result = await resetPasswordUseCase(event.email);
     result.fold(
-      (failure) => emit(state.copyWith(status: AuthStatus.error, errorMessage: failure.message)),
+      (failure) => emit(state.copyWith(
+          status: AuthStatus.error, errorMessage: failure.message)),
       (_) => emit(state.copyWith(
         status: AuthStatus.success,
         successMessage: 'Instruksi reset password telah dikirim ke email Anda.',
@@ -151,14 +163,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     UpdateAvatarRequested event,
     Emitter<AuthState> emit,
   ) async {
-    print('AuthBloc: Menerima permintaan update avatar...');
+    debugPrint('AuthBloc: Menerima permintaan update avatar...');
     emit(state.copyWith(status: AuthStatus.loading));
 
     final result = await updateAvatarUseCase(event.image);
 
     result.fold(
       (failure) {
-        print('AuthBloc: Update avatar gagal: ${failure.message}');
+        debugPrint('AuthBloc: Update avatar gagal: ${failure.message}');
         emit(state.copyWith(
           status: AuthStatus.error,
           errorMessage: failure.message,
@@ -167,7 +179,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(state.copyWith(status: AuthStatus.authenticated));
       },
       (newUrl) {
-        print('AuthBloc: Update avatar sukses! URL: $newUrl');
+        debugPrint('AuthBloc: Update avatar sukses! URL: $newUrl');
         final updatedUser = state.user.copyWith(avatarUrl: newUrl);
         emit(state.copyWith(
           user: updatedUser,
@@ -182,7 +194,8 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     UpdateProfileRequested event,
     Emitter<AuthState> emit,
   ) async {
-    print('AuthBloc: Update profil - nama: ${event.fullName}, email berubah: ${event.email != null}');
+    debugPrint(
+        'AuthBloc: Update profil - nama: ${event.fullName}, email berubah: ${event.email != null}');
     emit(state.copyWith(status: AuthStatus.loading));
 
     final result = await updateProfileUseCase(
@@ -191,7 +204,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
     result.fold(
       (failure) {
-        print('AuthBloc: Update profil gagal: ${failure.message}');
+        debugPrint('AuthBloc: Update profil gagal: ${failure.message}');
         emit(state.copyWith(
           status: AuthStatus.error,
           errorMessage: failure.message,
@@ -199,7 +212,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         emit(state.copyWith(status: AuthStatus.authenticated));
       },
       (_) {
-        print('AuthBloc: Update profil sukses!');
+        debugPrint('AuthBloc: Update profil sukses!');
         final updatedUser = state.user.copyWith(fullName: event.fullName);
         final emailChanged = event.email != null &&
             event.email!.isNotEmpty &&

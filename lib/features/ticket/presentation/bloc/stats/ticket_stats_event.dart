@@ -21,7 +21,11 @@ class FetchTicketStatsRequested extends TicketStatsEvent {
   List<Object?> get props => [assignedToId, startDate, endDate];
 }
 
-class FetchStaffUsersRequested extends TicketStatsEvent {}
+class FetchStaffUsersRequested extends TicketStatsEvent {
+  const FetchStaffUsersRequested();
+  @override
+  List<Object?> get props => [];
+}
 
 class FetchAllHistoryRequested extends TicketStatsEvent {
   final String? changedBy;

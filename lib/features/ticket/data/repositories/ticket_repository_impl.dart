@@ -78,13 +78,17 @@ class TicketRepositoryImpl implements TicketRepository {
   Future<Either<Failure, List<AuthUser>>> getStaffUsers() async {
     try {
       final staffData = await remoteDataSource.getStaffUsers();
-      final users = staffData.map((json) => ProfileModel.fromJson(json).toEntity()).toList();
-      return Right(users.map((p) => AuthUser(
-        id: p.id,
-        email: p.email,
-        fullName: p.fullName,
-        role: p.role,
-      )).toList());
+      final users = staffData
+          .map((json) => ProfileModel.fromJson(json).toEntity())
+          .toList();
+      return Right(users
+          .map((p) => AuthUser(
+                id: p.id,
+                email: p.email,
+                fullName: p.fullName,
+                role: p.role,
+              ))
+          .toList());
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));
     }
@@ -96,7 +100,6 @@ class TicketRepositoryImpl implements TicketRepository {
     required String title,
     required String description,
     required String category,
-    String priority = 'medium',
     required List<String> imagePaths,
   }) async {
     try {
@@ -105,13 +108,13 @@ class TicketRepositoryImpl implements TicketRepository {
         title: title,
         description: description,
         status: TicketStatus.open,
-        priority: TicketPriority.fromString(priority),
         category: category,
         createdAt: DateTime.now(),
         userId: userId,
       );
 
-      final createdTicket = await remoteDataSource.createTicket(ticketModel, imagePaths);
+      final createdTicket =
+          await remoteDataSource.createTicket(ticketModel, imagePaths);
       return Right(createdTicket.toEntity());
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 401));
@@ -133,7 +136,8 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<CommentEntity>>> getTicketComments(String ticketId) async {
+  Future<Either<Failure, List<CommentEntity>>> getTicketComments(
+      String ticketId) async {
     try {
       final comments = await remoteDataSource.getTicketComments(ticketId);
       return Right(comments.map((c) => c.toEntity()).toList());
@@ -171,7 +175,8 @@ class TicketRepositoryImpl implements TicketRepository {
     required TicketStatus status,
   }) async {
     try {
-      final ticket = await remoteDataSource.updateTicketStatus(ticketId, status);
+      final ticket =
+          await remoteDataSource.updateTicketStatus(ticketId, status);
       return Right(ticket.toEntity());
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
@@ -179,7 +184,8 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(String ticketId) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(
+      String ticketId) async {
     try {
       final activities = await remoteDataSource.getTicketHistory(ticketId);
       return Right(activities.map((a) => a.toEntity()).toList());
@@ -189,7 +195,8 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory({String? changedBy, DateTime? startDate, DateTime? endDate}) async {
+  Future<Either<Failure, List<TicketHistoryEntity>>> getAllTicketHistory(
+      {String? changedBy, DateTime? startDate, DateTime? endDate}) async {
     try {
       final activities = await remoteDataSource.getAllTicketHistory(
         changedBy: changedBy,
@@ -209,7 +216,8 @@ class TicketRepositoryImpl implements TicketRepository {
     required String feedback,
   }) async {
     try {
-      final ticket = await remoteDataSource.submitRating(ticketId, rating, feedback);
+      final ticket =
+          await remoteDataSource.submitRating(ticketId, rating, feedback);
       return Right(ticket.toEntity());
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
@@ -217,8 +225,11 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Stream<List<TicketEntity>> watchTickets({String? userId, String? assignedToId}) {
-    return remoteDataSource.watchTickets(userId: userId, assignedToId: assignedToId).map(
+  Stream<List<TicketEntity>> watchTickets(
+      {String? userId, String? assignedToId}) {
+    return remoteDataSource
+        .watchTickets(userId: userId, assignedToId: assignedToId)
+        .map(
           (models) => models.map((m) => m.toEntity()).toList(),
         );
   }
@@ -236,7 +247,8 @@ class TicketRepositoryImpl implements TicketRepository {
     required String technicianId,
   }) async {
     try {
-      final ticket = await remoteDataSource.assignTicket(ticketId, technicianId);
+      final ticket =
+          await remoteDataSource.assignTicket(ticketId, technicianId);
       return Right(ticket.toEntity());
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
@@ -244,9 +256,11 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId}) async {
+  Future<Either<Failure, TicketStats>> getTicketStats(
+      {String? assignedToId}) async {
     try {
-      final statsMap = await remoteDataSource.getTicketStats(assignedToId: assignedToId);
+      final statsMap =
+          await remoteDataSource.getTicketStats(assignedToId: assignedToId);
       return Right(TicketStats(
         total: statsMap['total'] ?? 0,
         open: statsMap['open'] ?? 0,

@@ -8,13 +8,15 @@ import 'package:uts/core/constants/enums.dart';
 import '../repositories/ticket_repository.dart';
 
 /// UseCase untuk mengambil semua tiket di sistem (untuk Admin/Staff).
-class GetAllTicketsUseCase implements UseCase<Either<Failure, List<TicketEntity>>, GetTicketsParams> {
+class GetAllTicketsUseCase
+    implements UseCase<Either<Failure, List<TicketEntity>>, GetTicketsParams> {
   final TicketRepository repository;
 
   GetAllTicketsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> call(GetTicketsParams params) async {
+  Future<Either<Failure, List<TicketEntity>>> call(
+      GetTicketsParams params) async {
     return await repository.getAllTickets(
       page: params.page,
       limit: params.limit,
@@ -22,14 +24,15 @@ class GetAllTicketsUseCase implements UseCase<Either<Failure, List<TicketEntity>
       searchQuery: params.searchQuery,
       category: params.category,
       assignedToId: params.assignedToId,
+      startDate: params.startDate,
+      endDate: params.endDate,
     );
   }
 }
 
-
-
 /// UseCase untuk mengambil daftar staff.
-class GetStaffUsersUseCase implements UseCase<Either<Failure, List<AuthUser>>, NoParams> {
+class GetStaffUsersUseCase
+    implements UseCase<Either<Failure, List<AuthUser>>, NoParams> {
   final TicketRepository repository;
 
   GetStaffUsersUseCase(this.repository);
@@ -41,7 +44,8 @@ class GetStaffUsersUseCase implements UseCase<Either<Failure, List<AuthUser>>, N
 }
 
 /// UseCase untuk update status tiket.
-class UpdateTicketStatusUseCase implements UseCase<Either<Failure, TicketEntity>, UpdateStatusParams> {
+class UpdateTicketStatusUseCase
+    implements UseCase<Either<Failure, TicketEntity>, UpdateStatusParams> {
   final TicketRepository repository;
 
   UpdateTicketStatusUseCase(this.repository);
@@ -63,7 +67,8 @@ class UpdateStatusParams {
 }
 
 /// UseCase untuk menugaskan tiket ke petugas.
-class AssignTicketUseCase implements UseCase<Either<Failure, TicketEntity>, AssignTicketParams> {
+class AssignTicketUseCase
+    implements UseCase<Either<Failure, TicketEntity>, AssignTicketParams> {
   final TicketRepository repository;
 
   AssignTicketUseCase(this.repository);

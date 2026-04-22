@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import '../models/user_model.dart';
 
@@ -10,10 +11,10 @@ abstract class AuthRemoteDataSource {
   Future<void> resetPassword(String email);
   Future<void> updatePassword(String newPassword);
   Future<UserModel?> getCurrentSession();
-  
+
   /// Unggah foto ke storage.
   Future<String> uploadAvatar(File image);
-  
+
   /// Perbarui field avatar_url di tabel profiles.
   Future<void> updateAvatarUrl(String url);
 
@@ -48,7 +49,7 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           .select('role, avatar_url')
           .eq('id', response.user!.id)
           .single();
-      
+
       final int roleInt = profileResponse['role'] as int;
       final String? avatarUrl = profileResponse['avatar_url'];
 
@@ -63,14 +64,16 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     } on sup.AuthException catch (e) {
       // Handle the specific "Email not confirmed" case as requested by user
       if (e.message.toLowerCase().contains('email not confirmed')) {
-        throw const sup.AuthException('Silakan verifikasi email Anda terlebih dahulu');
+        throw const sup.AuthException(
+            'Silakan verifikasi email Anda terlebih dahulu');
       }
       rethrow;
     }
   }
 
   @override
-  Future<UserModel> register(String email, String password, String fullName) async {
+  Future<UserModel> register(
+      String email, String password, String fullName) async {
     final response = await supabaseClient.auth.signUp(
       email: email,
       password: password,
@@ -119,7 +122,7 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
           .select('role, avatar_url')
           .eq('id', user.id)
           .single();
-      
+
       final int roleInt = profileResponse['role'] as int;
       final String? avatarUrl = profileResponse['avatar_url'];
 
@@ -143,23 +146,25 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final fileName = 'profile_image.jpg';
     final path = 'avatars/${user.id}/$fileName';
 
-    print('DEBUG: Memulai upload foto ke Supabase Storage: $path');
+    debugPrint('DEBUG: Memulai upload foto ke Supabase Storage: $path');
     try {
       // Upload with upsert: true
       await supabaseClient.storage.from('avatars').upload(
-        path,
-        image,
-        fileOptions: const sup.FileOptions(upsert: true, contentType: 'image/jpeg'),
-      );
-      print('DEBUG: Upload berhasil!');
+            path,
+            image,
+            fileOptions:
+                const sup.FileOptions(upsert: true, contentType: 'image/jpeg'),
+          );
+      debugPrint('DEBUG: Upload berhasil!');
     } catch (e) {
-      print('DEBUG: Error saat upload storage: $e');
+      debugPrint('DEBUG: Error saat upload storage: $e');
       rethrow;
     }
 
     // Get public URL
-    final String publicUrl = supabaseClient.storage.from('avatars').getPublicUrl(path);
-    
+    final String publicUrl =
+        supabaseClient.storage.from('avatars').getPublicUrl(path);
+
     // Add timestamp to avoid caching issues in the UI
     return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
   }
@@ -169,15 +174,15 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final user = supabaseClient.auth.currentUser;
     if (user == null) throw Exception('User tidak terautentikasi');
 
-    print('DEBUG: Memperbarui avatar_url di tabel profiles untuk user: ${user.id}');
+    debugPrint(
+        'DEBUG: Memperbarui avatar_url di tabel profiles untuk user: ${user.id}');
     try {
       await supabaseClient
           .from('profiles')
-          .update({'avatar_url': url})
-          .eq('id', user.id);
-      print('DEBUG: Update database berhasil!');
+          .update({'avatar_url': url}).eq('id', user.id);
+      debugPrint('DEBUG: Update database berhasil!');
     } catch (e) {
-      print('DEBUG: Error saat update database profile: $e');
+      debugPrint('DEBUG: Error saat update database profile: $e');
       rethrow;
     }
   }
@@ -187,29 +192,29 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final user = supabaseClient.auth.currentUser;
     if (user == null) throw Exception('User tidak terautentikasi');
 
-    print('DEBUG: Memperbarui full_name di tabel profiles untuk user: ${user.id}');
+    debugPrint(
+        'DEBUG: Memperbarui full_name di tabel profiles untuk user: ${user.id}');
     try {
       await supabaseClient
           .from('profiles')
-          .update({'full_name': fullName})
-          .eq('id', user.id);
-      print('DEBUG: Update full_name berhasil!');
+          .update({'full_name': fullName}).eq('id', user.id);
+      debugPrint('DEBUG: Update full_name berhasil!');
     } catch (e) {
-      print('DEBUG: Error saat update full_name: $e');
+      debugPrint('DEBUG: Error saat update full_name: $e');
       rethrow;
     }
   }
 
   @override
   Future<void> updateEmail(String newEmail) async {
-    print('DEBUG: Memperbarui email melalui Supabase Auth: $newEmail');
+    debugPrint('DEBUG: Memperbarui email melalui Supabase Auth: $newEmail');
     try {
       await supabaseClient.auth.updateUser(
         sup.UserAttributes(email: newEmail),
       );
-      print('DEBUG: Permintaan update email berhasil dikirim!');
+      debugPrint('DEBUG: Permintaan update email berhasil dikirim!');
     } catch (e) {
-      print('DEBUG: Error saat update email: $e');
+      debugPrint('DEBUG: Error saat update email: $e');
       rethrow;
     }
   }

@@ -72,6 +72,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
     listBloc.add(list_event.StartTicketListSubscription(
       userId: user.id,
       assignedToId: isTechnician ? user.id : null,
+      isStaff: user.role == UserRole.admin || isTechnician,
     ));
   }
 

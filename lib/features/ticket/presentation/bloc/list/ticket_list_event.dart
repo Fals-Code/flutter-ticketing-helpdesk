@@ -19,7 +19,8 @@ class FetchAllTicketsRequested extends TicketListEvent {
   final int page;
   final int limit;
   final String? assignedToId;
-  const FetchAllTicketsRequested({this.page = 0, this.limit = 10, this.assignedToId});
+  const FetchAllTicketsRequested(
+      {this.page = 0, this.limit = 10, this.assignedToId});
   @override
   List<Object?> get props => [page, limit, assignedToId];
 }
@@ -58,8 +59,6 @@ class CreateTicketRequested extends TicketListEvent {
   final String title;
   final String description;
   final String category;
-  final String priority;
-
   final List<String> imagePaths;
 
   const CreateTicketRequested({
@@ -67,21 +66,26 @@ class CreateTicketRequested extends TicketListEvent {
     required this.title,
     required this.description,
     required this.category,
-    required this.priority,
-
     required this.imagePaths,
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, priority, imagePaths];
+  List<Object?> get props => [userId, title, description, category, imagePaths];
 }
 
 class StartTicketListSubscription extends TicketListEvent {
   final String? userId;
   final String? assignedToId;
-  const StartTicketListSubscription({this.userId, this.assignedToId});
+  final bool isStaff;
+
+  const StartTicketListSubscription({
+    this.userId,
+    this.assignedToId,
+    this.isStaff = false,
+  });
+
   @override
-  List<Object?> get props => [userId, assignedToId];
+  List<Object?> get props => [userId, assignedToId, isStaff];
 }
 
 class ResetTicketListState extends TicketListEvent {}

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -11,10 +12,12 @@ import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+    as list_event;
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+    as stats_event;
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/shared/widgets/global_error_boundary.dart';
 import 'package:uts/shared/theme/app_theme.dart';
@@ -37,6 +40,44 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   debugPrint("Handling a background message: ${message.messageId}");
 }
 
+/// Test network connectivity - Debug helper
+Future<void> _testNetworkConnectivity() async {
+  try {
+    debugPrint('🔍 [NETWORK TEST] Testing DNS resolution...');
+
+    // Test 1: Resolve google.com
+    try {
+      final googleResult = await InternetAddress.lookup('google.com')
+          .timeout(const Duration(seconds: 5));
+      debugPrint(
+          '✅ [NETWORK] Google DNS: SUCCESS - ${googleResult.first.address}');
+    } catch (e) {
+      debugPrint('❌ [NETWORK] Google DNS: FAILED - $e');
+    }
+
+    // Test 2: Resolve Supabase domain
+    try {
+      final supabaseHost = Uri.parse(EnvConstants.supabaseUrl).host;
+      debugPrint('🔍 [NETWORK TEST] Resolving Supabase: $supabaseHost');
+
+      final supabaseResult = await InternetAddress.lookup(supabaseHost)
+          .timeout(const Duration(seconds: 5));
+      debugPrint(
+          '✅ [NETWORK] Supabase DNS: SUCCESS - ${supabaseResult.first.address}');
+    } catch (e) {
+      debugPrint('❌ [NETWORK] Supabase DNS: FAILED - $e');
+      debugPrint('⚠️  TROUBLESHOOTING:');
+      debugPrint('   1. Cek internet emulator → buka Chrome, akses Google');
+      debugPrint('   2. Cold Boot emulator → Device Manager → Cold Boot Now');
+      debugPrint('   3. Flush DNS Windows → CMD: ipconfig /flushdns');
+      debugPrint('   4. Coba physical phone → flutter run');
+      debugPrint('   5. Disable VPN/AdBlock');
+    }
+  } catch (e) {
+    debugPrint('❌ [NETWORK] Test failed: $e');
+  }
+}
+
 Future<void> main() async {
   // Pastikan Flutter binding terinitialize sebelum operasi async
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,6 +95,9 @@ Future<void> main() async {
   // 0. Initialize Firebase
   await Firebase.initializeApp();
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // 0.5. Test Network Connectivity (DEBUG)
+  await _testNetworkConnectivity();
 
   // Lock to portrait mode (sesuai SRS requirement mobile)
   await SystemChrome.setPreferredOrientations([
@@ -150,7 +194,8 @@ class _ConfigErrorPage extends StatelessWidget {
     );
   }
 
-  Widget _buildStep(String num, String text, {bool isCode = false, String? code}) {
+  Widget _buildStep(String num, String text,
+      {bool isCode = false, String? code}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16.0),
       child: Column(
@@ -162,10 +207,13 @@ class _ConfigErrorPage extends StatelessWidget {
               CircleAvatar(
                 radius: 12,
                 backgroundColor: Colors.black,
-                child: Text(num, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                child: Text(num,
+                    style: const TextStyle(color: Colors.white, fontSize: 12)),
               ),
               const SizedBox(width: 12),
-              Expanded(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w500))),
+              Expanded(
+                  child: Text(text,
+                      style: const TextStyle(fontWeight: FontWeight.w500))),
             ],
           ),
           if (isCode) ...[
@@ -179,7 +227,10 @@ class _ConfigErrorPage extends StatelessWidget {
               ),
               child: SelectableText(
                 code!,
-                style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold, color: Colors.red),
+                style: const TextStyle(
+                    fontFamily: 'monospace',
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red),
               ),
             ),
           ]
@@ -188,7 +239,6 @@ class _ConfigErrorPage extends StatelessWidget {
     );
   }
 }
-
 
 /// Root widget aplikasi E-Ticketing Helpdesk.
 class ETicketingApp extends StatelessWidget {
@@ -208,7 +258,8 @@ class ETicketingApp extends StatelessWidget {
         ),
         // BLoCs untuk fitur tiket
         BlocProvider<TicketListBloc>(
-          create: (_) => sl<TicketListBloc>()..add(const list_event.StartTicketListSubscription()),
+          create: (_) => sl<TicketListBloc>()
+            ..add(const list_event.StartTicketListSubscription()),
         ),
         BlocProvider<TicketDetailBloc>(
           create: (_) => sl<TicketDetailBloc>(),
@@ -218,7 +269,8 @@ class ETicketingApp extends StatelessWidget {
         ),
         // NotificationBloc untuk fitur notifikasi
         BlocProvider<NotificationBloc>(
-          create: (_) => sl<NotificationBloc>()..add(StartNotificationSubscription()),
+          create: (_) =>
+              sl<NotificationBloc>()..add(StartNotificationSubscription()),
         ),
         // AdminBloc untuk manajemen sistem
         BlocProvider<AdminBloc>(
@@ -226,7 +278,8 @@ class ETicketingApp extends StatelessWidget {
         ),
         // AppSettingsBloc untuk konfigurasi global
         BlocProvider<AppSettingsBloc>(
-          create: (_) => sl<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
+          create: (_) =>
+              sl<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
         ),
       ],
       child: BlocBuilder<ThemeCubit, ThemeMode>(
@@ -253,30 +306,44 @@ class ETicketingApp extends StatelessWidget {
               );
 
               final errorWrapped = GlobalErrorBoundary(child: child!);
-              final connectivityWrapped = ConnectivityBannerWidget(child: errorWrapped);
+              final connectivityWrapped =
+                  ConnectivityBannerWidget(child: errorWrapped);
 
               return BlocListener<AuthBloc, AuthState>(
                 listener: (context, state) {
                   if (state.status == AuthStatus.sessionExpired) {
                     _showSessionExpiredDialog(context);
                   }
-                  
+
                   if (state.status == AuthStatus.authenticated) {
                     // Start/Restart subscriptions on login
-                    context.read<TicketListBloc>().add(const list_event.StartTicketListSubscription());
-                    context.read<NotificationBloc>().add(StartNotificationSubscription());
-                    context.read<TicketStatsBloc>().add(const stats_event.FetchTicketStatsRequested());
+                    context
+                        .read<TicketListBloc>()
+                        .add(const list_event.StartTicketListSubscription());
+                    context
+                        .read<NotificationBloc>()
+                        .add(StartNotificationSubscription());
+                    context
+                        .read<TicketStatsBloc>()
+                        .add(const stats_event.FetchTicketStatsRequested());
                   }
 
                   if (state.status == AuthStatus.unauthenticated) {
                     // Reset all app states on logout
-                    context.read<TicketListBloc>().add(list_event.ResetTicketListState());
-                    context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
-                    context.read<NotificationBloc>().add(ResetNotificationState());
+                    context
+                        .read<TicketListBloc>()
+                        .add(list_event.ResetTicketListState());
+                    context
+                        .read<TicketStatsBloc>()
+                        .add(stats_event.ResetTicketStatsState());
+                    context
+                        .read<NotificationBloc>()
+                        .add(ResetNotificationState());
                   }
                 },
                 child: MediaQuery(
-                  data: mediaQuery.copyWith(textScaler: constrainedTextScaleFactor),
+                  data: mediaQuery.copyWith(
+                      textScaler: constrainedTextScaleFactor),
                   child: connectivityWrapped,
                 ),
               );
@@ -293,7 +360,8 @@ class ETicketingApp extends StatelessWidget {
       barrierDismissible: false,
       builder: (context) => AlertDialog(
         title: const Text('Sesi Habis'),
-        content: const Text('Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.'),
+        content: const Text(
+            'Sesi Anda telah berakhir. Silakan masuk kembali untuk melanjutkan.'),
         actions: [
           TextButton(
             onPressed: () {

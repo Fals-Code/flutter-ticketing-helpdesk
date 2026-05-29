@@ -31,9 +31,14 @@ class AuthRepositoryImpl implements AuthRepository {
       
       return Right(userModel.toEntity());
     } on sup.AuthException catch (e) {
-      return Left(ServerFailure(message: e.message, code: 400));
+      // Security: Use generic error messages to prevent account enumeration
+      // We only distinguish "Email not confirmed" for UX, others are generic.
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        return const Left(ServerFailure(message: 'Silakan verifikasi email Anda terlebih dahulu.', code: 401));
+      }
+      return const Left(ServerFailure(message: 'Email atau password tidak valid.', code: 401));
     } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+      return Left(UnknownFailure(message: 'Terjadi kesalahan saat masuk. Silakan coba lagi.'));
     }
   }
 
@@ -53,14 +58,26 @@ class AuthRepositoryImpl implements AuthRepository {
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 400));
     } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+      return Left(UnknownFailure(message: 'Gagal melakukan registrasi.'));
     }
   }
 
   @override
   Future<Either<Failure, Unit>> logout() async {
     try {
+      // 1. Get current user ID to clear FCM token if possible
+      final currentUserResult = await getCurrentUser();
+      currentUserResult.fold(
+        (_) => null, // Ignore if no user
+        (user) async {
+          // Optional: Clear FCM token from DB on logout for extra security
+          // await fcmService.clearTokenFromSupabase(user.id);
+        },
+      );
+
+      // 2. Perform remote logout (Supabase)
       await remoteDataSource.logout();
+
       return const Right(unit);
     } catch (e) {
       return Left(CacheFailure(message: 'Gagal membersihkan sesi: $e'));
@@ -72,10 +89,12 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await remoteDataSource.resetPassword(email);
       return const Right(unit);
-    } on sup.AuthException catch (e) {
-      return Left(ServerFailure(message: e.message, code: 400));
+    } on sup.AuthException catch (_) {
+      // Security: Always return success-like message to prevent email enumeration
+      // but we return unit (Right) so the UI shows success.
+      return const Right(unit);
     } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+      return Left(UnknownFailure(message: 'Gagal mengirim instruksi reset password.'));
     }
   }
 
@@ -101,7 +120,16 @@ class AuthRepositoryImpl implements AuthRepository {
       await remoteDataSource.updatePassword(newPassword);
       return const Right(unit);
     } on sup.AuthException catch (e) {
-      return Left(ServerFailure(message: e.message, code: 400));
+      // Security: Use generic error messages to prevent account enumeration
+      String message = 'Email atau password tidak valid.';
+      
+      // Keep specific message only for unconfirmed email if your business logic requires it, 
+      // otherwise keep it generic. 
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        message = 'Silakan verifikasi email Anda terlebih dahulu.';
+      }
+      
+      return Left(ServerFailure(message: message, code: 400));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -140,7 +168,16 @@ class AuthRepositoryImpl implements AuthRepository {
 
       return const Right(unit);
     } on sup.AuthException catch (e) {
-      return Left(ServerFailure(message: e.message, code: 400));
+      // Security: Use generic error messages to prevent account enumeration
+      String message = 'Email atau password tidak valid.';
+      
+      // Keep specific message only for unconfirmed email if your business logic requires it, 
+      // otherwise keep it generic. 
+      if (e.message.toLowerCase().contains('email not confirmed')) {
+        message = 'Silakan verifikasi email Anda terlebih dahulu.';
+      }
+      
+      return Left(ServerFailure(message: message, code: 400));
     } catch (e) {
       return Left(UnknownFailure(message: 'Gagal memperbarui profil: $e'));
     }

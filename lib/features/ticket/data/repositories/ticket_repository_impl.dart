@@ -264,9 +264,11 @@ class TicketRepositoryImpl implements TicketRepository {
       return Right(TicketStats(
         total: statsMap['total'] ?? 0,
         open: statsMap['open'] ?? 0,
+        pending: statsMap['pending'] ?? 0,
         inProgress: statsMap['in_progress'] ?? 0,
         resolved: statsMap['resolved'] ?? 0,
         closed: statsMap['closed'] ?? 0,
+        reopened: statsMap['reopened'] ?? 0,
       ));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));

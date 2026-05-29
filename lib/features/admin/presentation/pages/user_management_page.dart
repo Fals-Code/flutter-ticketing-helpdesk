@@ -112,32 +112,50 @@ class _UserManagementPageState extends State<UserManagementPage> {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
-      child: Row(
-        children: [
-          Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(color: avatarColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
-            child: Center(child: Text((user.fullName ?? 'U')[0].toUpperCase(), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: avatarColor, fontSize: 18))),
+      child: InkWell(
+        onTap: () => _showEditUserModal(user),
+        borderRadius: BorderRadius.circular(20),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                width: 48, height: 48,
+                decoration: BoxDecoration(color: avatarColor.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(14)),
+                child: Center(child: Text((user.fullName ?? 'U')[0].toUpperCase(), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, color: avatarColor, fontSize: 18))),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(user.fullName ?? 'No Name', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15)),
+                    Text(user.email, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildRolePill(user, roleInfo, isDark),
+            ],
           ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(user.fullName ?? 'No Name', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 15)),
-                Text(user.email, style: GoogleFonts.inter(fontSize: 12, color: Colors.grey)),
-              ],
-            ),
-          ),
-          const SizedBox(width: 8),
-          _buildRolePill(user, roleInfo, isDark),
-        ],
+        ),
+      ),
+    );
+  }
+
+  void _showEditUserModal(AuthUser user) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (modalContext) => BlocProvider.value(
+        value: context.read<AdminBloc>(),
+        child: _EditUserSheet(user: user),
       ),
     );
   }
@@ -336,5 +354,128 @@ class _RoleSelectionSheetState extends State<_RoleSelectionSheet> {
         ),
       ),
     );
+  }
+}
+
+class _EditUserSheet extends StatefulWidget {
+  final AuthUser user;
+  const _EditUserSheet({required this.user});
+
+  @override
+  State<_EditUserSheet> createState() => _EditUserSheetState();
+}
+
+class _EditUserSheetState extends State<_EditUserSheet> {
+  late TextEditingController _nameController;
+  late TextEditingController _emailController;
+  final _formKey = GlobalKey<FormState>();
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.user.fullName);
+    _emailController = TextEditingController(text: widget.user.email);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _emailController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      padding: EdgeInsets.fromLTRB(24, 12, 24, 24 + bottomPadding),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(2)))),
+            const SizedBox(height: 24),
+            Text('Edit Profil Pengguna', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800)),
+            const SizedBox(height: 24),
+            Text('Nama Lengkap', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _nameController,
+              decoration: _inputDecoration('Contoh: John Doe', Icons.person_outline_rounded, isDark),
+              validator: (v) => (v == null || v.isEmpty) ? 'Nama tidak boleh kosong' : null,
+            ),
+            const SizedBox(height: 20),
+            Text('Alamat Email', style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: Colors.grey)),
+            const SizedBox(height: 8),
+            TextFormField(
+              controller: _emailController,
+              decoration: _inputDecoration('email@perusahaan.com', Icons.email_outlined, isDark),
+              validator: (v) => (v == null || !v.contains('@')) ? 'Email tidak valid' : null,
+            ),
+            const SizedBox(height: 32),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      side: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    ),
+                    child: Text('BATAL', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13, color: Colors.grey)),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: _handleUpdate,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: Text('SIMPAN', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 13)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  InputDecoration _inputDecoration(String hint, IconData icon, bool isDark) {
+    return InputDecoration(
+      hintText: hint,
+      prefixIcon: Icon(icon, size: 20, color: AppColors.primary),
+      filled: true,
+      fillColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.02),
+      border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+    );
+  }
+
+  void _handleUpdate() {
+    if (_formKey.currentState!.validate()) {
+      HapticHelper.medium();
+      context.read<AdminBloc>().add(UpdateUserDetailsRequested(
+        userId: widget.user.id,
+        fullName: _nameController.text.trim(),
+        email: _emailController.text.trim(),
+      ));
+      Navigator.pop(context);
+    }
   }
 }

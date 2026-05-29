@@ -254,8 +254,10 @@ class _TicketListPageState extends State<TicketListPage>
                       height: 56,
                       child: FloatingActionButton.extended(
                         heroTag: 'ticket_list_fab',
-                        onPressed: () => context.push(AppRoutes.createTicket),
-                        backgroundColor: AppColors.primary,
+                        onPressed: listState.isOffline 
+                            ? () => ToastService().show(context, message: 'Koneksi internet diperlukan untuk membuat tiket', type: ToastType.error)
+                            : () => context.push(AppRoutes.createTicket),
+                        backgroundColor: listState.isOffline ? Colors.grey : AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 4,
                         isExtended: _isFabExpanded,
@@ -307,6 +309,12 @@ class _TicketListPageState extends State<TicketListPage>
                     setState(() {});
                   },
                 ),
+              ),
+              const SizedBox(width: 8),
+              _FilterButton(
+                isDark: isDark,
+                hasActiveFilter: state.categoryFilter != null || state.startDate != null,
+                onTap: () => _showAdvancedFilterSheet(context, state, isDark),
               ),
               if (isStaff && isAdmin) ...[
                 const SizedBox(width: 8),
@@ -391,6 +399,30 @@ class _TicketListPageState extends State<TicketListPage>
                         ),
                   ),
                   _StatusChip(
+                    label: 'Tertunda',
+                    isSelected: state.statusFilter == TicketStatusFilter.pending,
+                    color: AppColors.warning,
+                    isDark: isDark,
+                    badge: _countByStatus(
+                        state.allTickets, TicketStatusFilter.pending),
+                    onTap: () => context.read<TicketListBloc>().add(
+                          const list_event.FilterStatusChanged(
+                              TicketStatusFilter.pending),
+                        ),
+                  ),
+                  _StatusChip(
+                    label: 'Dibuka Kembali',
+                    isSelected: state.statusFilter == TicketStatusFilter.reopened,
+                    color: AppColors.danger,
+                    isDark: isDark,
+                    badge: _countByStatus(
+                        state.allTickets, TicketStatusFilter.reopened),
+                    onTap: () => context.read<TicketListBloc>().add(
+                          const list_event.FilterStatusChanged(
+                              TicketStatusFilter.reopened),
+                        ),
+                  ),
+                  _StatusChip(
                     label: 'Selesai',
                     isSelected:
                         state.statusFilter == TicketStatusFilter.resolved,
@@ -434,6 +466,25 @@ class _TicketListPageState extends State<TicketListPage>
     );
   }
 
+  void _showAdvancedFilterSheet(BuildContext context, TicketListState state, bool isDark) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
+      builder: (ctx) => _AdvancedFilterSheet(
+        initialCategory: state.categoryFilter,
+        initialStartDate: state.startDate,
+        initialEndDate: state.endDate,
+        isDark: isDark,
+        onApply: (cat, start, end) {
+          context.read<TicketListBloc>().add(list_event.FilterCategoryChanged(cat));
+          context.read<TicketListBloc>().add(list_event.FilterDateRangeChanged(start, end));
+        },
+      ),
+    );
+  }
+
   int _countByStatus(List<TicketEntity> tickets, TicketStatusFilter filter) {
     return tickets.where((t) {
       if (filter == TicketStatusFilter.open) {
@@ -441,6 +492,12 @@ class _TicketListPageState extends State<TicketListPage>
       }
       if (filter == TicketStatusFilter.inProgress) {
         return t.status == TicketStatus.inProgress;
+      }
+      if (filter == TicketStatusFilter.pending) {
+        return t.status == TicketStatus.pending;
+      }
+      if (filter == TicketStatusFilter.reopened) {
+        return t.status == TicketStatus.reopened;
       }
       return false;
     }).length;
@@ -587,8 +644,9 @@ class _TicketListPageState extends State<TicketListPage>
           isStaff: isStaff,
           isAdmin: isAdmin,
           staffUsers: context.read<TicketStatsBloc>().state.staffUsers,
-          onQuickAction: (ticket, newStatus) =>
-              _handleQuickAction(context, ticket, newStatus),
+          onQuickAction: state.isOffline 
+              ? null 
+              : (ticket, newStatus) => _handleQuickAction(context, ticket, newStatus),
           onRefreshList: _fetchInitial,
         );
       },
@@ -617,7 +675,7 @@ class _TicketCard extends StatefulWidget {
   final bool isStaff;
   final bool isAdmin;
   final List<AuthUser> staffUsers;
-  final Function(TicketEntity, TicketStatus) onQuickAction;
+  final Function(TicketEntity, TicketStatus)? onQuickAction;
   final VoidCallback onRefreshList;
 
   const _TicketCard({
@@ -626,7 +684,7 @@ class _TicketCard extends StatefulWidget {
     required this.isStaff,
     required this.isAdmin,
     required this.staffUsers,
-    required this.onQuickAction,
+    this.onQuickAction,
     required this.onRefreshList,
   });
 
@@ -638,21 +696,6 @@ class _TicketCardState extends State<_TicketCard> {
   bool get isDark => widget.isDark;
   TicketEntity get ticket => widget.ticket;
   List<AuthUser> get staffUsers => widget.staffUsers;
-
-  void _handleQuickAction(
-      BuildContext context, TicketEntity ticket, TicketStatus newStatus) {
-    HapticHelper.medium();
-    context.read<TicketDetailBloc>().add(
-          detail_event.UpdateTicketStatusRequested(
-            ticketId: ticket.id,
-            status: newStatus,
-          ),
-        );
-    // Refresh the list after a short delay
-    Future.delayed(const Duration(milliseconds: 600), () {
-      if (mounted) widget.onRefreshList();
-    });
-  }
 
   void _showAssignTechnicianSheet(
       BuildContext context, TicketEntity ticket, List<AuthUser> staffUsers) {
@@ -720,11 +763,6 @@ class _TicketCardState extends State<_TicketCard> {
 
   @override
   Widget build(BuildContext context) {
-    final isTechnician =
-        context.read<AuthBloc>().state.user.role == UserRole.technician;
-    final isAssignedToMe = isTechnician &&
-        ticket.assignedTo == context.read<AuthBloc>().state.user.id;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -813,40 +851,56 @@ class _TicketCardState extends State<_TicketCard> {
                         isDark: isDark,
                         icon: Icons.assignment_ind_outlined,
                         label: 'Tugaskan',
+                        enabled: widget.onQuickAction != null,
                         onTap: () => _showAssignTechnicianSheet(
                             context, ticket, staffUsers),
                       ),
                   ],
                 ),
-              if (widget.isStaff && ticket.status == TicketStatus.open)
-                const SizedBox(height: 8),
-              if (widget.isStaff && ticket.status == TicketStatus.open)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _QuickActionButton(
-                      isDark: isDark,
-                      icon: Icons.play_arrow_rounded,
-                      label: 'Proses',
-                      onTap: () => _handleQuickAction(
-                          context, ticket, TicketStatus.inProgress),
-                    ),
-                  ],
+              if (widget.isStaff && (ticket.status == TicketStatus.open || 
+                  ticket.status == TicketStatus.pending || 
+                  ticket.status == TicketStatus.reopened))
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _QuickActionButton(
+                        isDark: isDark,
+                        icon: Icons.play_arrow_rounded,
+                        label: ticket.status == TicketStatus.pending ? 'Lanjutkan' : 'Proses',
+                        enabled: widget.onQuickAction != null,
+                        onTap: () => widget.onQuickAction!(
+                            ticket, TicketStatus.inProgress),
+                      ),
+                    ],
+                  ),
                 ),
               if (widget.isStaff && ticket.status == TicketStatus.inProgress)
-                const SizedBox(height: 8),
-              if (widget.isStaff && ticket.status == TicketStatus.inProgress)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    _QuickActionButton(
-                      isDark: isDark,
-                      icon: Icons.check_circle_outline_rounded,
-                      label: 'Selesai',
-                      onTap: () => _handleQuickAction(
-                          context, ticket, TicketStatus.resolved),
-                    ),
-                  ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      _QuickActionButton(
+                        isDark: isDark,
+                        icon: Icons.pause_circle_outline_rounded,
+                        label: 'Tunda',
+                        enabled: widget.onQuickAction != null,
+                        onTap: () => widget.onQuickAction!(
+                            ticket, TicketStatus.pending),
+                      ),
+                      const SizedBox(width: 8),
+                      _QuickActionButton(
+                        isDark: isDark,
+                        icon: Icons.check_circle_outline_rounded,
+                        label: 'Selesai',
+                        enabled: widget.onQuickAction != null,
+                        onTap: () => widget.onQuickAction!(
+                            ticket, TicketStatus.resolved),
+                      ),
+                    ],
+                  ),
                 ),
             ],
           ),
@@ -968,6 +1022,302 @@ class _AssigneeFilterButton extends StatelessWidget {
   }
 }
 
+class _FilterButton extends StatelessWidget {
+  final bool isDark;
+  final bool hasActiveFilter;
+  final VoidCallback onTap;
+
+  const _FilterButton({
+    required this.isDark,
+    required this.hasActiveFilter,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        width: 44,
+        height: 44,
+        decoration: BoxDecoration(
+          color: hasActiveFilter
+              ? AppColors.primary.withValues(alpha: 0.1)
+              : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+              color: hasActiveFilter
+                  ? AppColors.primary
+                  : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+        ),
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            Icon(
+              Icons.tune_rounded,
+              size: 20,
+              color: hasActiveFilter
+                  ? AppColors.primary
+                  : (isDark ? Colors.white54 : Colors.black54),
+            ),
+            if (hasActiveFilter)
+              Positioned(
+                top: 10,
+                right: 10,
+                child: Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppColors.primary,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _AdvancedFilterSheet extends StatefulWidget {
+  final String? initialCategory;
+  final DateTime? initialStartDate;
+  final DateTime? initialEndDate;
+  final bool isDark;
+  final Function(String?, DateTime?, DateTime?) onApply;
+
+  const _AdvancedFilterSheet({
+    this.initialCategory,
+    this.initialStartDate,
+    this.initialEndDate,
+    required this.isDark,
+    required this.onApply,
+  });
+
+  @override
+  State<_AdvancedFilterSheet> createState() => _AdvancedFilterSheetState();
+}
+
+class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
+  String? _selectedCategory;
+  DateTime? _startDate;
+  DateTime? _endDate;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedCategory = widget.initialCategory;
+    _startDate = widget.initialStartDate;
+    _endDate = widget.initialEndDate;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: widget.isDark ? Colors.white10 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2))),
+          ),
+          const SizedBox(height: 24),
+          const Text('Filter Lanjutan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 24),
+          const Text('Kategori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _FilterChip(
+                label: 'Semua',
+                isSelected: _selectedCategory == null,
+                onTap: () => setState(() => _selectedCategory = null),
+                isDark: widget.isDark,
+              ),
+              ...['hardware', 'software', 'network', 'account', 'other'].map((cat) => _FilterChip(
+                label: cat[0].toUpperCase() + cat.substring(1),
+                isSelected: _selectedCategory == cat,
+                onTap: () => setState(() => _selectedCategory = cat),
+                isDark: widget.isDark,
+              )),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text('Rentang Tanggal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _DateSelector(
+                  label: 'Dari',
+                  date: _startDate,
+                  isDark: widget.isDark,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _startDate ?? DateTime.now(),
+                      firstDate: DateTime(2023),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) setState(() => _startDate = date);
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _DateSelector(
+                  label: 'Sampai',
+                  date: _endDate,
+                  isDark: widget.isDark,
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: _endDate ?? DateTime.now(),
+                      firstDate: _startDate ?? DateTime(2023),
+                      lastDate: DateTime.now(),
+                    );
+                    if (date != null) setState(() => _endDate = date);
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 32),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () {
+                    setState(() {
+                      _selectedCategory = null;
+                      _startDate = null;
+                      _endDate = null;
+                    });
+                  },
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Reset'),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    widget.onApply(_selectedCategory, _startDate, _endDate);
+                    Navigator.pop(context);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.primary,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text('Terapkan'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _FilterChip extends StatelessWidget {
+  final String label;
+  final bool isSelected;
+  final VoidCallback onTap;
+  final bool isDark;
+
+  const _FilterChip({
+    required this.label,
+    required this.isSelected,
+    required this.onTap,
+    required this.isDark,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        decoration: BoxDecoration(
+          color: isSelected ? AppColors.primary : (isDark ? AppColors.surfaceDark2 : Colors.grey.shade100),
+          borderRadius: BorderRadius.circular(100),
+          border: Border.all(color: isSelected ? AppColors.primary : (isDark ? AppColors.borderDark : Colors.grey.shade300)),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DateSelector extends StatelessWidget {
+  final String label;
+  final DateTime? date;
+  final bool isDark;
+  final VoidCallback onTap;
+
+  const _DateSelector({
+    required this.label,
+    this.date,
+    required this.isDark,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark2 : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey.shade300),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black87),
+                const SizedBox(width: 8),
+                Text(
+                  date != null ? DateFormat('dd/MM/yy').format(date!) : '--/--/--',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 // ── Sub-widgets ───────────────────────────────────────────────────────────────
 
 class _Badge extends StatelessWidget {
@@ -1007,37 +1357,45 @@ class _QuickActionButton extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
+  final bool enabled;
 
   const _QuickActionButton({
     required this.isDark,
     required this.icon,
     required this.label,
     required this.onTap,
+    this.enabled = true,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: enabled ? onTap : () {
+        ToastService().show(context, message: 'Tidak dapat melakukan aksi dalam mode offline', type: ToastType.error);
+      },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: isDark ? AppColors.surfaceDark : Colors.white,
+          color: enabled 
+              ? (isDark ? AppColors.surfaceDark : Colors.white)
+              : (isDark ? Colors.white10 : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight),
+              color: enabled 
+                  ? (isDark ? AppColors.borderDark : AppColors.borderLight)
+                  : (isDark ? Colors.white10 : Colors.grey.shade300)),
         ),
         child: Row(
           children: [
             Icon(icon,
-                size: 16, color: isDark ? Colors.white70 : Colors.black54),
+                size: 16, color: enabled ? (isDark ? Colors.white70 : Colors.black54) : Colors.grey),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white70 : Colors.black54,
+                color: enabled ? (isDark ? Colors.white70 : Colors.black54) : Colors.grey,
               ),
             ),
           ],
@@ -1347,7 +1705,9 @@ class _UnassignedBanner extends StatelessWidget {
         .where((t) =>
             t.assignedTo == null &&
             (t.status == TicketStatus.open ||
-                t.status == TicketStatus.inProgress))
+                t.status == TicketStatus.inProgress ||
+                t.status == TicketStatus.pending ||
+                t.status == TicketStatus.reopened))
         .length;
 
     if (unassigned == 0) return const SizedBox.shrink();

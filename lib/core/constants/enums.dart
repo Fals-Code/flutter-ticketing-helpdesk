@@ -59,14 +59,18 @@ enum UserRole {
 /// Status tiket dalam siklus hidup pengerjaan.
 enum TicketStatus {
   open,
+  pending,
   inProgress,
   resolved,
-  closed;
+  closed,
+  reopened;
 
   static TicketStatus fromString(String status) {
     switch (status.toLowerCase()) {
       case 'open':
         return TicketStatus.open;
+      case 'pending':
+        return TicketStatus.pending;
       case 'in_progress':
       case 'inprogress':
       case 'in progress':
@@ -75,37 +79,77 @@ enum TicketStatus {
         return TicketStatus.resolved;
       case 'closed':
         return TicketStatus.closed;
+      case 'reopened':
+        return TicketStatus.reopened;
       default:
         return TicketStatus.open;
     }
   }
 
   String get name => toString().split('.').last;
-  
+
   String get label {
     switch (this) {
-      case TicketStatus.open: return 'Terbuka';
-      case TicketStatus.inProgress: return 'Diproses';
-      case TicketStatus.resolved: return 'Selesai';
-      case TicketStatus.closed: return 'Ditutup';
+      case TicketStatus.open:
+        return 'Terbuka';
+      case TicketStatus.pending:
+        return 'Tertunda';
+      case TicketStatus.inProgress:
+        return 'Diproses';
+      case TicketStatus.resolved:
+        return 'Selesai';
+      case TicketStatus.closed:
+        return 'Ditutup';
+      case TicketStatus.reopened:
+        return 'Dibuka Kembali';
     }
   }
 
   String get dbValue {
     switch (this) {
-      case TicketStatus.inProgress: return 'in_progress';
-      default: return name;
+      case TicketStatus.inProgress:
+        return 'in_progress';
+      default:
+        return name;
     }
   }
 
   Color get color {
     switch (this) {
-      case TicketStatus.open: return AppColors.statusOpen;
-      case TicketStatus.inProgress: return AppColors.statusInProgress;
-      case TicketStatus.resolved: return AppColors.statusResolved;
-      case TicketStatus.closed: return AppColors.textSecondaryDark;
+      case TicketStatus.open:
+        return AppColors.statusOpen;
+      case TicketStatus.pending:
+        return AppColors.warning;
+      case TicketStatus.inProgress:
+        return AppColors.statusInProgress;
+      case TicketStatus.resolved:
+        return AppColors.statusResolved;
+      case TicketStatus.closed:
+        return AppColors.textSecondaryDark;
+      case TicketStatus.reopened:
+        return AppColors.danger;
     }
   }
+
+  /// State Machine: Mendefinisikan status apa saja yang diperbolehkan selanjutnya.
+  List<TicketStatus> get nextValidStates {
+    switch (this) {
+      case TicketStatus.open:
+        return [TicketStatus.inProgress, TicketStatus.pending, TicketStatus.closed];
+      case TicketStatus.pending:
+        return [TicketStatus.inProgress, TicketStatus.resolved, TicketStatus.closed];
+      case TicketStatus.inProgress:
+        return [TicketStatus.resolved, TicketStatus.pending, TicketStatus.closed];
+      case TicketStatus.resolved:
+        return [TicketStatus.closed, TicketStatus.reopened];
+      case TicketStatus.reopened:
+        return [TicketStatus.inProgress, TicketStatus.pending, TicketStatus.resolved];
+      case TicketStatus.closed:
+        return [TicketStatus.reopened]; // Opsional: admin bisa reopen
+    }
+  }
+
+  bool canTransitionTo(TicketStatus target) => nextValidStates.contains(target);
 }
 
 /// Prioritas tiket.
@@ -153,9 +197,11 @@ enum TicketPriority {
 enum TicketStatusFilter {
   all,
   open,
+  pending,
   inProgress,
   resolved,
-  closed
+  closed,
+  reopened
 }
 
 /// Filter Prioritas Tiket untuk List

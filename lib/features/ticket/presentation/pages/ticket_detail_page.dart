@@ -149,6 +149,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                   onPressed: () => context.pop(),
                                 ),
                                 actions: [
+                                  if (state.isOffline) _OfflineBadge(isDark: isDark),
                                   PopupMenuButton<String>(
                                     icon: const Icon(Icons.more_vert_rounded),
                                     onSelected: (val) {
@@ -174,7 +175,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       // HEADER
-                                      _buildHeader(ticket, isDark),
+                                      _buildHeader(ticket, state, isDark),
                                       const SizedBox(height: 24),
 
                                       // DESCRIPTION
@@ -230,72 +231,163 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   // ── HEADER ─────────────────────────────────────────────────────────────────
 
-  Widget _buildHeader(TicketEntity ticket, bool isDark) {
+  Widget _buildHeader(TicketEntity ticket, detail_state.TicketDetailState state, bool isDark) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Date
-        Text(
-          'Dibuat ${DateFormat('dd MMMM yyyy, HH:mm', 'id').format(ticket.createdAt)}',
-          style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black45),
+        // Meta Info (Date & Reporter)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Dibuat ${DateFormat('dd MMM yyyy, HH:mm', 'id').format(ticket.createdAt)}',
+                  style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black45),
+                ),
+                if (ticket.updatedAt != null && ticket.updatedAt != ticket.createdAt)
+                  Text(
+                    'Diperbarui ${DateFormat('dd MMM yyyy, HH:mm', 'id').format(ticket.updatedAt!)}',
+                    style: TextStyle(fontSize: 11, color: isDark ? Colors.white54 : Colors.black45),
+                  ),
+              ],
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: ticket.status.color.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: ticket.status.color.withValues(alpha: 0.5), width: 1),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(color: ticket.status.color, shape: BoxShape.circle),
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    ticket.status.label.toUpperCase(),
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.w800, color: ticket.status.color, letterSpacing: 0.5),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         // Title
         Text(
           ticket.title,
           style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700, letterSpacing: -0.5, height: 1.3),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
+          maxLines: 3,
         ),
-        const SizedBox(height: 14),
-        // Category + Priority
-        Row(
+        const SizedBox(height: 16),
+        
+        // Info Chips (Category & Reporter)
+        Wrap(
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            Icon(Icons.category_outlined, size: 14, color: isDark ? Colors.white54 : Colors.black54),
-            const SizedBox(width: 6),
-            Text(ticket.category, style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black87, fontWeight: FontWeight.w500)),
-          ],
-        ),
-        const SizedBox(height: 14),
-        // Assignee
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: ticket.assignedTo != null ? AppColors.primary.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
-                shape: BoxShape.circle,
-              ),
-              child: Center(
-                child: ticket.assignedTo != null
-                    ? Text(
-                        (ticket.assignedToName ?? 'T')[0].toUpperCase(),
-                        style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: AppColors.primary),
-                      )
-                    : const Icon(Icons.person_off_outlined, size: 14, color: Colors.orange),
-              ),
+            _buildInfoChip(
+              icon: Icons.category_outlined,
+              label: ticket.category,
+              isDark: isDark,
             ),
-            const SizedBox(width: 10),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Ditugaskan ke', style: TextStyle(fontSize: 10, color: isDark ? Colors.white38 : Colors.black38)),
-                Text(
-                  ticket.assignedToName ?? 'Belum ditugaskan',
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: ticket.assignedTo != null ? (isDark ? Colors.white : Colors.black87) : Colors.orange,
-                  ),
-                ),
-              ],
+            _buildInfoChip(
+              icon: Icons.person_outline_rounded,
+              label: 'Pelapor: ${ticket.userName ?? 'User'}',
+              isDark: isDark,
             ),
           ],
         ),
         const SizedBox(height: 20),
-        Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+
+        // Assignee Section
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: ticket.assignedTo != null ? AppColors.primary.withValues(alpha: 0.1) : Colors.orange.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Center(
+                  child: ticket.assignedTo != null
+                      ? Text(
+                          (ticket.assignedToName ?? 'T')[0].toUpperCase(),
+                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.primary),
+                        )
+                      : const Icon(Icons.person_off_outlined, size: 18, color: Colors.orange),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('PENANGGUNG JAWAB', style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, color: isDark ? Colors.white38 : Colors.black38, letterSpacing: 0.5)),
+                    const SizedBox(height: 2),
+                    Text(
+                      ticket.assignedToName ?? 'Belum ditugaskan',
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: ticket.assignedTo != null ? (isDark ? Colors.white : Colors.black87) : Colors.orange,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (ticket.assignedTo == null && (context.read<AuthBloc>().state.user.role == UserRole.admin))
+                TextButton(
+                  onPressed: state.isOffline 
+                      ? () => _showToast('Koneksi internet diperlukan', isError: true)
+                      : () => _showStaffBottomSheet(context, ticket),
+                  child: Text('Tugaskan', style: TextStyle(
+                    fontSize: 12, 
+                    fontWeight: FontWeight.bold,
+                    color: state.isOffline ? Colors.grey : AppColors.primary,
+                  )),
+                ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight, thickness: 1),
       ],
+    );
+  }
+
+  Widget _buildInfoChip({required IconData icon, required String label, required bool isDark}) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 14, color: isDark ? Colors.white54 : Colors.black54),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: isDark ? Colors.white70 : Colors.black87),
+          ),
+        ],
+      ),
     );
   }
 
@@ -440,56 +532,55 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 _buildStepTracker(ticket, isDark),
                 const SizedBox(height: 16),
 
-                // Action button
-                if (ticket.status == TicketStatus.open)
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => context.read<TicketDetailBloc>().add(
-                            detail_event.UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.inProgress),
-                          ),
-                      icon: const Icon(Icons.play_arrow_rounded, size: 20),
-                      label: const Text('Mulai Kerjakan', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: AppColors.success,
-                        side: const BorderSide(color: AppColors.success),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                // Action buttons based on next valid states
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  children: ticket.status.nextValidStates.map((nextStatus) {
+                    final isPositive = nextStatus == TicketStatus.resolved ||
+                        nextStatus == TicketStatus.inProgress;
+                    final isNegative = nextStatus == TicketStatus.closed ||
+                        nextStatus == TicketStatus.pending;
+                    final isReopen = nextStatus == TicketStatus.reopened;
+
+                    return SizedBox(
+                      width: (ticket.status.nextValidStates.length == 1)
+                          ? double.infinity
+                          : (MediaQuery.of(context).size.width - 80) / 2,
+                      child: _buildStateActionButton(
+                        context,
+                        ticket,
+                        nextStatus,
+                        isOffline: state.isOffline,
+                        isPositive: isPositive,
+                        isNegative: isNegative,
+                        isReopen: isReopen,
                       ),
-                    ),
-                  ),
-                if (ticket.status == TicketStatus.inProgress)
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => context.read<TicketDetailBloc>().add(
-                            detail_event.UpdateTicketStatusRequested(ticketId: ticket.id, status: TicketStatus.resolved),
-                          ),
-                      icon: const Icon(Icons.check_circle_outline_rounded, size: 20),
-                      label: const Text('Tandai Selesai', style: TextStyle(fontWeight: FontWeight.bold)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.success,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                    ),
-                  ),
-                if (ticket.status == TicketStatus.resolved || ticket.status == TicketStatus.closed)
+                    );
+                  }).toList(),
+                ),
+
+                if (ticket.status == TicketStatus.closed)
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     decoration: BoxDecoration(
-                      color: AppColors.success.withValues(alpha: 0.1),
+                      color: AppColors.textSecondaryDark.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                      border: Border.all(
+                          color: AppColors.textSecondaryDark.withValues(alpha: 0.3)),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.verified_rounded, color: AppColors.success, size: 18),
+                        Icon(Icons.lock_outline_rounded,
+                            color: AppColors.textSecondaryDark, size: 18),
                         SizedBox(width: 8),
-                        Text('Penanganan Selesai', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.bold, fontSize: 13)),
+                        Text('Tiket Ditutup',
+                            style: TextStyle(
+                                color: AppColors.textSecondaryDark,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13)),
                       ],
                     ),
                   ),
@@ -502,11 +593,15 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   const Text('Delegasikan Ke Teknisi', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
                   GestureDetector(
-                    onTap: () => _showStaffBottomSheet(context, ticket),
+                    onTap: state.isOffline 
+                        ? () => _showToast('Koneksi internet diperlukan', isError: true)
+                        : () => _showStaffBottomSheet(context, ticket),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                       decoration: BoxDecoration(
-                        color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                        color: state.isOffline 
+                            ? (isDark ? Colors.white10 : Colors.grey.shade100)
+                            : (isDark ? AppColors.backgroundDark : AppColors.backgroundLight),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
                       ),
@@ -536,16 +631,121 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
+  Widget _buildStateActionButton(
+    BuildContext context,
+    TicketEntity ticket,
+    TicketStatus nextStatus, {
+    bool isOffline = false,
+    bool isPositive = false,
+    bool isNegative = false,
+    bool isReopen = false,
+  }) {
+    IconData icon;
+    Color color;
+
+    switch (nextStatus) {
+      case TicketStatus.inProgress:
+        icon = Icons.play_arrow_rounded;
+        color = AppColors.success;
+        break;
+      case TicketStatus.pending:
+        icon = Icons.pause_circle_outline_rounded;
+        color = AppColors.warning;
+        break;
+      case TicketStatus.resolved:
+        icon = Icons.check_circle_outline_rounded;
+        color = AppColors.primary;
+        break;
+      case TicketStatus.closed:
+        icon = Icons.lock_outline_rounded;
+        color = AppColors.textSecondaryDark;
+        break;
+      case TicketStatus.reopened:
+        icon = Icons.refresh_rounded;
+        color = AppColors.danger;
+        break;
+      default:
+        icon = Icons.edit_note_rounded;
+        color = AppColors.primary;
+    }
+
+    if (isOffline) {
+      return OutlinedButton.icon(
+        onPressed: () => _showToast('Koneksi internet diperlukan', isError: true),
+        icon: Icon(icon, size: 18),
+        label: Text(nextStatus.label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        style: OutlinedButton.styleFrom(
+          foregroundColor: Colors.grey,
+          side: const BorderSide(color: Colors.grey),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      );
+    }
+
+    if (isPositive) {
+      return ElevatedButton.icon(
+        onPressed: () => context.read<TicketDetailBloc>().add(
+              detail_event.UpdateTicketStatusRequested(
+                  ticketId: ticket.id, status: nextStatus),
+            ),
+        icon: Icon(icon, size: 18),
+        label: Text(nextStatus.label,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 0,
+        ),
+      );
+    }
+
+    return OutlinedButton.icon(
+      onPressed: () => context.read<TicketDetailBloc>().add(
+            detail_event.UpdateTicketStatusRequested(
+                ticketId: ticket.id, status: nextStatus),
+          ),
+      icon: Icon(icon, size: 18),
+      label: Text(nextStatus.label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(color: color.withValues(alpha: 0.5)),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
   Widget _buildStepTracker(TicketEntity ticket, bool isDark) {
     const steps = ['Terbuka', 'Diproses', 'Selesai'];
     int activeIndex = 0;
-    if (ticket.status == TicketStatus.inProgress) activeIndex = 1;
-    if (ticket.status == TicketStatus.resolved || ticket.status == TicketStatus.closed) activeIndex = 2;
+    
+    // Logic mapping for basic 3-step visualization
+    if (ticket.status == TicketStatus.inProgress || ticket.status == TicketStatus.pending) {
+      activeIndex = 1;
+    } else if (ticket.status == TicketStatus.resolved || ticket.status == TicketStatus.closed) {
+      activeIndex = 2;
+    } else if (ticket.status == TicketStatus.reopened) {
+      activeIndex = 1; // Back to processing
+    }
 
     return Row(
       children: List.generate(steps.length, (index) {
         final isActive = index <= activeIndex;
         final isLast = index == steps.length - 1;
+        
+        // Custom color for current step if it's pending or reopened
+        Color stepColor = AppColors.primary;
+        if (index == activeIndex) {
+          if (ticket.status == TicketStatus.pending) stepColor = AppColors.warning;
+          if (ticket.status == TicketStatus.reopened) stepColor = AppColors.danger;
+        }
+
         return Expanded(
           child: Row(
             children: [
@@ -553,7 +753,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 width: 24,
                 height: 24,
                 decoration: BoxDecoration(
-                  color: isActive ? AppColors.primary : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                  color: isActive ? stepColor : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
@@ -564,10 +764,18 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
               const SizedBox(width: 6),
               Expanded(
-                child: Text(steps[index], style: TextStyle(fontSize: 11, fontWeight: isActive ? FontWeight.bold : FontWeight.normal, color: isActive ? AppColors.primary : (isDark ? Colors.white38 : Colors.black38))),
+                child: Text(
+                  index == activeIndex ? ticket.status.label : steps[index], 
+                  style: TextStyle(
+                    fontSize: 11, 
+                    fontWeight: isActive ? FontWeight.bold : FontWeight.normal, 
+                    color: isActive ? stepColor : (isDark ? Colors.white38 : Colors.black38),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ),
               if (!isLast)
-                Container(width: 16, height: 1, color: isActive ? AppColors.primary.withValues(alpha: 0.5) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
+                Container(width: 16, height: 1, color: isActive ? stepColor.withValues(alpha: 0.5) : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05))),
             ],
           ),
         );
@@ -653,13 +861,15 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => RatingDialog.show(context, onSubmitted: (rating, feedback) {
+                    onPressed: state.isOffline 
+                        ? () => _showToast('Koneksi internet diperlukan', isError: true)
+                        : () => RatingDialog.show(context, onSubmitted: (rating, feedback) {
                       context.read<TicketDetailBloc>().add(detail_event.SubmitRatingRequested(ticketId: widget.ticketId, rating: rating, feedback: feedback));
                     }),
                     icon: const Icon(Icons.star_rounded),
                     label: const Text('Beri Penilaian Layanan', style: TextStyle(fontWeight: FontWeight.bold)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.amber,
+                      backgroundColor: state.isOffline ? Colors.grey : Colors.amber,
                       foregroundColor: Colors.black87,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -892,9 +1102,13 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
               const SizedBox(width: 10),
               _SendButton(
-                enabled: _charCount > 0,
+                enabled: _charCount > 0 && !state.isOffline,
                 onPressed: () {
                   if (_commentController.text.trim().isEmpty) return;
+                  if (state.isOffline) {
+                    _showToast('Tidak dapat mengirim pesan saat offline', isError: true);
+                    return;
+                  }
                   context.read<TicketDetailBloc>().add(
                         detail_event.AddCommentRequested(ticketId: widget.ticketId, message: _commentController.text),
                       );
@@ -1031,6 +1245,39 @@ class _SendButtonState extends State<_SendButton> with SingleTickerProviderState
 class _PulsingDot extends StatefulWidget {
   @override
   State<_PulsingDot> createState() => _PulsingDotState();
+}
+
+class _OfflineBadge extends StatelessWidget {
+  final bool isDark;
+  const _OfflineBadge({required this.isDark});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.warning.withValues(alpha: 0.5)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.cloud_off_rounded, size: 14, color: AppColors.warning),
+          const SizedBox(width: 6),
+          Text(
+            'Offline',
+            style: TextStyle(
+              color: isDark ? AppColors.warning : AppColors.warning.withValues(alpha: 0.8),
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _PulsingDotState extends State<_PulsingDot> with SingleTickerProviderStateMixin {

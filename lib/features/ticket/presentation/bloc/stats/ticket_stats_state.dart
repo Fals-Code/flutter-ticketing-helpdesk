@@ -11,6 +11,7 @@ class TicketStatsState extends Equatable {
   final bool isLoading;
   final DateTime? startDate;
   final DateTime? endDate;
+  final String? assignedToId;
 
   const TicketStatsState({
     this.stats = const TicketStats(),
@@ -20,6 +21,7 @@ class TicketStatsState extends Equatable {
     this.isLoading = false,
     this.startDate,
     this.endDate,
+    this.assignedToId,
   });
 
   TicketStatsState copyWith({
@@ -30,6 +32,7 @@ class TicketStatsState extends Equatable {
     bool? isLoading,
     DateTime? startDate,
     DateTime? endDate,
+    String? assignedToId,
   }) {
     return TicketStatsState(
       stats: stats ?? this.stats,
@@ -39,9 +42,10 @@ class TicketStatsState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       startDate: startDate ?? this.startDate,
       endDate: endDate ?? this.endDate,
+      assignedToId: assignedToId ?? this.assignedToId,
     );
   }
 
   @override
-  List<Object?> get props => [stats, staffUsers, history, errorMessage, isLoading, startDate, endDate];
+  List<Object?> get props => [stats, staffUsers, history, errorMessage, isLoading, startDate, endDate, assignedToId];
 }

@@ -57,9 +57,11 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       final Map<String, int> stats = {
         'total': 0,
         'open': 0,
+        'pending': 0,
         'in_progress': 0,
         'resolved': 0,
         'closed': 0,
+        'reopened': 0,
       };
 
       for (var row in response) {

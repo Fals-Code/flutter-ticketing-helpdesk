@@ -71,26 +71,71 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
 
   double get _progress {
     int score = 0;
-    if (_subjectController.text.trim().isNotEmpty) score += 25;
+    final subject = _subjectController.text.trim();
+    final description = _descController.text.trim();
+
+    if (subject.length >= 5) score += 25;
     if (_selectedCategory.isNotEmpty) score += 25;
-    if (_descController.text.trim().isNotEmpty) score += 50;
+    if (description.length >= 20) {
+      score += 50;
+    } else if (description.isNotEmpty) {
+      score += 10; // Partial progress
+    }
     return score / 100.0;
   }
 
-  bool get _isFormValid => _progress == 1.0;
+  bool get _isFormValid {
+    final title = _subjectController.text.trim();
+    final desc = _descController.text.trim();
+    return title.isNotEmpty && 
+           _selectedCategory.isNotEmpty && 
+           desc.length >= 20;
+  }
 
   void _updateProgress() => setState(() {});
 
   Future<void> _pickImage(ImageSource source) async {
     if (_imagePaths.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Maksimal 5 foto lampiran.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maksimal 5 foto lampiran.'))
+      );
       return;
     }
     try {
-      final XFile? image = await _picker.pickImage(source: source, imageQuality: 70, maxWidth: 1080);
-      if (image != null) setState(() => _imagePaths.add(image.path));
+      final XFile? image = await _picker.pickImage(
+        source: source, 
+        imageQuality: 80, 
+        maxWidth: 1920
+      );
+      
+      if (image != null) {
+        final file = File(image.path);
+        final sizeInBytes = await file.length();
+        final sizeInMb = sizeInBytes / (1024 * 1024);
+
+        if (sizeInMb > 5) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Ukuran file terlalu besar. Maksimal 5MB.'),
+                backgroundColor: AppColors.danger,
+              ),
+            );
+          }
+          return;
+        }
+
+        setState(() => _imagePaths.add(image.path));
+      }
     } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal mengambil gambar: $e'),
+            backgroundColor: AppColors.danger,
+          ),
+        );
+      }
     }
   }
 
@@ -127,21 +172,36 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   }
 
   void _submit() {
-    if (_selectedCategory.isEmpty) {
-      setState(() => _showCategoryError = true);
-    }
+    setState(() {
+      _showCategoryError = _selectedCategory.isEmpty;
+    });
 
-    if (!_isFormValid) {
-      if (_formKey.currentState?.validate() ?? false) {
-        // Just category missing
-      }
+    final isFormValid = _formKey.currentState?.validate() ?? false;
+    
+    if (!isFormValid || _selectedCategory.isEmpty) {
+      // Show snackbar for better UX if hidden errors exist
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Harap lengkapi semua field yang wajib diisi'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
       return;
     }
+
+    final isLoading = context.read<TicketListBloc>().state.isLoading;
+    if (isLoading) return;
+
     FocusScope.of(context).unfocus();
     
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sesi telah berakhir.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sesi telah berakhir. Silakan login kembali.'),
+          backgroundColor: AppColors.danger,
+        ),
+      );
       return;
     }
 
@@ -159,6 +219,9 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<TicketListBloc, list_state.TicketListState>(
+      listenWhen: (previous, current) => 
+        previous.successMessage != current.successMessage || 
+        previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.successMessage != null && !_isSuccess) {
           setState(() {
@@ -167,9 +230,19 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
           _successAnimController.forward();
           context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
         }
-        if (state.errorMessage != null) {
+        if (state.errorMessage != null && !_isSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.errorMessage!), backgroundColor: AppColors.danger),
+            SnackBar(
+              content: Row(
+                children: [
+                  const Icon(Icons.error_outline, color: Colors.white),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(state.errorMessage!)),
+                ],
+              ),
+              backgroundColor: AppColors.danger,
+              behavior: SnackBarBehavior.floating,
+            ),
           );
         }
       },
@@ -220,13 +293,17 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       const SizedBox(height: 16),
                       AppTextField(
                         label: 'Judul Laporan',
-                        hint: 'Sebutkan inti masalah Anda',
+                        hint: 'Sebutkan inti masalah Anda (min. 5 karakter)',
                         controller: _subjectController,
                         focusNode: _subjectFocus,
                         textInputAction: TextInputAction.next,
                         onSubmitted: (_) => FocusScope.of(context).requestFocus(_descFocus),
                         maxLength: 100,
-                        validator: (v) => v == null || v.trim().isEmpty ? 'Harap isi judul laporan' : null,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Harap isi judul laporan';
+                          if (v.trim().length < 5) return 'Judul terlalu pendek (min. 5 karakter)';
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -296,7 +373,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       const SizedBox(height: 16),
                       AppTextField(
                         label: 'Deskripsi',
-                        hint: 'Jelaskan masalah secara rinci...\n\n\n\n',
+                        hint: 'Jelaskan masalah secara rinci (minimal 20 karakter)...',
                         controller: _descController,
                         focusNode: _descFocus,
                         maxLines: 8,
@@ -304,6 +381,11 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         textInputAction: TextInputAction.done,
                         keyboardType: TextInputType.multiline,
                         maxLength: 500,
+                        validator: (v) {
+                          if (v == null || v.trim().isEmpty) return 'Harap isi deskripsi masalah';
+                          if (v.trim().length < 20) return 'Deskripsi terlalu pendek (min. 20 karakter)';
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 32),
                       Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
@@ -346,12 +428,12 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54, fontWeight: FontWeight.w500),
                       ),
                     ),
-                  SizedBox(
+                    SizedBox(
                     width: double.infinity,
                     child: AppButton.primary(
-                      label: 'Kirim Laporan',
+                      label: isLoading ? 'Mengirim...' : 'Kirim Laporan',
                       isLoading: isLoading,
-                      onPressed: _isFormValid ? _submit : null,
+                      onPressed: (_isFormValid && !isLoading) ? _submit : null,
                     ),
                   ),
                 ],

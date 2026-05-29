@@ -25,6 +25,16 @@ class UpdateUserRoleUseCase implements UseCase<Either<Failure, void>, UpdateRole
   }
 }
 
+class UpdateUserDetailsUseCase implements UseCase<Either<Failure, void>, UpdateDetailsParams> {
+  final AdminRepository repository;
+  UpdateUserDetailsUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, void>> call(UpdateDetailsParams params) async {
+    return await repository.updateUserDetails(params.userId, params.fullName, params.email);
+  }
+}
+
 class GetAdminReportsUseCase implements UseCase<Either<Failure, AdminReport>, GetReportParams> {
   final AdminRepository repository;
   GetAdminReportsUseCase(this.repository);
@@ -49,4 +59,11 @@ class UpdateRoleParams {
   final String userId;
   final int newRole;
   UpdateRoleParams({required this.userId, required this.newRole});
+}
+
+class UpdateDetailsParams {
+  final String userId;
+  final String fullName;
+  final String email;
+  UpdateDetailsParams({required this.userId, required this.fullName, required this.email});
 }

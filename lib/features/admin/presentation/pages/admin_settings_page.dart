@@ -10,7 +10,6 @@ import '../../presentation/bloc/settings/app_settings_state.dart';
 import '../../domain/entities/app_settings_entity.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
-import 'package:get_it/get_it.dart';
 
 class AdminSettingsPage extends StatefulWidget {
   const AdminSettingsPage({super.key});
@@ -28,10 +27,8 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => GetIt.I<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
-      child: BlocConsumer<AppSettingsBloc, AppSettingsState>(
-        listener: (context, state) {
+    return BlocConsumer<AppSettingsBloc, AppSettingsState>(
+      listener: (context, state) {
           if (state.errorMessage != null) {
             ToastService().show(context, message: state.errorMessage!, type: ToastType.error);
           }
@@ -164,8 +161,7 @@ class _AdminSettingsPageState extends State<AdminSettingsPage> {
             ),
           );
         },
-      ),
-    );
+      );
   }
 
   Widget _buildHeroSection(bool isDark) {

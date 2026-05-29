@@ -11,6 +11,7 @@ class TicketDetailState extends Equatable {
   final String? errorMessage;
   final String? successMessage;
   final bool isRatingSubmitting;
+  final bool isOffline;
 
   const TicketDetailState({
     this.isLoading = false,
@@ -20,6 +21,7 @@ class TicketDetailState extends Equatable {
     this.errorMessage,
     this.successMessage,
     this.isRatingSubmitting = false,
+    this.isOffline = false,
   });
 
   TicketDetailState copyWith({
@@ -30,6 +32,7 @@ class TicketDetailState extends Equatable {
     String? errorMessage,
     String? successMessage,
     bool? isRatingSubmitting,
+    bool? isOffline,
   }) {
     return TicketDetailState(
       isLoading: isLoading ?? this.isLoading,
@@ -39,6 +42,7 @@ class TicketDetailState extends Equatable {
       errorMessage: errorMessage,
       successMessage: successMessage,
       isRatingSubmitting: isRatingSubmitting ?? this.isRatingSubmitting,
+      isOffline: isOffline ?? this.isOffline,
     );
   }
 
@@ -51,5 +55,6 @@ class TicketDetailState extends Equatable {
         errorMessage,
         successMessage,
         isRatingSubmitting,
+        isOffline,
       ];
 }

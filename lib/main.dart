@@ -83,11 +83,16 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // 1. VALIDASI KEAMANAN & ENVIRONMENT
-  // Jika URL kosong, berarti konfigurasi IDE (Android Studio/VS Code) belum benar.
-  if (EnvConstants.supabaseUrl.isEmpty) {
-    runApp(const MaterialApp(
+  final bool isUrlMissing = EnvConstants.supabaseUrl.isEmpty;
+  final bool isKeyMissing = EnvConstants.supabaseAnonKey.isEmpty;
+
+  if (isUrlMissing || isKeyMissing) {
+    runApp(MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: _ConfigErrorPage(),
+      home: _ConfigErrorPage(
+        isUrlMissing: isUrlMissing,
+        isKeyMissing: isKeyMissing,
+      ),
     ));
     return;
   }
@@ -137,7 +142,13 @@ Future<void> main() async {
 
 /// Halaman Diagnostik jika konfigurasi --dart-define belum disetting.
 class _ConfigErrorPage extends StatelessWidget {
-  const _ConfigErrorPage();
+  final bool isUrlMissing;
+  final bool isKeyMissing;
+
+  const _ConfigErrorPage({
+    this.isUrlMissing = false,
+    this.isKeyMissing = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -157,9 +168,9 @@ class _ConfigErrorPage extends StatelessWidget {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 12),
-              const Text(
-                "Aplikasi berjalan dalam mode aman (Security Mode). Supabase URL tidak terdeteksi di dalam binary.",
-                style: TextStyle(fontSize: 16, color: Colors.black54),
+              Text(
+                "Aplikasi berjalan dalam mode aman (Security Mode). ${isUrlMissing ? 'Supabase URL' : ''}${isUrlMissing && isKeyMissing ? ' dan ' : ''}${isKeyMissing ? 'Supabase Anon Key' : ''} tidak terdeteksi di dalam binary.",
+                style: const TextStyle(fontSize: 16, color: Colors.black54),
               ),
               const SizedBox(height: 32),
               _buildStep(

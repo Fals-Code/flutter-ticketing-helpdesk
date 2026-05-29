@@ -6,23 +6,43 @@ import 'package:uts/core/usecases/usecase.dart';
 import 'ticket_stats_event.dart';
 import 'ticket_stats_state.dart';
 
+import 'package:uts/core/services/connectivity_service.dart';
+
 class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
   final GetTicketStatsUseCase getTicketStatsUseCase;
   final GetStaffUsersUseCase getStaffUsersUseCase;
   final GetAllTicketHistoryUseCase getAllTicketHistoryUseCase;
+  final ConnectivityService connectivityService;
+  StreamSubscription? _connectivitySubscription;
 
   TicketStatsBloc({
     required this.getTicketStatsUseCase,
     required this.getStaffUsersUseCase,
     required this.getAllTicketHistoryUseCase,
+    required this.connectivityService,
   }) : super(const TicketStatsState()) {
     on<FetchTicketStatsRequested>(_onFetchStats);
     on<FetchStaffUsersRequested>(_onFetchStaffUsers);
     on<FetchAllHistoryRequested>(_onFetchAllHistory);
     on<ResetTicketStatsState>(_onResetState);
+
+    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
+      if (status == ConnectionStatus.online) {
+        add(FetchTicketStatsRequested(assignedToId: state.assignedToId));
+        add(const FetchStaffUsersRequested());
+        if (state.history.isNotEmpty) {
+           add(FetchAllHistoryRequested(
+            changedBy: null, 
+            startDate: state.startDate,
+            endDate: state.endDate,
+          ));
+        }
+      }
+    });
   }
 
   Future<void> _onFetchStats(FetchTicketStatsRequested event, Emitter<TicketStatsState> emit) async {
+    emit(state.copyWith(assignedToId: event.assignedToId));
     final result = await getTicketStatsUseCase(event.assignedToId);
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
@@ -53,5 +73,11 @@ class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
 
   void _onResetState(ResetTicketStatsState event, Emitter<TicketStatsState> emit) {
     emit(const TicketStatsState());
+  }
+
+  @override
+  Future<void> close() {
+    _connectivitySubscription?.cancel();
+    return super.close();
   }
 }

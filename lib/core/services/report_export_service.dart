@@ -7,12 +7,15 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
 
+import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
+
 class ReportExportService {
   /// Exports the admin report as a PDF file and opens the share dialog.
   Future<void> exportToPdf(
     AdminReport report, {
     DateTime? startDate,
     DateTime? endDate,
+    TicketStats? stats,
   }) async {
     final pdf = pw.Document();
     final dateFormatter = DateFormat('dd MMM yyyy');
@@ -39,6 +42,40 @@ class ReportExportService {
           ],
         ),
         build: (_) => [
+          if (stats != null) ...[
+            pw.Text('Ringkasan Status Tiket',
+                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.indigo50),
+                  children: [
+                    _cell('Total', isHeader: true),
+                    _cell('Terbuka', isHeader: true),
+                    _cell('Diproses', isHeader: true),
+                    _cell('Selesai', isHeader: true),
+                    _cell('Tertunda', isHeader: true),
+                    _cell('Kembali', isHeader: true),
+                    _cell('Ditutup', isHeader: true),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    _cell('${stats.total}'),
+                    _cell('${stats.open}'),
+                    _cell('${stats.inProgress}'),
+                    _cell('${stats.resolved}'),
+                    _cell('${stats.pending}'),
+                    _cell('${stats.reopened}'),
+                    _cell('${stats.closed}'),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 24),
+          ],
           // ── Team Performance ──────────────────────────────────────────
           pw.Text('Performa Tim (Tiket Selesai)',
               style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
@@ -139,8 +176,25 @@ class ReportExportService {
     AdminReport report, {
     DateTime? startDate,
     DateTime? endDate,
+    TicketStats? stats,
   }) async {
     final rows = <List<dynamic>>[];
+
+    // ── Summary section ─────────────────────────────────────────────
+    if (stats != null) {
+      rows.add(['=== RINGKASAN TIKET ===']);
+      rows.add(['Total Tiket', 'Terbuka', 'Diproses', 'Selesai', 'Tertunda', 'Kembali', 'Ditutup']);
+      rows.add([
+        stats.total,
+        stats.open,
+        stats.inProgress,
+        stats.resolved,
+        stats.pending,
+        stats.reopened,
+        stats.closed
+      ]);
+      rows.add([]); // blank separator
+    }
 
     // ── Team Performance section ──────────────────────────────────────
     rows.add(['=== PERFORMA TIM ===']);

@@ -10,20 +10,25 @@ import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 class TicketStats extends Equatable {
   final int total;
   final int open;
+  final int pending;
   final int inProgress;
   final int resolved;
   final int closed;
+  final int reopened;
 
   const TicketStats({
     this.total = 0,
     this.open = 0,
+    this.pending = 0,
     this.inProgress = 0,
     this.resolved = 0,
     this.closed = 0,
+    this.reopened = 0,
   });
 
   @override
-  List<Object?> get props => [total, open, inProgress, resolved, closed];
+  List<Object?> get props =>
+      [total, open, pending, inProgress, resolved, closed, reopened];
 }
 
 abstract class TicketRepository {

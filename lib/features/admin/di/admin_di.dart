@@ -12,6 +12,7 @@ Future<void> initAdmin(GetIt sl) async {
   sl.registerFactory(() => AdminBloc(
         getUsersUseCase: sl(),
         updateUserRoleUseCase: sl(),
+        updateUserDetailsUseCase: sl(),
         getAdminReportsUseCase: sl(),
       ));
   sl.registerFactory(() => AppSettingsBloc(
@@ -22,6 +23,7 @@ Future<void> initAdmin(GetIt sl) async {
   // Use cases
   sl.registerLazySingleton(() => GetUsersUseCase(sl()));
   sl.registerLazySingleton(() => UpdateUserRoleUseCase(sl()));
+  sl.registerLazySingleton(() => UpdateUserDetailsUseCase(sl()));
   sl.registerLazySingleton(() => GetAdminReportsUseCase(sl()));
   sl.registerLazySingleton(() => GetAppSettingsUseCase(sl()));
   sl.registerLazySingleton(() => UpdateAppSettingsUseCase(sl()));

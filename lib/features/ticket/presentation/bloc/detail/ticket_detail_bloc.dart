@@ -6,6 +6,9 @@ import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecas
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'ticket_detail_event.dart';
 import 'ticket_detail_state.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:uts/features/ticket/data/models/ticket_model.dart';
+import 'package:uts/core/services/connectivity_service.dart';
 
 class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final GetTicketDetailUseCase getTicketDetailUseCase;
@@ -16,7 +19,10 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
   final WatchTicketCommentsUseCase watchTicketCommentsUseCase;
   final SubmitRatingUseCase submitRatingUseCase;
+  final TicketLocalDataSource localDataSource;
+  final ConnectivityService connectivityService;
   StreamSubscription? _commentSubscription;
+  StreamSubscription? _connectivitySubscription;
 
   TicketDetailBloc({
     required this.getTicketDetailUseCase,
@@ -27,6 +33,8 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     required this.getTicketHistoryUseCase,
     required this.watchTicketCommentsUseCase,
     required this.submitRatingUseCase,
+    required this.localDataSource,
+    required this.connectivityService,
   }) : super(const TicketDetailState()) {
     on<FetchTicketDetailRequested>(_onFetchDetail);
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
@@ -37,14 +45,39 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<StartTicketCommentsSubscription>(_onStartCommentSubscription);
     on<CommentStreamUpdated>(_onCommentStreamUpdated);
     on<ResetTicketDetailState>(_onResetState);
+
+    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
+      if (status == ConnectionStatus.online && state.ticket != null) {
+        add(FetchTicketDetailRequested(state.ticket!.id));
+      }
+    });
   }
 
   Future<void> _onFetchDetail(FetchTicketDetailRequested event, Emitter<TicketDetailState> emit) async {
-    emit(state.copyWith(isLoading: true, comments: []));
+    emit(state.copyWith(isLoading: true, comments: [], errorMessage: null));
+    
     final result = await getTicketDetailUseCase(event.ticketId);
-    result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(isLoading: false, ticket: ticket)),
+    
+    await result.fold(
+      (failure) async {
+        // Try to get from cache if remote fails
+        final cachedTicket = await localDataSource.getCachedTicketDetail(event.ticketId);
+        if (cachedTicket != null) {
+          emit(state.copyWith(
+            isLoading: false, 
+            ticket: cachedTicket.toEntity(),
+            isOffline: true,
+            successMessage: 'Menampilkan data dari cache (Offline)',
+          ));
+        } else {
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message));
+        }
+      },
+      (ticket) async {
+        // Cache the detail for offline use
+        await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
+        emit(state.copyWith(isLoading: false, ticket: ticket, isOffline: false));
+      },
     );
   }
 
@@ -118,6 +151,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   @override
   Future<void> close() {
     _commentSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     return super.close();
   }
 }

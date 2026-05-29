@@ -24,6 +24,21 @@ class UpdateUserRoleRequested extends AdminEvent {
   List<Object?> get props => [userId, newRole];
 }
 
+class UpdateUserDetailsRequested extends AdminEvent {
+  final String userId;
+  final String fullName;
+  final String email;
+
+  const UpdateUserDetailsRequested({
+    required this.userId,
+    required this.fullName,
+    required this.email,
+  });
+
+  @override
+  List<Object?> get props => [userId, fullName, email];
+}
+
 class FetchAdminReportsRequested extends AdminEvent {
   final DateTime? startDate;
   final DateTime? endDate;

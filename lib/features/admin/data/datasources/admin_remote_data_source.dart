@@ -6,6 +6,7 @@ import '../models/app_settings_model.dart';
 abstract class AdminRemoteDataSource {
   Future<List<UserModel>> getUsers();
   Future<void> updateUserRole(String userId, int newRole);
+  Future<void> updateUserDetails(String userId, String fullName, String email);
   Future<AdminReportModel> getAdminReports({DateTime? startDate, DateTime? endDate});
   Future<AppSettingsModel> getAppSettings();
   Future<void> updateAppSettings(AppSettingsModel settings);
@@ -39,6 +40,23 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           .eq('id', userId);
     } catch (e) {
       throw Exception('Gagal memperbarui peran pengguna: $e');
+    }
+  }
+
+  @override
+  Future<void> updateUserDetails(String userId, String fullName, String email) async {
+    try {
+      // Note: Updating email in Auth usually requires different methods if using Supabase Auth,
+      // but for 'profiles' table we just update the metadata.
+      await supabaseClient
+          .from('profiles')
+          .update({
+            'full_name': fullName,
+            'email': email,
+          })
+          .eq('id', userId);
+    } catch (e) {
+      throw Exception('Gagal memperbarui profil pengguna: $e');
     }
   }
 

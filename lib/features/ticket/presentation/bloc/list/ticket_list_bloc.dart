@@ -8,6 +8,7 @@ import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
+import 'package:uts/core/services/connectivity_service.dart';
 
 class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final GetTicketsUseCase getTicketsUseCase;
@@ -15,7 +16,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final WatchTicketsUseCase watchTicketsUseCase;
   final CreateTicketUseCase createTicketUseCase;
   final TicketLocalDataSource localDataSource;
+  final ConnectivityService connectivityService;
   StreamSubscription? _ticketSubscription;
+  StreamSubscription? _connectivitySubscription;
 
   TicketListBloc({
     required this.getTicketsUseCase,
@@ -23,14 +26,42 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     required this.watchTicketsUseCase,
     required this.createTicketUseCase,
     required this.localDataSource,
+    required this.connectivityService,
   }) : super(const TicketListState()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
     on<SearchTicketsRequested>(_onSearchQueryChanged);
     on<FilterStatusChanged>(_onFilterStatusChanged);
+    on<FilterCategoryChanged>(_onFilterCategoryChanged);
+    on<FilterDateRangeChanged>(_onFilterDateRangeChanged);
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
     on<ResetTicketListState>(_onResetState);
+
+    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
+      if (status == ConnectionStatus.online) {
+        add(const FetchTicketsRequested(page: 0));
+        add(const FetchAllTicketsRequested(page: 0));
+      }
+    });
+  }
+
+  Future<void> _onSearchQueryChanged(
+    SearchTicketsRequested event,
+    Emitter<TicketListState> emit,
+  ) async {
+    emit(state.copyWith(searchQuery: event.query));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
+  }
+
+  Future<void> _onFilterStatusChanged(
+    FilterStatusChanged event,
+    Emitter<TicketListState> emit,
+  ) async {
+    emit(state.copyWith(statusFilter: event.filter));
+    add(const FetchTicketsRequested(page: 0));
+    add(const FetchAllTicketsRequested(page: 0));
   }
 
   Future<void> _onCreateTicket(
@@ -44,7 +75,18 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     }
 
     if (event.title.trim().length < 5) {
-      emit(state.copyWith(errorMessage: 'Judul terlalu pendek'));
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Judul terlalu pendek (min. 5 karakter)',
+      ));
+      return;
+    }
+
+    if (event.description.trim().length < 20) {
+      emit(state.copyWith(
+        isLoading: false,
+        errorMessage: 'Deskripsi terlalu pendek (min. 20 karakter)',
+      ));
       return;
     }
 
@@ -60,13 +102,14 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       imageUrls: event.imagePaths,
     );
 
-    // 2. Insert into current list (optimistic update)
+    // 2. Set loading state and optimistic update
     final originalTickets = [...state.tickets];
     final updatedTickets = [optimisticTicket, ...originalTickets];
 
     emit(state.copyWith(
+      isLoading: true,
       tickets: updatedTickets,
-      successMessage: null, // Clear messages
+      successMessage: null,
       errorMessage: null,
     ));
 
@@ -82,6 +125,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       (failure) {
         // 3. Rollback on failure
         emit(state.copyWith(
+          isLoading: false,
           tickets: originalTickets,
           errorMessage: failure.message,
         ));
@@ -89,6 +133,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       (ticket) {
         // 4. Success
         emit(state.copyWith(
+          isLoading: false,
           successMessage: 'Laporan berhasil dibuat',
           errorMessage: null,
         ));
@@ -138,6 +183,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         page: event.page,
         limit: event.limit,
         searchQuery: state.searchQuery,
+        category: state.categoryFilter,
+        startDate: state.startDate,
+        endDate: state.endDate,
         status: state.statusFilter == TicketStatusFilter.all
             ? null
             : _mapStatusFilter(state.statusFilter),
@@ -208,6 +256,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
             ? null
             : _mapStatusFilter(state.statusFilter),
         searchQuery: state.searchQuery,
+        category: state.categoryFilter,
+        startDate: state.startDate,
+        endDate: state.endDate,
         assignedToId: assignedToId,
       ),
     );
@@ -228,20 +279,20 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     );
   }
 
-  Future<void> _onSearchQueryChanged(
-    SearchTicketsRequested event,
+  Future<void> _onFilterCategoryChanged(
+    FilterCategoryChanged event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(searchQuery: event.query));
+    emit(state.copyWith(categoryFilter: event.category));
     add(const FetchTicketsRequested(page: 0));
     add(const FetchAllTicketsRequested(page: 0));
   }
 
-  Future<void> _onFilterStatusChanged(
-    FilterStatusChanged event,
+  Future<void> _onFilterDateRangeChanged(
+    FilterDateRangeChanged event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(statusFilter: event.filter));
+    emit(state.copyWith(startDate: event.startDate, endDate: event.endDate));
     add(const FetchTicketsRequested(page: 0));
     add(const FetchAllTicketsRequested(page: 0));
   }
@@ -255,6 +306,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   @override
   Future<void> close() {
     _ticketSubscription?.cancel();
+    _connectivitySubscription?.cancel();
     return super.close();
   }
 
@@ -290,12 +342,16 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     switch (filter) {
       case TicketStatusFilter.open:
         return 'open';
+      case TicketStatusFilter.pending:
+        return 'pending';
       case TicketStatusFilter.inProgress:
         return 'in_progress';
       case TicketStatusFilter.resolved:
         return 'resolved';
       case TicketStatusFilter.closed:
         return 'closed';
+      case TicketStatusFilter.reopened:
+        return 'reopened';
       case TicketStatusFilter.all:
         return 'all';
     }

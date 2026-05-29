@@ -50,12 +50,13 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     setState(() => _isExporting = true);
     HapticHelper.medium();
     try {
+      final stats = context.read<TicketStatsBloc>().state.stats;
       if (asPdf) {
         await _exportService.exportToPdf(report,
-            startDate: _startDate, endDate: _endDate);
+            startDate: _startDate, endDate: _endDate, stats: stats);
       } else {
         await _exportService.exportToCsv(report,
-            startDate: _startDate, endDate: _endDate);
+            startDate: _startDate, endDate: _endDate, stats: stats);
       }
     } catch (e) {
       if (mounted) {
@@ -299,6 +300,8 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         _buildStatCard('Terbuka', state.stats.open, Icons.folder_open_rounded, Colors.orange, isDark),
         _buildStatCard('Diproses', state.stats.inProgress, Icons.loop_rounded, Colors.blue, isDark),
         _buildStatCard('Selesai', state.stats.resolved, Icons.check_circle_rounded, Colors.green, isDark),
+        _buildStatCard('Tertunda', state.stats.pending, Icons.pause_circle_rounded, Colors.amber, isDark),
+        _buildStatCard('Kembali', state.stats.reopened, Icons.refresh_rounded, Colors.red, isDark),
       ],
     );
   }

@@ -20,6 +20,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
         watchTicketsUseCase: sl(),
         createTicketUseCase: sl(),
         localDataSource: sl(),
+        connectivityService: sl(),
       ));
 
   sl.registerFactory(() => TicketDetailBloc(
@@ -31,12 +32,15 @@ Future<void> initTicketDependencies(GetIt sl) async {
         getTicketHistoryUseCase: sl(),
         watchTicketCommentsUseCase: sl(),
         submitRatingUseCase: sl(),
+        localDataSource: sl(),
+        connectivityService: sl(),
       ));
 
   sl.registerFactory(() => TicketStatsBloc(
         getTicketStatsUseCase: sl(),
         getStaffUsersUseCase: sl(),
         getAllTicketHistoryUseCase: sl(),
+        connectivityService: sl(),
       ));
 
   // UseCases

@@ -34,6 +34,16 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
+  Future<Either<Failure, void>> updateUserDetails(String userId, String fullName, String email) async {
+    try {
+      await remoteDataSource.updateUserDetails(userId, fullName, email);
+      return const Right(null);
+    } catch (e) {
+      return Left(ServerFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, AdminReport>> getAdminReports({DateTime? startDate, DateTime? endDate}) async {
     try {
       final report = await remoteDataSource.getAdminReports(

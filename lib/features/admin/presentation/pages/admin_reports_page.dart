@@ -12,6 +12,7 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.d
     as stats_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart'
     as stats_state;
+import 'package:uts/core/constants/enums.dart';
 import 'package:uts/shared/widgets/loading_widget.dart';
 import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
@@ -26,12 +27,26 @@ class AdminReportsPage extends StatefulWidget {
 class _AdminReportsPageState extends State<AdminReportsPage> {
   DateTime? _startDate;
   DateTime? _endDate;
+  String? _selectedCategory;
+  String? _selectedStatus;
+  String? _selectedTechnicianId;
   bool _isExporting = false;
   final _exportService = ReportExportService();
+
+  static const List<Map<String, String>> _ticketCategories = [
+    {'value': 'hardware', 'label': 'Hardware'},
+    {'value': 'software', 'label': 'Software'},
+    {'value': 'network', 'label': 'Jaringan'},
+    {'value': 'account', 'label': 'Akun & Akses'},
+    {'value': 'other', 'label': 'Lainnya'},
+  ];
 
   @override
   void initState() {
     super.initState();
+    context
+        .read<TicketStatsBloc>()
+        .add(const stats_event.FetchStaffUsersRequested());
     _refreshData();
   }
 
@@ -39,6 +54,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested(
           startDate: _startDate,
           endDate: _endDate,
+          category: _selectedCategory,
+          status: _selectedStatus,
+          assignedToId: _selectedTechnicianId,
         ));
     context.read<AdminBloc>().add(FetchAdminReportsRequested(
           startDate: _startDate,
@@ -61,7 +79,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Gagal export: $e'), backgroundColor: AppColors.danger),
+          SnackBar(
+              content: Text('Gagal export: $e'),
+              backgroundColor: AppColors.danger),
         );
       }
     } finally {
@@ -83,9 +103,16 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white10 : Colors.black12, borderRadius: BorderRadius.circular(2))),
+            Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: isDark ? Colors.white10 : Colors.black12,
+                    borderRadius: BorderRadius.circular(2))),
             const SizedBox(height: 24),
-            Text('Ekspor Laporan', style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800)),
+            Text('Ekspor Laporan',
+                style: GoogleFonts.plusJakartaSans(
+                    fontSize: 18, fontWeight: FontWeight.w800)),
             const SizedBox(height: 24),
             Row(
               children: [
@@ -95,7 +122,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     label: 'Format PDF',
                     color: Colors.red,
                     isDark: isDark,
-                    onTap: () { Navigator.pop(context); _exportReport(report, asPdf: true); },
+                    onTap: () {
+                      Navigator.pop(context);
+                      _exportReport(report, asPdf: true);
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -105,7 +135,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                     label: 'Format CSV',
                     color: Colors.green,
                     isDark: isDark,
-                    onTap: () { Navigator.pop(context); _exportReport(report, asPdf: false); },
+                    onTap: () {
+                      Navigator.pop(context);
+                      _exportReport(report, asPdf: false);
+                    },
                   ),
                 ),
               ],
@@ -116,7 +149,12 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
   }
 
-  Widget _buildExportCard({required IconData icon, required String label, required Color color, required bool isDark, required VoidCallback onTap}) {
+  Widget _buildExportCard(
+      {required IconData icon,
+      required String label,
+      required Color color,
+      required bool isDark,
+      required VoidCallback onTap}) {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
@@ -131,7 +169,9 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
           children: [
             Icon(icon, color: color, size: 32),
             const SizedBox(height: 12),
-            Text(label, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 13, color: color)),
+            Text(label,
+                style: GoogleFonts.inter(
+                    fontWeight: FontWeight.w700, fontSize: 13, color: color)),
           ],
         ),
       ),
@@ -144,13 +184,19 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       context: context,
       firstDate: DateTime(2020),
       lastDate: DateTime.now().add(const Duration(days: 1)),
-      initialDateRange: _startDate != null && _endDate != null ? DateTimeRange(start: _startDate!, end: _endDate!) : null,
+      initialDateRange: _startDate != null && _endDate != null
+          ? DateTimeRange(start: _startDate!, end: _endDate!)
+          : null,
       builder: (context, child) {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: isDark
-                ? const ColorScheme.dark(primary: AppColors.primary, onPrimary: Colors.white, surface: AppColors.surfaceDark)
-                : const ColorScheme.light(primary: AppColors.primary, onPrimary: Colors.white),
+                ? const ColorScheme.dark(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surfaceDark)
+                : const ColorScheme.light(
+                    primary: AppColors.primary, onPrimary: Colors.white),
           ),
           child: child!,
         );
@@ -162,14 +208,19 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       if (picked.end.difference(picked.start).inDays > 366) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Maksimal rentang waktu adalah 1 tahun.'), backgroundColor: AppColors.danger),
+            const SnackBar(
+                content: Text('Maksimal rentang waktu adalah 1 tahun.'),
+                backgroundColor: AppColors.danger),
           );
         }
         return;
       }
 
       HapticHelper.medium();
-      setState(() { _startDate = picked.start; _endDate = picked.end; });
+      setState(() {
+        _startDate = picked.start;
+        _endDate = picked.end;
+      });
       _refreshData();
     }
   }
@@ -187,13 +238,17 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor:
+          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: Text('Laporan & Analitik', style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18)),
+        title: Text('Laporan & Analitik',
+            style: GoogleFonts.plusJakartaSans(
+                fontWeight: FontWeight.w800, fontSize: 18)),
         actions: [
-          IconButton(icon: const Icon(Icons.refresh_rounded), onPressed: _refreshData),
+          IconButton(
+              icon: const Icon(Icons.refresh_rounded), onPressed: _refreshData),
           const SizedBox(width: 8),
         ],
       ),
@@ -201,7 +256,10 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         builder: (context, adminState) {
           return BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
             builder: (context, statsState) {
-              if (adminState.status == AdminStatus.loading && adminState.report == null) return const Center(child: LoadingWidget());
+              if (adminState.status == AdminStatus.loading &&
+                  adminState.report == null) {
+                return const Center(child: LoadingWidget());
+              }
 
               return RefreshIndicator(
                 onRefresh: () async => _refreshData(),
@@ -219,13 +277,18 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                       const SizedBox(height: 32),
                       _buildSectionTitle('PERFORMA TIM'),
                       const SizedBox(height: 16),
-                      if (adminState.report != null) _buildPerformanceList(adminState.report!.teamPerformance, isDark),
+                      if (adminState.report != null)
+                        _buildPerformanceList(
+                            adminState.report!.teamPerformance, isDark),
                       const SizedBox(height: 32),
                       _buildSectionTitle('DISTRIBUSI KATEGORI'),
                       const SizedBox(height: 16),
-                      if (adminState.report != null) _buildCategoryDistribution(adminState.report!.categoryDistribution, isDark),
+                      if (adminState.report != null)
+                        _buildCategoryDistribution(
+                            adminState.report!.categoryDistribution, isDark),
                       const SizedBox(height: 48),
-                      if (adminState.report != null) _buildDownloadButton(adminState.report!, isDark),
+                      if (adminState.report != null)
+                        _buildDownloadButton(adminState.report!, isDark),
                       const SizedBox(height: 40),
                     ],
                   ),
@@ -239,52 +302,218 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
   }
 
   Widget _buildFilterCard(bool isDark) {
-    final hasFilter = _startDate != null;
-    return GestureDetector(
-      onTap: _selectDateRange,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: hasFilter ? AppColors.primary.withValues(alpha: 0.05) : (isDark ? AppColors.surfaceDark : Colors.white),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: hasFilter ? AppColors.primary.withValues(alpha: 0.2) : (isDark ? AppColors.borderDark : AppColors.borderLight)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(12)),
-              child: const Icon(Icons.calendar_today_rounded, size: 20, color: AppColors.primary),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    final hasFilter = _startDate != null ||
+        _selectedCategory != null ||
+        _selectedStatus != null ||
+        _selectedTechnicianId != null;
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 300),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: hasFilter
+            ? AppColors.primary.withValues(alpha: 0.05)
+            : (isDark ? AppColors.surfaceDark : Colors.white),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+            color: hasFilter
+                ? AppColors.primary.withValues(alpha: 0.2)
+                : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12)),
+                child: const Icon(Icons.filter_alt_rounded,
+                    size: 20, color: AppColors.primary),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Filter Laporan',
+                        style: GoogleFonts.inter(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            color: Colors.grey)),
+                    Text(
+                      hasFilter
+                          ? 'Terapkan filter untuk melihat laporan terperinci'
+                          : 'Semua tiket',
+                      style: GoogleFonts.plusJakartaSans(
+                          fontSize: 15, fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+              if (hasFilter)
+                IconButton(
+                  onPressed: () {
+                    setState(() {
+                      _startDate = null;
+                      _endDate = null;
+                      _selectedCategory = null;
+                      _selectedStatus = null;
+                      _selectedTechnicianId = null;
+                    });
+                    _refreshData();
+                  },
+                  icon: const Icon(Icons.clear_rounded, size: 18),
+                )
+              else
+                const Icon(Icons.expand_more_rounded, color: Colors.grey),
+            ],
+          ),
+          const SizedBox(height: 18),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: _buildFilterDropdown<String>(
+                  isDark: isDark,
+                  label: 'Kategori',
+                  value: _selectedCategory,
+                  hint: 'Semua',
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Semua')),
+                    ..._ticketCategories.map((cat) => DropdownMenuItem(
+                        value: cat['value'], child: Text(cat['label']!))),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedCategory = value);
+                    _refreshData();
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildFilterDropdown<String>(
+                  isDark: isDark,
+                  label: 'Status',
+                  value: _selectedStatus,
+                  hint: 'Semua',
+                  items: [
+                    const DropdownMenuItem(value: null, child: Text('Semua')),
+                    ...TicketStatus.values.map(
+                      (status) => DropdownMenuItem(
+                          value: status.dbValue, child: Text(status.label)),
+                    ),
+                  ],
+                  onChanged: (value) {
+                    setState(() => _selectedStatus = value);
+                    _refreshData();
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          _buildFilterDropdown<String>(
+            isDark: isDark,
+            label: 'Teknisi',
+            value: _selectedTechnicianId,
+            hint: 'Semua',
+            items: [
+              const DropdownMenuItem(value: null, child: Text('Semua')),
+              ...context.read<TicketStatsBloc>().state.staffUsers.map((user) {
+                return DropdownMenuItem(
+                    value: user.id, child: Text(user.fullName ?? user.email));
+              }),
+            ],
+            onChanged: (value) {
+              setState(() => _selectedTechnicianId = value);
+              _refreshData();
+            },
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: _selectDateRange,
+            child: Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                    color:
+                        isDark ? AppColors.borderDark : AppColors.borderLight),
+              ),
+              child: Row(
                 children: [
-                  Text('Rentang Waktu', style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey)),
-                  Text(
-                    hasFilter ? '${DateFormat('d MMM').format(_startDate!)} - ${DateFormat('d MMM yyyy').format(_endDate!)}' : 'Seluruh Waktu',
-                    style: GoogleFonts.plusJakartaSans(fontSize: 15, fontWeight: FontWeight.w700),
+                  const Icon(Icons.calendar_today_rounded,
+                      size: 18, color: AppColors.primary),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      _startDate != null && _endDate != null
+                          ? '${DateFormat('d MMM yyyy').format(_startDate!)} - ${DateFormat('d MMM yyyy').format(_endDate!)}'
+                          : 'Pilih rentang tanggal',
+                      style: GoogleFonts.inter(
+                          fontSize: 13, color: Colors.grey[700]),
+                    ),
                   ),
+                  if (_startDate != null && _endDate != null)
+                    const Icon(Icons.edit_calendar_rounded,
+                        size: 18, color: AppColors.primary)
                 ],
               ),
             ),
-            if (hasFilter)
-              IconButton(
-                onPressed: () { setState(() { _startDate = null; _endDate = null; }); _refreshData(); },
-                icon: const Icon(Icons.clear_rounded, size: 18),
-              )
-            else
-              const Icon(Icons.chevron_right_rounded, color: Colors.grey),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
+  Widget _buildFilterDropdown<T>({
+    required bool isDark,
+    required String label,
+    required T? value,
+    required String hint,
+    required List<DropdownMenuItem<T>> items,
+    required ValueChanged<T?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label,
+            style: GoogleFonts.inter(
+                fontSize: 11, fontWeight: FontWeight.w700, color: Colors.grey)),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.surfaceDark : Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight),
+          ),
+          child: DropdownButton<T>(
+            isDense: true,
+            isExpanded: true,
+            underline: const SizedBox.shrink(),
+            value: value,
+            hint: Text(hint,
+                style: GoogleFonts.inter(fontSize: 13, color: Colors.grey)),
+            items: items,
+            onChanged: onChanged,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildSectionTitle(String title) {
-    return Text(title, style: GoogleFonts.inter(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.5));
+    return Text(title,
+        style: GoogleFonts.inter(
+            fontSize: 11,
+            fontWeight: FontWeight.w800,
+            color: Colors.grey,
+            letterSpacing: 1.5));
   }
 
   Widget _buildStatsGrid(stats_state.TicketStatsState state, bool isDark) {
@@ -296,23 +525,31 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       mainAxisSpacing: 16,
       childAspectRatio: 1.3,
       children: [
-        _buildStatCard('Total', state.stats.total, Icons.analytics_rounded, Colors.indigo, isDark),
-        _buildStatCard('Terbuka', state.stats.open, Icons.folder_open_rounded, Colors.orange, isDark),
-        _buildStatCard('Diproses', state.stats.inProgress, Icons.loop_rounded, Colors.blue, isDark),
-        _buildStatCard('Selesai', state.stats.resolved, Icons.check_circle_rounded, Colors.green, isDark),
-        _buildStatCard('Tertunda', state.stats.pending, Icons.pause_circle_rounded, Colors.amber, isDark),
-        _buildStatCard('Kembali', state.stats.reopened, Icons.refresh_rounded, Colors.red, isDark),
+        _buildStatCard('Total', state.stats.total, Icons.analytics_rounded,
+            Colors.indigo, isDark),
+        _buildStatCard('Terbuka', state.stats.open, Icons.folder_open_rounded,
+            Colors.orange, isDark),
+        _buildStatCard('Diproses', state.stats.inProgress, Icons.loop_rounded,
+            Colors.blue, isDark),
+        _buildStatCard('Selesai', state.stats.resolved,
+            Icons.check_circle_rounded, Colors.green, isDark),
+        _buildStatCard('Tertunda', state.stats.pending,
+            Icons.pause_circle_rounded, Colors.amber, isDark),
+        _buildStatCard('Kembali', state.stats.reopened, Icons.refresh_rounded,
+            Colors.red, isDark),
       ],
     );
   }
 
-  Widget _buildStatCard(String label, int value, IconData icon, Color color, bool isDark) {
+  Widget _buildStatCard(
+      String label, int value, IconData icon, Color color, bool isDark) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -320,14 +557,23 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10)),
             child: Icon(icon, color: color, size: 18),
           ),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _AnimatedCounter(value: value, style: GoogleFonts.plusJakartaSans(fontSize: 24, fontWeight: FontWeight.w800)),
-              Text(label, style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey)),
+              _AnimatedCounter(
+                  value: value,
+                  style: GoogleFonts.plusJakartaSans(
+                      fontSize: 24, fontWeight: FontWeight.w800)),
+              Text(label,
+                  style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey)),
             ],
           ),
         ],
@@ -341,13 +587,17 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: ListView.separated(
         shrinkWrap: true,
         physics: const NeverScrollableScrollPhysics(),
         itemCount: performance.length,
-        separatorBuilder: (_, __) => Divider(height: 1, color: isDark ? AppColors.borderDark : AppColors.borderLight, indent: 60),
+        separatorBuilder: (_, __) => Divider(
+            height: 1,
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            indent: 60),
         itemBuilder: (context, index) {
           final item = performance[index];
           final progress = item.resolvedCount / (max == 0 ? 1 : max);
@@ -356,31 +606,49 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
             child: Row(
               children: [
                 Container(
-                  width: 38, height: 38,
-                  decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(10)),
-                  child: Center(child: Text('#${index + 1}', style: GoogleFonts.inter(fontWeight: FontWeight.w800, color: AppColors.primary, fontSize: 13))),
+                  width: 38,
+                  height: 38,
+                  decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(10)),
+                  child: Center(
+                      child: Text('#${index + 1}',
+                          style: GoogleFonts.inter(
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                              fontSize: 13))),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(item.fullName, style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w700, fontSize: 14)),
+                      Text(item.fullName,
+                          style: GoogleFonts.plusJakartaSans(
+                              fontWeight: FontWeight.w700, fontSize: 14)),
                       const SizedBox(height: 6),
                       ClipRRect(
                         borderRadius: BorderRadius.circular(4),
                         child: LinearProgressIndicator(
                           value: progress,
                           minHeight: 4,
-                          backgroundColor: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
-                          valueColor: AlwaysStoppedAnimation(progress > 0.8 ? Colors.green : AppColors.primary),
+                          backgroundColor: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05),
+                          valueColor: AlwaysStoppedAnimation(progress > 0.8
+                              ? Colors.green
+                              : AppColors.primary),
                         ),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 16),
-                Text(item.resolvedCount.toString(), style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 16, color: Colors.green)),
+                Text(item.resolvedCount.toString(),
+                    style: GoogleFonts.plusJakartaSans(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: Colors.green)),
               ],
             ),
           );
@@ -389,16 +657,25 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
     );
   }
 
-  Widget _buildCategoryDistribution(List<CategoryDistribution> distribution, bool isDark) {
+  Widget _buildCategoryDistribution(
+      List<CategoryDistribution> distribution, bool isDark) {
     final total = distribution.fold<int>(0, (s, e) => s + e.count);
-    final colors = [AppColors.primary, Colors.orange, Colors.teal, Colors.purple, Colors.pink, Colors.amber];
-    
+    final colors = [
+      AppColors.primary,
+      Colors.orange,
+      Colors.teal,
+      Colors.purple,
+      Colors.pink,
+      Colors.amber
+    ];
+
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+        border: Border.all(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: Column(
         children: distribution.asMap().entries.map((entry) {
@@ -412,17 +689,34 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(item.category, style: GoogleFonts.inter(fontWeight: FontWeight.w700, fontSize: 12)),
-                    Text('${item.count} (${(progress * 100).toInt()}%)', style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 12, color: Colors.grey)),
+                    Text(item.category,
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w700, fontSize: 12)),
+                    Text('${item.count} (${(progress * 100).toInt()}%)',
+                        style: GoogleFonts.inter(
+                            fontWeight: FontWeight.w800,
+                            fontSize: 12,
+                            color: Colors.grey)),
                   ],
                 ),
                 const SizedBox(height: 8),
                 Stack(
                   children: [
-                    Container(height: 8, width: double.infinity, decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(4))),
+                    Container(
+                        height: 8,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : Colors.black.withValues(alpha: 0.05),
+                            borderRadius: BorderRadius.circular(4))),
                     FractionallySizedBox(
                       widthFactor: progress,
-                      child: Container(height: 8, decoration: BoxDecoration(color: colors[i % colors.length], borderRadius: BorderRadius.circular(4))),
+                      child: Container(
+                          height: 8,
+                          decoration: BoxDecoration(
+                              color: colors[i % colors.length],
+                              borderRadius: BorderRadius.circular(4))),
                     ),
                   ],
                 ),
@@ -444,18 +738,26 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
         gradient: LinearGradient(
-          colors: isStale ? [Colors.grey, Colors.grey.shade600] : [AppColors.primary, const Color(0xFF4F46E5)],
+          colors: isStale
+              ? [Colors.grey, Colors.grey.shade600]
+              : [AppColors.primary, const Color(0xFF4F46E5)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         boxShadow: [
-          if (!isStale) BoxShadow(color: AppColors.primary.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))
+          if (!isStale)
+            BoxShadow(
+                color: AppColors.primary.withValues(alpha: 0.3),
+                blurRadius: 15,
+                offset: const Offset(0, 8))
         ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
-          onTap: (isStale || _isExporting) ? null : () => _showExportBottomSheet(report),
+          onTap: (isStale || _isExporting)
+              ? null
+              : () => _showExportBottomSheet(report),
           borderRadius: BorderRadius.circular(20),
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 20),
@@ -463,15 +765,23 @@ class _AdminReportsPageState extends State<AdminReportsPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 if (_isExporting || isLoadingReport)
-                  const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                          color: Colors.white, strokeWidth: 2))
                 else
-                  const Icon(Icons.download_rounded, color: Colors.white, size: 20),
+                  const Icon(Icons.download_rounded,
+                      color: Colors.white, size: 20),
                 const SizedBox(width: 12),
                 Text(
                   _isExporting
                       ? 'MENYIAPKAN LAPORAN...'
                       : (isLoadingReport ? 'MEMUAT DATA...' : 'UNDUH LAPORAN'),
-                  style: GoogleFonts.plusJakartaSans(color: Colors.white, fontWeight: FontWeight.w800, letterSpacing: 1),
+                  style: GoogleFonts.plusJakartaSans(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 1),
                 ),
               ],
             ),
@@ -490,15 +800,18 @@ class _AnimatedCounter extends StatefulWidget {
   State<_AnimatedCounter> createState() => _AnimatedCounterState();
 }
 
-class _AnimatedCounterState extends State<_AnimatedCounter> with SingleTickerProviderStateMixin {
+class _AnimatedCounterState extends State<_AnimatedCounter>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<int> _animation;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 1));
-    _animation = IntTween(begin: 0, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+    _controller =
+        AnimationController(vsync: this, duration: const Duration(seconds: 1));
+    _animation = IntTween(begin: 0, end: widget.value).animate(
+        CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
     _controller.forward();
   }
 
@@ -506,19 +819,25 @@ class _AnimatedCounterState extends State<_AnimatedCounter> with SingleTickerPro
   void didUpdateWidget(_AnimatedCounter oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.value != widget.value) {
-      _animation = IntTween(begin: oldWidget.value, end: widget.value).animate(CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
-      _controller.reset(); _controller.forward();
+      _animation = IntTween(begin: oldWidget.value, end: widget.value).animate(
+          CurvedAnimation(parent: _controller, curve: Curves.easeOutQuart));
+      _controller.reset();
+      _controller.forward();
     }
   }
 
   @override
-  void dispose() { _controller.dispose(); super.dispose(); }
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     return AnimatedBuilder(
       animation: _animation,
-      builder: (context, child) => Text(_animation.value.toString(), style: widget.style),
+      builder: (context, child) =>
+          Text(_animation.value.toString(), style: widget.style),
     );
   }
 }

@@ -82,14 +82,36 @@ class AddCommentUseCase
 }
 
 class GetTicketStatsUseCase
-    implements UseCase<Either<Failure, TicketStats>, String?> {
+    implements UseCase<Either<Failure, TicketStats>, GetTicketStatsParams> {
   final TicketRepository repository;
   GetTicketStatsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, TicketStats>> call(String? assignedToId) async {
-    return await repository.getTicketStats(assignedToId: assignedToId);
+  Future<Either<Failure, TicketStats>> call(GetTicketStatsParams params) async {
+    return await repository.getTicketStats(
+      assignedToId: params.assignedToId,
+      category: params.category,
+      status: params.status,
+      startDate: params.startDate,
+      endDate: params.endDate,
+    );
   }
+}
+
+class GetTicketStatsParams {
+  final String? assignedToId;
+  final String? category;
+  final String? status;
+  final DateTime? startDate;
+  final DateTime? endDate;
+
+  GetTicketStatsParams({
+    this.assignedToId,
+    this.category,
+    this.status,
+    this.startDate,
+    this.endDate,
+  });
 }
 
 class GetTicketHistoryUseCase

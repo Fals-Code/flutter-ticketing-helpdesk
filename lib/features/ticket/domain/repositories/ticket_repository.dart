@@ -111,7 +111,13 @@ abstract class TicketRepository {
   });
 
   /// Mengambil statistik tiket (Total, Open, In Progress, Resolved).
-  Future<Either<Failure, TicketStats>> getTicketStats({String? assignedToId});
+  Future<Either<Failure, TicketStats>> getTicketStats({
+    String? assignedToId,
+    String? category,
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  });
 
   /// Aliran data tiket secara realtime.
   Stream<List<TicketEntity>> watchTickets(

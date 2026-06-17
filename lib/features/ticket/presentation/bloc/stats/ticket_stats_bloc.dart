@@ -26,13 +26,14 @@ class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
     on<FetchAllHistoryRequested>(_onFetchAllHistory);
     on<ResetTicketStatsState>(_onResetState);
 
-    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
+    _connectivitySubscription =
+        connectivityService.connectionStream.listen((status) {
       if (status == ConnectionStatus.online) {
         add(FetchTicketStatsRequested(assignedToId: state.assignedToId));
         add(const FetchStaffUsersRequested());
         if (state.history.isNotEmpty) {
-           add(FetchAllHistoryRequested(
-            changedBy: null, 
+          add(FetchAllHistoryRequested(
+            changedBy: null,
             startDate: state.startDate,
             endDate: state.endDate,
           ));
@@ -41,16 +42,24 @@ class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
     });
   }
 
-  Future<void> _onFetchStats(FetchTicketStatsRequested event, Emitter<TicketStatsState> emit) async {
+  Future<void> _onFetchStats(
+      FetchTicketStatsRequested event, Emitter<TicketStatsState> emit) async {
     emit(state.copyWith(assignedToId: event.assignedToId));
-    final result = await getTicketStatsUseCase(event.assignedToId);
+    final result = await getTicketStatsUseCase(GetTicketStatsParams(
+      assignedToId: event.assignedToId,
+      category: event.category,
+      status: event.status,
+      startDate: event.startDate,
+      endDate: event.endDate,
+    ));
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
       (stats) => emit(state.copyWith(stats: stats)),
     );
   }
 
-  Future<void> _onFetchStaffUsers(FetchStaffUsersRequested event, Emitter<TicketStatsState> emit) async {
+  Future<void> _onFetchStaffUsers(
+      FetchStaffUsersRequested event, Emitter<TicketStatsState> emit) async {
     final result = await getStaffUsersUseCase(const NoParams());
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
@@ -58,20 +67,24 @@ class TicketStatsBloc extends Bloc<TicketStatsEvent, TicketStatsState> {
     );
   }
 
-  Future<void> _onFetchAllHistory(FetchAllHistoryRequested event, Emitter<TicketStatsState> emit) async {
-    emit(state.copyWith(isLoading: true, startDate: event.startDate, endDate: event.endDate));
+  Future<void> _onFetchAllHistory(
+      FetchAllHistoryRequested event, Emitter<TicketStatsState> emit) async {
+    emit(state.copyWith(
+        isLoading: true, startDate: event.startDate, endDate: event.endDate));
     final result = await getAllTicketHistoryUseCase(GetHistoryParams(
       changedBy: event.changedBy,
       startDate: event.startDate,
       endDate: event.endDate,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (history) => emit(state.copyWith(isLoading: false, history: history)),
     );
   }
 
-  void _onResetState(ResetTicketStatsState event, Emitter<TicketStatsState> emit) {
+  void _onResetState(
+      ResetTicketStatsState event, Emitter<TicketStatsState> emit) {
     emit(const TicketStatsState());
   }
 

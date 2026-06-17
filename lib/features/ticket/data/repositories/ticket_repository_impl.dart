@@ -256,11 +256,21 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, TicketStats>> getTicketStats(
-      {String? assignedToId}) async {
+  Future<Either<Failure, TicketStats>> getTicketStats({
+    String? assignedToId,
+    String? category,
+    String? status,
+    DateTime? startDate,
+    DateTime? endDate,
+  }) async {
     try {
-      final statsMap =
-          await remoteDataSource.getTicketStats(assignedToId: assignedToId);
+      final statsMap = await remoteDataSource.getTicketStats(
+        assignedToId: assignedToId,
+        category: category,
+        status: status,
+        startDate: startDate,
+        endDate: endDate,
+      );
       return Right(TicketStats(
         total: statsMap['total'] ?? 0,
         open: statsMap['open'] ?? 0,

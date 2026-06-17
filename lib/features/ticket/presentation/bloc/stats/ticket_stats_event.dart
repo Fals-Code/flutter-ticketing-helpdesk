@@ -10,15 +10,20 @@ class FetchTicketStatsRequested extends TicketStatsEvent {
   final String? assignedToId;
   final DateTime? startDate;
   final DateTime? endDate;
+  final String? category;
+  final String? status;
 
   const FetchTicketStatsRequested({
     this.assignedToId,
     this.startDate,
     this.endDate,
+    this.category,
+    this.status,
   });
 
   @override
-  List<Object?> get props => [assignedToId, startDate, endDate];
+  List<Object?> get props =>
+      [assignedToId, startDate, endDate, category, status];
 }
 
 class FetchStaffUsersRequested extends TicketStatsEvent {
@@ -31,7 +36,8 @@ class FetchAllHistoryRequested extends TicketStatsEvent {
   final String? changedBy;
   final DateTime? startDate;
   final DateTime? endDate;
-  const FetchAllHistoryRequested({this.changedBy, this.startDate, this.endDate});
+  const FetchAllHistoryRequested(
+      {this.changedBy, this.startDate, this.endDate});
   @override
   List<Object?> get props => [changedBy, startDate, endDate];
 }

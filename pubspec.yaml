@@ -62,6 +62,13 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
   bloc_test: ^9.1.7
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icons/app_icon.png"
+  min_sdk_android: 21 # flutter_launcher_icons requires this for some features
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -78,6 +85,7 @@ flutter:
   assets:
     - assets/images/
     - assets/icons/
+    - assets/data/
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

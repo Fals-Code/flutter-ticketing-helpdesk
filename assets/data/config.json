@@ -1,0 +1,6 @@
+{
+  "app_name": "Praktikum Mobile Modul 8",
+  "module": "Assets dan Media",
+  "version": "1.0.0",
+  "description": "Aplikasi ini dibuat untuk mendemonstrasikan penggunaan assets, file JSON, konfigurasi, image, dan launcher icon pada Flutter."
+}

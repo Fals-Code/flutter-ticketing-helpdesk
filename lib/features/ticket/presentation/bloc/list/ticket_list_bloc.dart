@@ -38,7 +38,8 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     on<CreateTicketRequested>(_onCreateTicket);
     on<ResetTicketListState>(_onResetState);
 
-    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
+    _connectivitySubscription =
+        connectivityService.connectionStream.listen((status) {
       if (status == ConnectionStatus.online) {
         add(const FetchTicketsRequested(page: 0));
         add(const FetchAllTicketsRequested(page: 0));
@@ -297,9 +298,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     add(const FetchAllTicketsRequested(page: 0));
   }
 
-  void _onResetState(
-      ResetTicketListState event, Emitter<TicketListState> emit) {
+  Future<void> _onResetState(
+      ResetTicketListState event, Emitter<TicketListState> emit) async {
     _ticketSubscription?.cancel();
+    await localDataSource.clearCache();
     emit(const TicketListState());
   }
 

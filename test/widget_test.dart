@@ -12,10 +12,9 @@ import 'package:uts/main.dart';
 void main() {
   testWidgets('App smoke test', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    // Note: This test might require proper DI mocking in a real environment
     await tester.pumpWidget(const ETicketingApp());
 
-    // Verify that splash screen or login brand is shown
-    expect(find.text('TICKET-Q'), findsOneWidget);
+    // Memastikan judul AppBar "Assets dan Media" muncul di layar
+    expect(find.text('Assets dan Media'), findsOneWidget);
   });
 }

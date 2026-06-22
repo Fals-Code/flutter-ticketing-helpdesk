@@ -208,7 +208,11 @@ class _TicketListPageState extends State<TicketListPage>
                         const SizedBox(width: 4),
                       ],
                       bottom: PreferredSize(
-                        preferredSize: const Size.fromHeight(108),
+                        preferredSize: Size.fromHeight(
+                          isTechnician && listState.assignedToId != null
+                              ? 144
+                              : 108,
+                        ),
                         child: _buildFilterBar(context, listState, isDark,
                             isStaff, isAdmin, isTechnician),
                       ),
@@ -254,10 +258,15 @@ class _TicketListPageState extends State<TicketListPage>
                       height: 56,
                       child: FloatingActionButton.extended(
                         heroTag: 'ticket_list_fab',
-                        onPressed: listState.isOffline 
-                            ? () => ToastService().show(context, message: 'Koneksi internet diperlukan untuk membuat tiket', type: ToastType.error)
+                        onPressed: listState.isOffline
+                            ? () => ToastService().show(context,
+                                message:
+                                    'Koneksi internet diperlukan untuk membuat tiket',
+                                type: ToastType.error)
                             : () => context.push(AppRoutes.createTicket),
-                        backgroundColor: listState.isOffline ? Colors.grey : AppColors.primary,
+                        backgroundColor: listState.isOffline
+                            ? Colors.grey
+                            : AppColors.primary,
                         foregroundColor: Colors.white,
                         elevation: 4,
                         isExtended: _isFabExpanded,
@@ -313,7 +322,8 @@ class _TicketListPageState extends State<TicketListPage>
               const SizedBox(width: 8),
               _FilterButton(
                 isDark: isDark,
-                hasActiveFilter: state.categoryFilter != null || state.startDate != null,
+                hasActiveFilter:
+                    state.categoryFilter != null || state.startDate != null,
                 onTap: () => _showAdvancedFilterSheet(context, state, isDark),
               ),
               if (isStaff && isAdmin) ...[
@@ -400,7 +410,8 @@ class _TicketListPageState extends State<TicketListPage>
                   ),
                   _StatusChip(
                     label: 'Tertunda',
-                    isSelected: state.statusFilter == TicketStatusFilter.pending,
+                    isSelected:
+                        state.statusFilter == TicketStatusFilter.pending,
                     color: AppColors.warning,
                     isDark: isDark,
                     badge: _countByStatus(
@@ -412,7 +423,8 @@ class _TicketListPageState extends State<TicketListPage>
                   ),
                   _StatusChip(
                     label: 'Dibuka Kembali',
-                    isSelected: state.statusFilter == TicketStatusFilter.reopened,
+                    isSelected:
+                        state.statusFilter == TicketStatusFilter.reopened,
                     color: AppColors.danger,
                     isDark: isDark,
                     badge: _countByStatus(
@@ -466,11 +478,13 @@ class _TicketListPageState extends State<TicketListPage>
     );
   }
 
-  void _showAdvancedFilterSheet(BuildContext context, TicketListState state, bool isDark) {
+  void _showAdvancedFilterSheet(
+      BuildContext context, TicketListState state, bool isDark) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       builder: (ctx) => _AdvancedFilterSheet(
         initialCategory: state.categoryFilter,
@@ -478,8 +492,12 @@ class _TicketListPageState extends State<TicketListPage>
         initialEndDate: state.endDate,
         isDark: isDark,
         onApply: (cat, start, end) {
-          context.read<TicketListBloc>().add(list_event.FilterCategoryChanged(cat));
-          context.read<TicketListBloc>().add(list_event.FilterDateRangeChanged(start, end));
+          context
+              .read<TicketListBloc>()
+              .add(list_event.FilterCategoryChanged(cat));
+          context
+              .read<TicketListBloc>()
+              .add(list_event.FilterDateRangeChanged(start, end));
         },
       ),
     );
@@ -644,9 +662,10 @@ class _TicketListPageState extends State<TicketListPage>
           isStaff: isStaff,
           isAdmin: isAdmin,
           staffUsers: context.read<TicketStatsBloc>().state.staffUsers,
-          onQuickAction: state.isOffline 
-              ? null 
-              : (ticket, newStatus) => _handleQuickAction(context, ticket, newStatus),
+          onQuickAction: state.isOffline
+              ? null
+              : (ticket, newStatus) =>
+                  _handleQuickAction(context, ticket, newStatus),
           onRefreshList: _fetchInitial,
         );
       },
@@ -773,7 +792,8 @@ class _TicketCardState extends State<_TicketCard> {
             color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
       child: InkWell(
-        onTap: () => context.push(AppRoutes.ticketDetail.replaceAll(':id', ticket.id)),
+        onTap: () =>
+            context.push(AppRoutes.ticketDetail.replaceAll(':id', ticket.id)),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -857,9 +877,10 @@ class _TicketCardState extends State<_TicketCard> {
                       ),
                   ],
                 ),
-              if (widget.isStaff && (ticket.status == TicketStatus.open || 
-                  ticket.status == TicketStatus.pending || 
-                  ticket.status == TicketStatus.reopened))
+              if (widget.isStaff &&
+                  (ticket.status == TicketStatus.open ||
+                      ticket.status == TicketStatus.pending ||
+                      ticket.status == TicketStatus.reopened))
                 Padding(
                   padding: const EdgeInsets.only(top: 8),
                   child: Row(
@@ -868,7 +889,9 @@ class _TicketCardState extends State<_TicketCard> {
                       _QuickActionButton(
                         isDark: isDark,
                         icon: Icons.play_arrow_rounded,
-                        label: ticket.status == TicketStatus.pending ? 'Lanjutkan' : 'Proses',
+                        label: ticket.status == TicketStatus.pending
+                            ? 'Lanjutkan'
+                            : 'Proses',
                         enabled: widget.onQuickAction != null,
                         onTap: () => widget.onQuickAction!(
                             ticket, TicketStatus.inProgress),
@@ -887,8 +910,8 @@ class _TicketCardState extends State<_TicketCard> {
                         icon: Icons.pause_circle_outline_rounded,
                         label: 'Tunda',
                         enabled: widget.onQuickAction != null,
-                        onTap: () => widget.onQuickAction!(
-                            ticket, TicketStatus.pending),
+                        onTap: () =>
+                            widget.onQuickAction!(ticket, TicketStatus.pending),
                       ),
                       const SizedBox(width: 8),
                       _QuickActionButton(
@@ -1116,7 +1139,8 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: EdgeInsets.fromLTRB(24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
+      padding: EdgeInsets.fromLTRB(
+          24, 12, 24, MediaQuery.of(context).padding.bottom + 24),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1130,9 +1154,11 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                     borderRadius: BorderRadius.circular(2))),
           ),
           const SizedBox(height: 24),
-          const Text('Filter Lanjutan', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text('Filter Lanjutan',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
-          const Text('Kategori', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const Text('Kategori',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Wrap(
             spacing: 8,
@@ -1144,16 +1170,18 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                 onTap: () => setState(() => _selectedCategory = null),
                 isDark: widget.isDark,
               ),
-              ...['hardware', 'software', 'network', 'account', 'other'].map((cat) => _FilterChip(
-                label: cat[0].toUpperCase() + cat.substring(1),
-                isSelected: _selectedCategory == cat,
-                onTap: () => setState(() => _selectedCategory = cat),
-                isDark: widget.isDark,
-              )),
+              ...['hardware', 'software', 'network', 'account', 'other']
+                  .map((cat) => _FilterChip(
+                        label: cat[0].toUpperCase() + cat.substring(1),
+                        isSelected: _selectedCategory == cat,
+                        onTap: () => setState(() => _selectedCategory = cat),
+                        isDark: widget.isDark,
+                      )),
             ],
           ),
           const SizedBox(height: 24),
-          const Text('Rentang Tanggal', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+          const Text('Rentang Tanggal',
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
           const SizedBox(height: 12),
           Row(
             children: [
@@ -1206,7 +1234,8 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                   },
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Reset'),
                 ),
@@ -1222,7 +1251,8 @@ class _AdvancedFilterSheetState extends State<_AdvancedFilterSheet> {
                     backgroundColor: AppColors.primary,
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
                   ),
                   child: const Text('Terapkan'),
                 ),
@@ -1255,16 +1285,23 @@ class _FilterChip extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? AppColors.primary : (isDark ? AppColors.surfaceDark2 : Colors.grey.shade100),
+          color: isSelected
+              ? AppColors.primary
+              : (isDark ? AppColors.surfaceDark2 : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(100),
-          border: Border.all(color: isSelected ? AppColors.primary : (isDark ? AppColors.borderDark : Colors.grey.shade300)),
+          border: Border.all(
+              color: isSelected
+                  ? AppColors.primary
+                  : (isDark ? AppColors.borderDark : Colors.grey.shade300)),
         ),
         child: Text(
           label,
           style: TextStyle(
             fontSize: 13,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : (isDark ? Colors.white70 : Colors.black87),
+            color: isSelected
+                ? Colors.white
+                : (isDark ? Colors.white70 : Colors.black87),
           ),
         ),
       ),
@@ -1294,20 +1331,30 @@ class _DateSelector extends StatelessWidget {
         decoration: BoxDecoration(
           color: isDark ? AppColors.surfaceDark2 : Colors.grey.shade100,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: isDark ? AppColors.borderDark : Colors.grey.shade300),
+          border: Border.all(
+              color: isDark ? AppColors.borderDark : Colors.grey.shade300),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(label, style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38)),
+            Text(label,
+                style: TextStyle(
+                    fontSize: 11,
+                    color: isDark ? Colors.white38 : Colors.black38)),
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.calendar_today_rounded, size: 14, color: isDark ? Colors.white70 : Colors.black87),
+                Icon(Icons.calendar_today_rounded,
+                    size: 14, color: isDark ? Colors.white70 : Colors.black87),
                 const SizedBox(width: 8),
                 Text(
-                  date != null ? DateFormat('dd/MM/yy').format(date!) : '--/--/--',
-                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87),
+                  date != null
+                      ? DateFormat('dd/MM/yy').format(date!)
+                      : '--/--/--',
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black87),
                 ),
               ],
             ),
@@ -1370,32 +1417,41 @@ class _QuickActionButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: enabled ? onTap : () {
-        ToastService().show(context, message: 'Tidak dapat melakukan aksi dalam mode offline', type: ToastType.error);
-      },
+      onTap: enabled
+          ? onTap
+          : () {
+              ToastService().show(context,
+                  message: 'Tidak dapat melakukan aksi dalam mode offline',
+                  type: ToastType.error);
+            },
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: enabled 
+          color: enabled
               ? (isDark ? AppColors.surfaceDark : Colors.white)
               : (isDark ? Colors.white10 : Colors.grey.shade100),
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
-              color: enabled 
+              color: enabled
                   ? (isDark ? AppColors.borderDark : AppColors.borderLight)
                   : (isDark ? Colors.white10 : Colors.grey.shade300)),
         ),
         child: Row(
           children: [
             Icon(icon,
-                size: 16, color: enabled ? (isDark ? Colors.white70 : Colors.black54) : Colors.grey),
+                size: 16,
+                color: enabled
+                    ? (isDark ? Colors.white70 : Colors.black54)
+                    : Colors.grey),
             const SizedBox(width: 6),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: enabled ? (isDark ? Colors.white70 : Colors.black54) : Colors.grey,
+                color: enabled
+                    ? (isDark ? Colors.white70 : Colors.black54)
+                    : Colors.grey,
               ),
             ),
           ],

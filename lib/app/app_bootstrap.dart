@@ -22,6 +22,7 @@ import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
     as list_event;
@@ -42,8 +43,8 @@ Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 Future<void> bootstrapApplication() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  final isUrlMissing = EnvConstants.supabaseUrl.isEmpty;
-  final isKeyMissing = EnvConstants.supabaseAnonKey.isEmpty;
+  final isUrlMissing = EnvConstants.supabaseUrl.trim().isEmpty;
+  final isKeyMissing = EnvConstants.supabaseAnonKey.trim().isEmpty;
 
   if (isUrlMissing || isKeyMissing) {
     runApp(
@@ -101,27 +102,15 @@ class ETicketingApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MultiBlocProvider(
       providers: [
-        BlocProvider<ThemeCubit>(
-          create: (_) => sl<ThemeCubit>(),
-        ),
+        BlocProvider<ThemeCubit>(create: (_) => sl<ThemeCubit>()),
         BlocProvider<AuthBloc>(
           create: (_) => sl<AuthBloc>()..add(AppStarted()),
         ),
-        BlocProvider<TicketListBloc>(
-          create: (_) => sl<TicketListBloc>(),
-        ),
-        BlocProvider<TicketDetailBloc>(
-          create: (_) => sl<TicketDetailBloc>(),
-        ),
-        BlocProvider<TicketStatsBloc>(
-          create: (_) => sl<TicketStatsBloc>(),
-        ),
-        BlocProvider<NotificationBloc>(
-          create: (_) => sl<NotificationBloc>(),
-        ),
-        BlocProvider<AdminBloc>(
-          create: (_) => sl<AdminBloc>(),
-        ),
+        BlocProvider<TicketListBloc>(create: (_) => sl<TicketListBloc>()),
+        BlocProvider<TicketDetailBloc>(create: (_) => sl<TicketDetailBloc>()),
+        BlocProvider<TicketStatsBloc>(create: (_) => sl<TicketStatsBloc>()),
+        BlocProvider<NotificationBloc>(create: (_) => sl<NotificationBloc>()),
+        BlocProvider<AdminBloc>(create: (_) => sl<AdminBloc>()),
         BlocProvider<AppSettingsBloc>(
           create: (_) =>
               sl<AppSettingsBloc>()..add(FetchAppSettingsRequested()),
@@ -152,9 +141,7 @@ class ETicketingApp extends StatelessWidget {
               return BlocListener<AuthBloc, AuthState>(
                 listener: _handleAuthenticationState,
                 child: MediaQuery(
-                  data: mediaQuery.copyWith(
-                    textScaler: constrainedTextScaler,
-                  ),
+                  data: mediaQuery.copyWith(textScaler: constrainedTextScaler),
                   child: appContent,
                 ),
               );
@@ -166,11 +153,6 @@ class ETicketingApp extends StatelessWidget {
   }
 
   void _handleAuthenticationState(BuildContext context, AuthState state) {
-    if (state.status == AuthStatus.sessionExpired) {
-      _showSessionExpiredDialog(context);
-      return;
-    }
-
     if (state.status == AuthStatus.authenticated) {
       context
           .read<TicketListBloc>()
@@ -184,18 +166,32 @@ class ETicketingApp extends StatelessWidget {
       return;
     }
 
-    if (state.status == AuthStatus.unauthenticated) {
-      context
-          .read<TicketListBloc>()
-          .add(list_event.ResetTicketListState());
-      context
-          .read<TicketStatsBloc>()
-          .add(stats_event.ResetTicketStatsState());
-      context.read<NotificationBloc>().add(ResetNotificationState());
+    if (state.status == AuthStatus.unauthenticated ||
+        state.status == AuthStatus.sessionExpired) {
+      _resetSessionScopedState(context);
+
+      if (state.status == AuthStatus.sessionExpired) {
+        _showSessionExpiredDialog(context);
+      }
     }
   }
 
+  void _resetSessionScopedState(BuildContext context) {
+    context
+        .read<TicketListBloc>()
+        .add(list_event.ResetTicketListState());
+    context.read<TicketDetailBloc>().add(ResetTicketDetailState());
+    context
+        .read<TicketStatsBloc>()
+        .add(stats_event.ResetTicketStatsState());
+    context.read<NotificationBloc>().add(ResetNotificationState());
+  }
+
   void _showSessionExpiredDialog(BuildContext context) {
+    if (!context.mounted) {
+      return;
+    }
+
     showDialog<void>(
       context: context,
       barrierDismissible: false,
@@ -231,7 +227,9 @@ class ConfigurationErrorApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
       home: _ConfigurationErrorPage(
         isUrlMissing: isUrlMissing,
         isKeyMissing: isKeyMissing,
@@ -251,64 +249,72 @@ class _ConfigurationErrorPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final missingValues = [
-      if (isUrlMissing) 'Supabase URL',
-      if (isKeyMissing) 'Supabase Anon Key',
+    final missingValues = <String>[
+      if (isUrlMissing) 'SUPABASE_URL',
+      if (isKeyMissing) 'SUPABASE_ANON_KEY',
     ].join(' dan ');
 
     return Scaffold(
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(
-                Icons.security_outlined,
-                color: Colors.red,
-                size: 64,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Keamanan Aktif: Konfigurasi Belum Terpasang',
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                '$missingValues tidak ditemukan. Aplikasi tidak akan '
-                'membuka layanan backend sampai konfigurasi tersedia.',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Colors.black54,
-                ),
-              ),
-              const SizedBox(height: 32),
-              const Text(
-                'Jalankan aplikasi menggunakan:',
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.05),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: Colors.black12),
-                ),
-                child: const SelectableText(
-                  'flutter run --dart-define-from-file=define_config.json',
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontWeight: FontWeight.bold,
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(24),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 560),
+              child: Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Icon(
+                        Icons.security_outlined,
+                        color: Colors.red,
+                        size: 56,
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        'Konfigurasi Belum Terpasang',
+                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        '$missingValues belum diberikan saat proses build. '
+                        'Aplikasi dihentikan dalam mode aman agar tidak berjalan '
+                        'dengan konfigurasi kosong.',
+                      ),
+                      const SizedBox(height: 20),
+                      const Text(
+                        'Jalankan aplikasi dengan:',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.black12),
+                        ),
+                        child: const SelectableText(
+                          'flutter run --dart-define-from-file=define_config.json',
+                          style: TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      const Text(
+                        'Gunakan define_config.example.json sebagai pola dan '
+                        'jangan commit credential asli ke repository.',
+                      ),
+                    ],
                   ),
                 ),
               ),
-            ],
+            ),
           ),
         ),
       ),
@@ -319,44 +325,43 @@ class _ConfigurationErrorPage extends StatelessWidget {
 class StartupErrorApp extends StatelessWidget {
   final String message;
 
-  const StartupErrorApp({
-    super.key,
-    required this.message,
-  });
+  const StartupErrorApp({required this.message, super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      title: AppStrings.appName,
       debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
       home: Scaffold(
         body: SafeArea(
           child: Center(
-            child: Padding(
+            child: SingleChildScrollView(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    Icons.cloud_off_rounded,
-                    color: Colors.red,
-                    size: 64,
-                  ),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'Aplikasi Tidak Dapat Diinisialisasi',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 560),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.error_outline,
+                      color: Colors.red,
+                      size: 56,
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(fontSize: 16),
-                  ),
-                ],
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aplikasi Gagal Dimulai',
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      message,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

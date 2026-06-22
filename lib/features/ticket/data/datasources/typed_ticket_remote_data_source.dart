@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/ticket_model.dart';
 import 'ticket_remote_data_source.dart';
@@ -24,9 +23,15 @@ class TypedSupabaseTicketRemoteDataSourceImpl
     final source = supabaseClient.from('tickets').stream(primaryKey: ['id']);
 
     if (userId != null && assignedToId != null) {
-      return _mapTicketStream(
-        source.eq('user_id', userId).eq('assigned_to', assignedToId),
+      final userScopedSource = source.eq('user_id', userId);
+      final doublyFilteredSource = userScopedSource.map(
+        (rows) => rows
+            .where((row) => row['assigned_to'] == assignedToId)
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList(growable: false),
       );
+
+      return _mapTicketStream(doublyFilteredSource);
     }
 
     if (userId != null) {

@@ -167,7 +167,7 @@ class SafeTicketListBloc extends TicketListBloc {
   @override
   Future<void> close() async {
     await _safeTicketSubscription?.cancel();
-    return super.close();
+    await super.close();
   }
 }
 

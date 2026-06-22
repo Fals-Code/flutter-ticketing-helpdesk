@@ -1,14 +1,16 @@
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
-import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
-import 'ticket_detail_event.dart';
-import 'ticket_detail_state.dart';
+import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
-import 'package:uts/core/services/connectivity_service.dart';
+import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
+
+import 'ticket_detail_event.dart';
+import 'ticket_detail_state.dart';
 
 class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final GetTicketDetailUseCase getTicketDetailUseCase;
@@ -21,8 +23,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final SubmitRatingUseCase submitRatingUseCase;
   final TicketLocalDataSource localDataSource;
   final ConnectivityService connectivityService;
-  StreamSubscription? _commentSubscription;
-  StreamSubscription? _connectivitySubscription;
+
+  StreamSubscription<List<CommentEntity>>? _commentSubscription;
+  StreamSubscription<ConnectionStatus>? _connectivitySubscription;
 
   TicketDetailBloc({
     required this.getTicketDetailUseCase,
@@ -46,85 +49,154 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<CommentStreamUpdated>(_onCommentStreamUpdated);
     on<ResetTicketDetailState>(_onResetState);
 
-    _connectivitySubscription = connectivityService.connectionStream.listen((status) {
-      if (status == ConnectionStatus.online && state.ticket != null) {
+    _connectivitySubscription =
+        connectivityService.connectionStream.listen((status) {
+      if (!isClosed &&
+          status == ConnectionStatus.online &&
+          state.ticket != null) {
         add(FetchTicketDetailRequested(state.ticket!.id));
       }
     });
   }
 
-  Future<void> _onFetchDetail(FetchTicketDetailRequested event, Emitter<TicketDetailState> emit) async {
+  Future<void> _onFetchDetail(
+    FetchTicketDetailRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true, comments: [], errorMessage: null));
-    
+
     final result = await getTicketDetailUseCase(event.ticketId);
-    
+
     await result.fold(
       (failure) async {
-        // Try to get from cache if remote fails
-        final cachedTicket = await localDataSource.getCachedTicketDetail(event.ticketId);
+        final cachedTicket =
+            await localDataSource.getCachedTicketDetail(event.ticketId);
         if (cachedTicket != null) {
-          emit(state.copyWith(
-            isLoading: false, 
-            ticket: cachedTicket.toEntity(),
-            isOffline: true,
-            successMessage: 'Menampilkan data dari cache (Offline)',
-          ));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              ticket: cachedTicket.toEntity(),
+              isOffline: true,
+              successMessage: 'Menampilkan data dari cache (Offline)',
+            ),
+          );
         } else {
-          emit(state.copyWith(isLoading: false, errorMessage: failure.message));
+          emit(
+            state.copyWith(
+              isLoading: false,
+              errorMessage: failure.message,
+            ),
+          );
         }
       },
       (ticket) async {
-        // Cache the detail for offline use
         await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
-        emit(state.copyWith(isLoading: false, ticket: ticket, isOffline: false));
+        emit(
+          state.copyWith(
+            isLoading: false,
+            ticket: ticket,
+            isOffline: false,
+          ),
+        );
       },
     );
   }
 
-  Future<void> _onUpdateStatus(UpdateTicketStatusRequested event, Emitter<TicketDetailState> emit) async {
+  Future<void> _onUpdateStatus(
+    UpdateTicketStatusRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true));
-    final result = await updateTicketStatusUseCase(UpdateStatusParams(ticketId: event.ticketId, status: event.status));
+    final result = await updateTicketStatusUseCase(
+      UpdateStatusParams(ticketId: event.ticketId, status: event.status),
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(isLoading: false, ticket: ticket, successMessage: 'Status tiket diperbarui')),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: failure.message),
+      ),
+      (ticket) => emit(
+        state.copyWith(
+          isLoading: false,
+          ticket: ticket,
+          successMessage: 'Status tiket diperbarui',
+        ),
+      ),
     );
   }
 
-  Future<void> _onAssignTicket(AssignTicketRequested event, Emitter<TicketDetailState> emit) async {
+  Future<void> _onAssignTicket(
+    AssignTicketRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
     emit(state.copyWith(isLoading: true));
-    final result = await assignTicketUseCase(AssignTicketParams(ticketId: event.ticketId, technicianId: event.technicianId));
+    final result = await assignTicketUseCase(
+      AssignTicketParams(
+        ticketId: event.ticketId,
+        technicianId: event.technicianId,
+      ),
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(isLoading: false, ticket: ticket, successMessage: 'Tiket berhasil didelegasikan')),
+      (failure) => emit(
+        state.copyWith(isLoading: false, errorMessage: failure.message),
+      ),
+      (ticket) => emit(
+        state.copyWith(
+          isLoading: false,
+          ticket: ticket,
+          successMessage: 'Tiket berhasil didelegasikan',
+        ),
+      ),
     );
   }
 
-  Future<void> _onAddComment(AddCommentRequested event, Emitter<TicketDetailState> emit) async {
-    final result = await addCommentUseCase(AddCommentParams(ticketId: event.ticketId, message: event.message));
+  Future<void> _onAddComment(
+    AddCommentRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
+    final result = await addCommentUseCase(
+      AddCommentParams(ticketId: event.ticketId, message: event.message),
+    );
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (comment) => emit(state.copyWith(successMessage: 'Tanggapan berhasil dikirim')),
+      (_) => emit(
+        state.copyWith(successMessage: 'Tanggapan berhasil dikirim'),
+      ),
     );
   }
 
-  Future<void> _onSubmitRating(SubmitRatingRequested event, Emitter<TicketDetailState> emit) async {
+  Future<void> _onSubmitRating(
+    SubmitRatingRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
     emit(state.copyWith(isRatingSubmitting: true));
-    final result = await submitRatingUseCase(SubmitRatingParams(
-      ticketId: event.ticketId,
-      rating: event.rating,
-      feedback: event.feedback,
-    ));
+    final result = await submitRatingUseCase(
+      SubmitRatingParams(
+        ticketId: event.ticketId,
+        rating: event.rating,
+        feedback: event.feedback,
+      ),
+    );
     result.fold(
-      (failure) => emit(state.copyWith(isRatingSubmitting: false, errorMessage: failure.message)),
-      (ticket) => emit(state.copyWith(
-        isRatingSubmitting: false,
-        ticket: ticket,
-        successMessage: 'Terima kasih atas penilaian Anda!',
-      )),
+      (failure) => emit(
+        state.copyWith(
+          isRatingSubmitting: false,
+          errorMessage: failure.message,
+        ),
+      ),
+      (ticket) => emit(
+        state.copyWith(
+          isRatingSubmitting: false,
+          ticket: ticket,
+          successMessage: 'Terima kasih atas penilaian Anda!',
+        ),
+      ),
     );
   }
 
-  Future<void> _onFetchActivities(FetchTicketActivitiesRequested event, Emitter<TicketDetailState> emit) async {
+  Future<void> _onFetchActivities(
+    FetchTicketActivitiesRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
     final result = await getTicketHistoryUseCase(event.ticketId);
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
@@ -132,26 +204,53 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     );
   }
 
-  void _onStartCommentSubscription(StartTicketCommentsSubscription event, Emitter<TicketDetailState> emit) {
-    _commentSubscription?.cancel();
+  Future<void> _onStartCommentSubscription(
+    StartTicketCommentsSubscription event,
+    Emitter<TicketDetailState> emit,
+  ) async {
+    final previousSubscription = _commentSubscription;
+    _commentSubscription = null;
+    await previousSubscription?.cancel();
+
+    if (isClosed) {
+      return;
+    }
+
     _commentSubscription = watchTicketCommentsUseCase(event.ticketId).listen(
-      (comments) => add(CommentStreamUpdated(comments)),
+      (comments) {
+        if (!isClosed) {
+          add(CommentStreamUpdated(comments));
+        }
+      },
     );
   }
 
-  void _onCommentStreamUpdated(CommentStreamUpdated event, Emitter<TicketDetailState> emit) {
-    emit(state.copyWith(comments: List<CommentEntity>.from(event.comments)));
+  void _onCommentStreamUpdated(
+    CommentStreamUpdated event,
+    Emitter<TicketDetailState> emit,
+  ) {
+    emit(state.copyWith(comments: event.comments));
   }
 
-  void _onResetState(ResetTicketDetailState event, Emitter<TicketDetailState> emit) {
-    _commentSubscription?.cancel();
+  Future<void> _onResetState(
+    ResetTicketDetailState event,
+    Emitter<TicketDetailState> emit,
+  ) async {
+    final previousSubscription = _commentSubscription;
+    _commentSubscription = null;
+    await previousSubscription?.cancel();
     emit(const TicketDetailState());
   }
 
   @override
-  Future<void> close() {
-    _commentSubscription?.cancel();
-    _connectivitySubscription?.cancel();
-    return super.close();
+  Future<void> close() async {
+    final commentSubscription = _commentSubscription;
+    final connectivitySubscription = _connectivitySubscription;
+    _commentSubscription = null;
+    _connectivitySubscription = null;
+
+    await commentSubscription?.cancel();
+    await connectivitySubscription?.cancel();
+    await super.close();
   }
 }

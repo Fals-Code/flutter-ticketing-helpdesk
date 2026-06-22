@@ -1,15 +1,19 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 
 abstract class TicketDetailEvent extends Equatable {
   const TicketDetailEvent();
+
   @override
   List<Object?> get props => [];
 }
 
 class FetchTicketDetailRequested extends TicketDetailEvent {
   final String ticketId;
+
   const FetchTicketDetailRequested(this.ticketId);
+
   @override
   List<Object?> get props => [ticketId];
 }
@@ -17,7 +21,12 @@ class FetchTicketDetailRequested extends TicketDetailEvent {
 class UpdateTicketStatusRequested extends TicketDetailEvent {
   final String ticketId;
   final TicketStatus status;
-  const UpdateTicketStatusRequested({required this.ticketId, required this.status});
+
+  const UpdateTicketStatusRequested({
+    required this.ticketId,
+    required this.status,
+  });
+
   @override
   List<Object?> get props => [ticketId, status];
 }
@@ -25,7 +34,12 @@ class UpdateTicketStatusRequested extends TicketDetailEvent {
 class AssignTicketRequested extends TicketDetailEvent {
   final String ticketId;
   final String technicianId;
-  const AssignTicketRequested({required this.ticketId, required this.technicianId});
+
+  const AssignTicketRequested({
+    required this.ticketId,
+    required this.technicianId,
+  });
+
   @override
   List<Object?> get props => [ticketId, technicianId];
 }
@@ -33,28 +47,39 @@ class AssignTicketRequested extends TicketDetailEvent {
 class AddCommentRequested extends TicketDetailEvent {
   final String ticketId;
   final String message;
-  const AddCommentRequested({required this.ticketId, required this.message});
+
+  const AddCommentRequested({
+    required this.ticketId,
+    required this.message,
+  });
+
   @override
   List<Object?> get props => [ticketId, message];
 }
 
 class FetchTicketActivitiesRequested extends TicketDetailEvent {
   final String ticketId;
+
   const FetchTicketActivitiesRequested(this.ticketId);
+
   @override
   List<Object?> get props => [ticketId];
 }
 
 class StartTicketCommentsSubscription extends TicketDetailEvent {
   final String ticketId;
+
   const StartTicketCommentsSubscription(this.ticketId);
+
   @override
   List<Object?> get props => [ticketId];
 }
 
 class CommentStreamUpdated extends TicketDetailEvent {
-  final List<dynamic> comments; // CommentEntity
+  final List<CommentEntity> comments;
+
   const CommentStreamUpdated(this.comments);
+
   @override
   List<Object?> get props => [comments];
 }

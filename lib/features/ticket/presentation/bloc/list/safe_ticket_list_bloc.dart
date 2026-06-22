@@ -8,14 +8,9 @@ import 'ticket_list_bloc.dart';
 import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
 
-/// Ticket list BLoC variant that converts realtime stream callbacks into BLoC
-/// events before emitting state.
-///
-/// Calling `emit` directly from `Stream.listen` after the original event
-/// handler has returned violates BLoC's emitter lifecycle and throws
-/// `emit was called after an event handler completed normally`.
 class SafeTicketListBloc extends TicketListBloc {
   StreamSubscription<List<TicketEntity>>? _safeTicketSubscription;
+  int _generation = 0;
 
   SafeTicketListBloc({
     required super.getTicketsUseCase,
@@ -32,36 +27,33 @@ class SafeTicketListBloc extends TicketListBloc {
   @override
   void add(TicketListEvent event) {
     if (event is StartTicketListSubscription) {
-      unawaited(_startSafeSubscription(event));
+      final generation = ++_generation;
+      unawaited(_startSubscription(event, generation));
       return;
     }
-
     if (event is ResetTicketListState) {
-      final subscription = _safeTicketSubscription;
-      _safeTicketSubscription = null;
-      if (subscription != null) {
-        unawaited(subscription.cancel());
-      }
+      final generation = ++_generation;
+      unawaited(_resetSubscription(event, generation));
+      return;
     }
-
     super.add(event);
   }
 
-  Future<void> _startSafeSubscription(
+  Future<void> _startSubscription(
     StartTicketListSubscription event,
+    int generation,
   ) async {
-    await _safeTicketSubscription?.cancel();
-
-    if (isClosed) {
-      return;
-    }
+    final previous = _safeTicketSubscription;
+    _safeTicketSubscription = null;
+    await previous?.cancel();
+    if (isClosed || generation != _generation) return;
 
     _safeTicketSubscription = watchTicketsUseCase(
       userId: event.userId,
       assignedToId: event.assignedToId,
     ).listen(
       (tickets) {
-        if (!isClosed) {
+        if (!isClosed && generation == _generation) {
           super.add(
             _RealtimeTicketsArrived(
               tickets: tickets,
@@ -71,70 +63,65 @@ class SafeTicketListBloc extends TicketListBloc {
         }
       },
       onError: (Object error, StackTrace stackTrace) {
-        if (!isClosed) {
+        if (!isClosed && generation == _generation) {
           super.add(_RealtimeTicketsFailed(error.toString()));
         }
       },
     );
   }
 
+  Future<void> _resetSubscription(
+    ResetTicketListState event,
+    int generation,
+  ) async {
+    final previous = _safeTicketSubscription;
+    _safeTicketSubscription = null;
+    await previous?.cancel();
+    if (!isClosed && generation == _generation) {
+      super.add(event);
+    }
+  }
+
   void _onRealtimeTicketsArrived(
     _RealtimeTicketsArrived event,
     Emitter<TicketListState> emit,
   ) {
-    final filteredTickets = _applyRealtimeFilters(event.tickets);
-
-    if (event.isStaff) {
-      emit(state.copyWith(allTickets: filteredTickets));
-    } else {
-      emit(state.copyWith(tickets: filteredTickets));
-    }
+    final tickets = _filter(event.tickets);
+    emit(
+      event.isStaff
+          ? state.copyWith(allTickets: tickets)
+          : state.copyWith(tickets: tickets),
+    );
   }
 
   void _onRealtimeTicketsFailed(
     _RealtimeTicketsFailed event,
     Emitter<TicketListState> emit,
   ) {
-    emit(
-      state.copyWith(
-        errorMessage: 'Realtime tiket terputus: ${event.message}',
-      ),
-    );
+    emit(state.copyWith(errorMessage: 'Realtime tiket terputus: ${event.message}'));
   }
 
-  List<TicketEntity> _applyRealtimeFilters(List<TicketEntity> tickets) {
+  List<TicketEntity> _filter(List<TicketEntity> tickets) {
     return tickets.where((ticket) {
       if (state.statusFilter != TicketStatusFilter.all) {
-        final mappedStatus = _mapStatusFilter(state.statusFilter);
-        final ticketStatusName = ticket.status.name.toLowerCase();
-
-        if (mappedStatus.contains(',')) {
-          final allowed = mappedStatus.split(',');
-          if (!allowed.contains(ticketStatusName)) {
-            return false;
-          }
-        } else if (ticketStatusName != mappedStatus) {
-          return false;
-        }
+        final status = _statusValue(state.statusFilter);
+        if (ticket.status.name.toLowerCase() != status) return false;
       }
-
       final query = state.searchQuery.toLowerCase();
       if (query.isNotEmpty &&
           !ticket.title.toLowerCase().contains(query) &&
           !ticket.description.toLowerCase().contains(query)) {
         return false;
       }
-
       if (state.assignedToId != null &&
           ticket.assignedTo != state.assignedToId) {
         return false;
       }
-
       return true;
     }).toList(growable: false);
   }
 
-  String _mapStatusFilter(TicketStatusFilter filter) {
+  String _statusValue(TicketStatusFilter filter) {
     switch (filter) {
       case TicketStatusFilter.open:
         return 'open';
@@ -155,7 +142,10 @@ class SafeTicketListBloc extends TicketListBloc {
 
   @override
   Future<void> close() async {
-    await _safeTicketSubscription?.cancel();
+    _generation++;
+    final subscription = _safeTicketSubscription;
+    _safeTicketSubscription = null;
+    await subscription?.cancel();
     await super.close();
   }
 }

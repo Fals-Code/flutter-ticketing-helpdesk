@@ -2,11 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/constants/enums.dart';
-import 'package:uts/core/services/connectivity_service.dart';
-import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 
 import 'ticket_list_bloc.dart';
 import 'ticket_list_event.dart';
@@ -22,20 +18,13 @@ class SafeTicketListBloc extends TicketListBloc {
   StreamSubscription<List<TicketEntity>>? _safeTicketSubscription;
 
   SafeTicketListBloc({
-    required GetTicketsUseCase getTicketsUseCase,
-    required GetAllTicketsUseCase getAllTicketsUseCase,
-    required WatchTicketsUseCase watchTicketsUseCase,
-    required CreateTicketUseCase createTicketUseCase,
-    required TicketLocalDataSource localDataSource,
-    required ConnectivityService connectivityService,
-  }) : super(
-          getTicketsUseCase: getTicketsUseCase,
-          getAllTicketsUseCase: getAllTicketsUseCase,
-          watchTicketsUseCase: watchTicketsUseCase,
-          createTicketUseCase: createTicketUseCase,
-          localDataSource: localDataSource,
-          connectivityService: connectivityService,
-        ) {
+    required super.getTicketsUseCase,
+    required super.getAllTicketsUseCase,
+    required super.watchTicketsUseCase,
+    required super.createTicketUseCase,
+    required super.localDataSource,
+    required super.connectivityService,
+  }) {
     on<_RealtimeTicketsArrived>(_onRealtimeTicketsArrived);
     on<_RealtimeTicketsFailed>(_onRealtimeTicketsFailed);
   }

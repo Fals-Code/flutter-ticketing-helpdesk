@@ -4,19 +4,35 @@ import 'package:uts/features/ticket/data/datasources/typed_ticket_remote_data_so
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 
 void main() {
-  test('watchTickets returns a strongly typed ticket stream', () {
+  late TypedSupabaseTicketRemoteDataSourceImpl dataSource;
+
+  setUp(() {
     final client = SupabaseClient(
       'https://example.supabase.co',
       'test-anon-key',
     );
-    final dataSource = TypedSupabaseTicketRemoteDataSourceImpl(client);
+    dataSource = TypedSupabaseTicketRemoteDataSourceImpl(client);
+  });
 
+  test('watchTickets returns a strongly typed stream for one filter', () {
+    final stream = dataSource.watchTickets(userId: 'user-1');
+
+    expect(stream, isA<Stream<List<TicketModel>>>());
+  });
+
+  test('watchTickets supports user and assignee filters together', () {
     expect(
-      () => dataSource.watchTickets(userId: 'user-1'),
+      () => dataSource.watchTickets(
+        userId: 'user-1',
+        assignedToId: 'staff-1',
+      ),
       returnsNormally,
     );
 
-    final stream = dataSource.watchTickets(userId: 'user-1');
+    final stream = dataSource.watchTickets(
+      userId: 'user-1',
+      assignedToId: 'staff-1',
+    );
     expect(stream, isA<Stream<List<TicketModel>>>());
   });
 }

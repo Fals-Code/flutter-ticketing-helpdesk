@@ -13,7 +13,7 @@ Dokumen ini membagi perbaikan dan pengembangan E-Ticketing Helpdesk berdasarkan 
 
 | Fase | Fokus | Status |
 |---|---|---|
-| 0 | Pulihkan entrypoint Helpdesk, pisahkan demo Modul 8, perbaiki startup fallback dan smoke test | Selesai diimplementasikan, menunggu validasi lokal/CI |
+| 0 | Pulihkan entrypoint Helpdesk, pisahkan demo Modul 8, perbaiki startup fallback dan smoke test | Selesai dan tervalidasi lokal/CI |
 | 1 | Audit baseline arsitektur, environment, dependency injection, lifecycle BLoC, dan dokumentasi teknis | Belum dimulai |
 | 2 | Schema Supabase, migration, Storage policy, RLS, RPC, audit trail, dan security matrix | Belum dimulai |
 | 3 | Authentication, session, akun nonaktif, dan route-based access control | Belum dimulai |

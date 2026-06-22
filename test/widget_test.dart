@@ -1,20 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:uts/main.dart';
 
 void main() {
-  testWidgets('App smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const ETicketingApp());
+  testWidgets('missing configuration renders diagnostic app', (tester) async {
+    await tester.pumpWidget(
+      const ConfigurationErrorApp(
+        isUrlMissing: true,
+        isKeyMissing: true,
+      ),
+    );
 
-    // Memastikan judul AppBar "Assets dan Media" muncul di layar
-    expect(find.text('Assets dan Media'), findsOneWidget);
+    expect(
+      find.text('Keamanan Aktif: Konfigurasi Belum Terpasang'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Supabase URL'), findsOneWidget);
+    expect(find.textContaining('Supabase Anon Key'), findsOneWidget);
+    expect(find.text('Assets dan Media'), findsNothing);
+  });
+
+  testWidgets('startup failure renders a readable fallback', (tester) async {
+    await tester.pumpWidget(
+      const StartupErrorApp(message: 'Layanan gagal diinisialisasi.'),
+    );
+
+    expect(
+      find.text('Aplikasi Tidak Dapat Diinisialisasi'),
+      findsOneWidget,
+    );
+    expect(find.text('Layanan gagal diinisialisasi.'), findsOneWidget);
   });
 }

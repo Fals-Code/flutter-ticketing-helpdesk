@@ -10,13 +10,14 @@ import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/safe_ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
   // BLoCs
-  sl.registerFactory(
-    () => TicketListBloc(
+  sl.registerFactory<TicketListBloc>(
+    () => SafeTicketListBloc(
       getTicketsUseCase: sl(),
       getAllTicketsUseCase: sl(),
       watchTicketsUseCase: sl(),

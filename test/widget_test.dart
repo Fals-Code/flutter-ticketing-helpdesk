@@ -22,11 +22,12 @@ void main() {
     testWidgets('shows a controlled page when service initialization fails',
         (tester) async {
       await tester.pumpWidget(
-        const AppStartupFailureApp(message: 'service initialization failed'),
+        const StartupErrorApp(message: 'service initialization failed'),
       );
 
       expect(find.text('Aplikasi Gagal Dimulai'), findsOneWidget);
       expect(find.text('service initialization failed'), findsOneWidget);
+      expect(find.text('Assets dan Media'), findsNothing);
       expect(tester.takeException(), isNull);
     });
   });

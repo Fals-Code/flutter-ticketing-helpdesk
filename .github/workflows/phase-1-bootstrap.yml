@@ -1,0 +1,117 @@
+name: Phase 1 Baseline Migration
+
+on:
+  push:
+    branches:
+      - refactor/phase-1-project-baseline
+    paths:
+      - .github/workflows/phase-1-bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout Phase 1 branch
+        uses: actions/checkout@v4
+        with:
+          ref: refactor/phase-1-project-baseline
+          fetch-depth: 0
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Apply project identity and dependency baseline
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              "name: uts\n": "name: ticket_q\n",
+              'description: "E-Ticketing Helpdesk — Aplikasi manajemen tiket layanan berbasis Flutter."':
+                  'description: "TICKET-Q — aplikasi mobile E-Ticketing Helpdesk untuk pelaporan, pemantauan, dan penyelesaian tiket layanan."',
+              "version: 1.0.0+1": "version: 2.0.0+1",
+          }
+
+          pubspec = Path("pubspec.yaml")
+          text = pubspec.read_text(encoding="utf-8")
+          for old, new in replacements.items():
+              if old not in text:
+                  raise SystemExit(f"Expected pubspec value not found: {old!r}")
+              text = text.replace(old, new, 1)
+
+          unused_dependencies = (
+              "  cupertino_icons: ^1.0.8\n",
+              "  infinite_scroll_pagination: ^5.1.1\n",
+              "  flutter_dotenv: ^5.2.1\n",
+              "  flutter_background_service: ^5.1.0\n",
+              "  flutter_background_service_android: ^6.3.1\n",
+          )
+          for dependency in unused_dependencies:
+              if dependency not in text:
+                  raise SystemExit(f"Expected dependency not found: {dependency.strip()}")
+              text = text.replace(dependency, "", 1)
+          pubspec.write_text(text, encoding="utf-8")
+
+          for root in (Path("lib"), Path("test")):
+              for dart_file in root.rglob("*.dart"):
+                  source = dart_file.read_text(encoding="utf-8")
+                  updated = source.replace("package:uts/", "package:ticket_q/")
+                  if updated != source:
+                      dart_file.write_text(updated, encoding="utf-8")
+
+          file_replacements = {
+              Path("android/app/build.gradle.kts"): [
+                  ("com.example.uts", "com.falscode.ticketq"),
+                  ("        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).\n", "        // Application ID resmi TICKET-Q.\n"),
+                  ("        // You can update the following values to match your application needs.\n        // For more information, see: https://flutter.dev/to/review-gradle-config.\n", ""),
+              ],
+              Path("android/app/src/main/AndroidManifest.xml"): [
+                  ('android:label="uts"', 'android:label="TICKET-Q"'),
+              ],
+              Path("ios/Runner/Info.plist"): [
+                  ("<string>Uts</string>", "<string>TICKET-Q</string>"),
+                  ("<string>uts</string>", "<string>TICKET-Q</string>"),
+              ],
+              Path("ios/Runner.xcodeproj/project.pbxproj"): [
+                  ("com.example.uts", "com.falscode.ticketq"),
+              ],
+              Path("lib/core/constants/app_strings.dart"): [
+                  ("static const String appName = 'E-Ticketing Helpdesk';", "static const String appName = 'TICKET-Q';"),
+              ],
+          }
+
+          for path, pairs in file_replacements.items():
+              source = path.read_text(encoding="utf-8")
+              updated = source
+              for old, new in pairs:
+                  if old not in updated:
+                      raise SystemExit(f"Expected value not found in {path}: {old!r}")
+                  updated = updated.replace(old, new)
+              path.write_text(updated, encoding="utf-8")
+          PY
+
+      - name: Refresh dependency lockfile
+        run: flutter pub get
+
+      - name: Format Dart sources
+        run: dart format .
+
+      - name: Commit migration result
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pubspec.yaml pubspec.lock lib test android ios
+          git diff --cached --check
+          git commit -m "chore(phase-1): establish project identity and dependency baseline"
+          git push origin HEAD:refactor/phase-1-project-baseline

@@ -1,0 +1,52 @@
+name: Flutter Quality Gate
+
+on:
+  push:
+    branches:
+      - refactor/phase-1-project-baseline
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Flutter clean
+        run: flutter clean
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Verify lockfile
+        run: git diff --exit-code -- pubspec.lock
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test
+
+      - name: Verify clean working tree
+        run: test -z "$(git status --short)"

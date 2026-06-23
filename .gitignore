@@ -1,59 +1,69 @@
-# Miscellaneous
-*.class
-*.log
-*.pyc
-*.swp
+# Operating system and editor files
 .DS_Store
-.atom/
-.build/
-.buildlog/
-.history
-.svn/
-.swiftpm/
-migrate_working_dir/
-
-# IntelliJ related
+Thumbs.db
+*.swp
+*.swo
 *.iml
 *.ipr
 *.iws
 .idea/
+.vscode/
+.history/
 
-# The .vscode folder contains launch configuration and tasks you configure in
-# VS Code which may wish to be included in version control, so this line is
-# commented out by default.
-#.vscode/
+# Logs and temporary files
+*.log
+*.tmp
+*.class
+*.pyc
+.atom/
+.build/
+.buildlog/
+.svn/
+.swiftpm/
+migrate_working_dir/
 
-# Flutter/Dart/Pub related
-**/doc/api/
-**/ios/Flutter/.last_build_id
+# Flutter, Dart, and Pub
 .dart_tool/
+.flutter-plugins
 .flutter-plugins-dependencies
 .pub-cache/
 .pub/
+.packages
+**/doc/api/
+**/ios/Flutter/.last_build_id
 /build/
 /coverage/
 
-# Symbolication related
-app.*.symbols
-
-# Obfuscation related
-app.*.map.json
-
-# Android Studio will place build artifacts here
-/android/app/debug
-/android/app/profile
-/android/app/release
+# Android and Gradle output
 /android/.gradle/
 /android/.kotlin/
 /android/build/
 /android/app/build/
+/android/app/debug/
+/android/app/profile/
+/android/app/release/
 
-# Environment variables
+# Symbolication and obfuscation output
+app.*.symbols
+app.*.map.json
+
+# Environment configuration
 .env
+.env.*
+!.env.example
 define_config.json
+define_config.*.json
+!define_config.example.json
 
-# Android signing credentials
+# Signing files
 *.jks
 *.keystore
-key.properties
-android/key.properties
+**/key.properties
+*.p12
+*.mobileprovision
+
+# Generated local platform configuration
+local.properties
+android/local.properties
+ios/Flutter/Generated.xcconfig
+ios/Flutter/flutter_export_environment.sh

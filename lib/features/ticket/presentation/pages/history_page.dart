@@ -2,15 +2,17 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart' as stats_state;
-import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/app_colors.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+    as stats_event;
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_state.dart'
+    as stats_state;
+import 'package:ticket_q/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uts/core/router/app_router.dart';
-import 'package:uts/core/utils/haptic_helper.dart';
+import 'package:ticket_q/core/router/app_router.dart';
+import 'package:ticket_q/core/utils/haptic_helper.dart';
 
 class HistoryPage extends StatefulWidget {
   const HistoryPage({super.key});
@@ -37,10 +39,10 @@ class _HistoryPageState extends State<HistoryPage> {
     }
 
     context.read<TicketStatsBloc>().add(stats_event.FetchAllHistoryRequested(
-      changedBy: changedBy,
-      startDate: _startDate,
-      endDate: _endDate,
-    ));
+          changedBy: changedBy,
+          startDate: _startDate,
+          endDate: _endDate,
+        ));
   }
 
   Future<void> _selectDateRange() async {
@@ -56,8 +58,12 @@ class _HistoryPageState extends State<HistoryPage> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: isDark
-                ? const ColorScheme.dark(primary: AppColors.primary, onPrimary: Colors.white, surface: AppColors.surfaceDark)
-                : const ColorScheme.light(primary: AppColors.primary, onPrimary: Colors.white),
+                ? const ColorScheme.dark(
+                    primary: AppColors.primary,
+                    onPrimary: Colors.white,
+                    surface: AppColors.surfaceDark)
+                : const ColorScheme.light(
+                    primary: AppColors.primary, onPrimary: Colors.white),
           ),
           child: child!,
         );
@@ -79,17 +85,20 @@ class _HistoryPageState extends State<HistoryPage> {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor:
+          isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
           'Riwayat Aktivitas',
-          style: GoogleFonts.plusJakartaSans(fontWeight: FontWeight.w800, fontSize: 18),
+          style: GoogleFonts.plusJakartaSans(
+              fontWeight: FontWeight.w800, fontSize: 18),
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.calendar_month_rounded, color: _startDate != null ? AppColors.primary : null),
+            icon: Icon(Icons.calendar_month_rounded,
+                color: _startDate != null ? AppColors.primary : null),
             onPressed: _selectDateRange,
           ),
           if (_startDate != null)
@@ -165,7 +174,7 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Widget _buildTimelineItem(dynamic item, bool isLastGroupItem, bool isDark) {
     final statusColor = _getStatusColor(item.newStatus);
-    
+
     return IntrinsicHeight(
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -174,7 +183,8 @@ class _HistoryPageState extends State<HistoryPage> {
           Column(
             children: [
               Container(
-                width: 12, height: 12,
+                width: 12,
+                height: 12,
                 margin: const EdgeInsets.only(top: 4),
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.backgroundDark : Colors.white,
@@ -186,7 +196,9 @@ class _HistoryPageState extends State<HistoryPage> {
                 child: Container(
                   width: 1.5,
                   decoration: BoxDecoration(
-                    color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05),
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.05)
+                        : Colors.black.withValues(alpha: 0.05),
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),
@@ -213,7 +225,8 @@ class _HistoryPageState extends State<HistoryPage> {
                       const SizedBox(width: 8),
                       Text(
                         '• ${DateFormat('HH:mm').format(item.createdAt)}',
-                        style: GoogleFonts.inter(fontSize: 11, color: Colors.grey),
+                        style:
+                            GoogleFonts.inter(fontSize: 11, color: Colors.grey),
                       ),
                     ],
                   ),
@@ -230,19 +243,23 @@ class _HistoryPageState extends State<HistoryPage> {
                   GestureDetector(
                     onTap: () {
                       HapticHelper.light();
-                      context.push(AppRoutes.ticketDetail.replaceAll(':id', item.ticketId));
+                      context.push(AppRoutes.ticketDetail
+                          .replaceAll(':id', item.ticketId));
                     },
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
                         color: AppColors.primary.withValues(alpha: 0.05),
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: AppColors.primary.withValues(alpha: 0.1)),
+                        border: Border.all(
+                            color: AppColors.primary.withValues(alpha: 0.1)),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.confirmation_number_rounded, size: 12, color: AppColors.primary),
+                          const Icon(Icons.confirmation_number_rounded,
+                              size: 12, color: AppColors.primary),
                           const SizedBox(width: 6),
                           Text(
                             '#${item.ticketId.substring(0, 8).toUpperCase()}',
@@ -275,15 +292,36 @@ class _HistoryPageState extends State<HistoryPage> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(width: 12, height: 12, decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1), shape: BoxShape.circle)),
+            Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                    color: isDark
+                        ? Colors.white.withValues(alpha: 0.1)
+                        : Colors.black.withValues(alpha: 0.1),
+                    shape: BoxShape.circle)),
             const SizedBox(width: 16),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(width: 100, height: 12, decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.1) : Colors.black.withValues(alpha: 0.1), borderRadius: BorderRadius.circular(4))),
+                  Container(
+                      width: 100,
+                      height: 12,
+                      decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.1)
+                              : Colors.black.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4))),
                   const SizedBox(height: 8),
-                  Container(width: double.infinity, height: 40, decoration: BoxDecoration(color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.05), borderRadius: BorderRadius.circular(8))),
+                  Container(
+                      width: double.infinity,
+                      height: 40,
+                      decoration: BoxDecoration(
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.05)
+                              : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(8))),
                 ],
               ),
             ),
@@ -300,13 +338,17 @@ class _HistoryPageState extends State<HistoryPage> {
         children: [
           Container(
             padding: const EdgeInsets.all(40),
-            decoration: BoxDecoration(color: AppColors.primary.withValues(alpha: 0.05), shape: BoxShape.circle),
-            child: Icon(Icons.history_toggle_off_rounded, size: 60, color: AppColors.primary.withValues(alpha: 0.3)),
+            decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.05),
+                shape: BoxShape.circle),
+            child: Icon(Icons.history_toggle_off_rounded,
+                size: 60, color: AppColors.primary.withValues(alpha: 0.3)),
           ),
           const SizedBox(height: 24),
           Text(
             'Belum Ada Jejak',
-            style: GoogleFonts.plusJakartaSans(fontSize: 18, fontWeight: FontWeight.w800),
+            style: GoogleFonts.plusJakartaSans(
+                fontSize: 18, fontWeight: FontWeight.w800),
           ),
           const SizedBox(height: 4),
           Text(
@@ -325,7 +367,8 @@ class _HistoryPageState extends State<HistoryPage> {
     final yesterday = today.subtract(const Duration(days: 1));
 
     for (var item in history) {
-      final date = DateTime(item.createdAt.year, item.createdAt.month, item.createdAt.day);
+      final date = DateTime(
+          item.createdAt.year, item.createdAt.month, item.createdAt.day);
       String key;
       if (date == today) {
         key = 'Hari Ini';
@@ -344,11 +387,16 @@ class _HistoryPageState extends State<HistoryPage> {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'open': return AppColors.primary;
-      case 'in_progress': return AppColors.statusInProgress;
-      case 'resolved': return AppColors.statusResolved;
-      case 'closed': return Colors.grey;
-      default: return AppColors.primary;
+      case 'open':
+        return AppColors.primary;
+      case 'in_progress':
+        return AppColors.statusInProgress;
+      case 'resolved':
+        return AppColors.statusResolved;
+      case 'closed':
+        return Colors.grey;
+      default:
+        return AppColors.primary;
     }
   }
 

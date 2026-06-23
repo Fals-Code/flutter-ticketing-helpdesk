@@ -2,20 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
-import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/services/report_export_service.dart';
-import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
-import 'package:uts/features/admin/presentation/bloc/admin_event.dart';
-import 'package:uts/features/admin/presentation/bloc/admin_state.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+import 'package:ticket_q/core/constants/app_colors.dart';
+import 'package:ticket_q/core/services/report_export_service.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/admin_event.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/admin_state.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart'
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_state.dart'
     as stats_state;
-import 'package:uts/core/constants/enums.dart';
-import 'package:uts/shared/widgets/loading_widget.dart';
-import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
-import 'package:uts/core/utils/haptic_helper.dart';
+import 'package:ticket_q/core/constants/enums.dart';
+import 'package:ticket_q/shared/widgets/loading_widget.dart';
+import 'package:ticket_q/features/admin/domain/entities/admin_report_entity.dart';
+import 'package:ticket_q/core/utils/haptic_helper.dart';
 
 class AdminReportsPage extends StatefulWidget {
   const AdminReportsPage({super.key});

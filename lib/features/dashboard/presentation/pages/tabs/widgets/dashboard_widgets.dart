@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/core/router/app_router.dart';
+import 'package:ticket_q/core/constants/app_colors.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:ticket_q/core/router/app_router.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_state.dart';
 
 class GreetingBanner extends StatefulWidget {
   final bool isDark;
@@ -18,7 +18,8 @@ class GreetingBanner extends StatefulWidget {
   State<GreetingBanner> createState() => _GreetingBannerState();
 }
 
-class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProviderStateMixin {
+class _GreetingBannerState extends State<GreetingBanner>
+    with SingleTickerProviderStateMixin {
   late AnimationController _animController;
 
   @override
@@ -40,13 +41,29 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
   Map<String, dynamic> _getGreetingConfig() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 11) {
-      return {'text': 'Selamat Pagi', 'icon': Icons.wb_sunny_rounded, 'color': const Color(0xFFFBBF24)};
+      return {
+        'text': 'Selamat Pagi',
+        'icon': Icons.wb_sunny_rounded,
+        'color': const Color(0xFFFBBF24)
+      };
     } else if (hour >= 11 && hour < 15) {
-      return {'text': 'Selamat Siang', 'icon': Icons.wb_sunny_rounded, 'color': const Color(0xFFF59E0B)};
+      return {
+        'text': 'Selamat Siang',
+        'icon': Icons.wb_sunny_rounded,
+        'color': const Color(0xFFF59E0B)
+      };
     } else if (hour >= 15 && hour < 18) {
-      return {'text': 'Selamat Sore', 'icon': Icons.wb_twilight_rounded, 'color': const Color(0xFFFB923C)};
+      return {
+        'text': 'Selamat Sore',
+        'icon': Icons.wb_twilight_rounded,
+        'color': const Color(0xFFFB923C)
+      };
     } else {
-      return {'text': 'Selamat Malam', 'icon': Icons.bedtime_rounded, 'color': const Color(0xFF818CF8)};
+      return {
+        'text': 'Selamat Malam',
+        'icon': Icons.bedtime_rounded,
+        'color': const Color(0xFF818CF8)
+      };
     }
   }
 
@@ -58,12 +75,14 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
         final name = state.user.fullName ?? 'Pengguna';
-        final today = DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now());
+        final today =
+            DateFormat('EEEE, d MMMM yyyy', 'id_ID').format(DateTime.now());
 
         return AnimatedBuilder(
           animation: _animController,
           builder: (context, child) {
-            final slideValue = Curves.easeOutCubic.transform(1.0 - _animController.value) * 20;
+            final slideValue =
+                Curves.easeOutCubic.transform(1.0 - _animController.value) * 20;
             return Opacity(
               opacity: _animController.value,
               child: Transform.translate(
@@ -80,7 +99,9 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
               decoration: BoxDecoration(
                 color: widget.isDark ? AppColors.surfaceDark : Colors.white,
                 border: Border.all(
-                  color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
+                  color: widget.isDark
+                      ? AppColors.borderDark
+                      : AppColors.borderLight,
                 ),
               ),
               child: Stack(
@@ -120,7 +141,7 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
                       ),
                     ),
                   ),
-                  
+
                   // Content
                   Row(
                     children: [
@@ -130,7 +151,8 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
                           children: [
                             Row(
                               children: [
-                                Icon(config['icon'] as IconData, color: accentColor, size: 14),
+                                Icon(config['icon'] as IconData,
+                                    color: accentColor, size: 14),
                                 const SizedBox(width: 8),
                                 Text(
                                   (config['text'] as String).toUpperCase(),
@@ -149,7 +171,9 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
                               style: GoogleFonts.plusJakartaSans(
                                 fontSize: 24,
                                 fontWeight: FontWeight.w800,
-                                color: widget.isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                color: widget.isDark
+                                    ? AppColors.textPrimaryDark
+                                    : AppColors.textPrimaryLight,
                                 letterSpacing: -0.8,
                               ),
                             ),
@@ -158,7 +182,9 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
                               today,
                               style: GoogleFonts.inter(
                                 fontSize: 13,
-                                color: widget.isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                                color: widget.isDark
+                                    ? AppColors.textSecondaryDark
+                                    : AppColors.textSecondaryLight,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -171,10 +197,14 @@ class _GreetingBannerState extends State<GreetingBanner> with SingleTickerProvid
                         width: 52,
                         height: 52,
                         decoration: BoxDecoration(
-                          color: widget.isDark ? AppColors.surfaceDark2 : Colors.grey.withValues(alpha: 0.05),
+                          color: widget.isDark
+                              ? AppColors.surfaceDark2
+                              : Colors.grey.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(
-                            color: widget.isDark ? AppColors.borderDark : AppColors.borderLight,
+                            color: widget.isDark
+                                ? AppColors.borderDark
+                                : AppColors.borderLight,
                           ),
                         ),
                         child: Center(
@@ -218,8 +248,9 @@ class StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final double targetValue = double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
-    
+    final double targetValue =
+        double.tryParse(value.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0;
+
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
@@ -264,7 +295,7 @@ class StatCard extends StatelessWidget {
                       ),
                       child: Icon(icon, color: color, size: 18),
                     ),
-                    // Small upward trend or dot indicator if needed, 
+                    // Small upward trend or dot indicator if needed,
                     // for now just aesthetic
                     Container(
                       width: 6,
@@ -289,7 +320,9 @@ class StatCard extends StatelessWidget {
                           style: GoogleFonts.plusJakartaSans(
                             fontSize: 32,
                             fontWeight: FontWeight.w800,
-                            color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                            color: isDark
+                                ? AppColors.textPrimaryDark
+                                : AppColors.textPrimaryLight,
                             letterSpacing: -1,
                           ),
                         );
@@ -300,7 +333,9 @@ class StatCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                        color: isDark
+                            ? AppColors.textSecondaryDark
+                            : AppColors.textSecondaryLight,
                         letterSpacing: 0.2,
                       ),
                     ),
@@ -319,12 +354,14 @@ class RecentTicketCard extends StatelessWidget {
   final TicketEntity ticket;
   final bool isDark;
 
-  const RecentTicketCard({super.key, required this.ticket, required this.isDark});
+  const RecentTicketCard(
+      {super.key, required this.ticket, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () => context.push(AppRoutes.ticketDetail.replaceAll(':id', ticket.id)),
+      onTap: () =>
+          context.push(AppRoutes.ticketDetail.replaceAll(':id', ticket.id)),
       child: Container(
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(18),
@@ -350,7 +387,8 @@ class RecentTicketCard extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                   decoration: BoxDecoration(
                     color: ticket.status.color.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -387,7 +425,9 @@ class RecentTicketCard extends StatelessWidget {
               style: GoogleFonts.plusJakartaSans(
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 letterSpacing: -0.2,
               ),
               maxLines: 1,
@@ -396,14 +436,17 @@ class RecentTicketCard extends StatelessWidget {
             const SizedBox(height: 12),
             Row(
               children: [
-                Icon(Icons.category_outlined, size: 14, color: isDark ? Colors.white38 : Colors.black38),
+                Icon(Icons.category_outlined,
+                    size: 14, color: isDark ? Colors.white38 : Colors.black38),
                 const SizedBox(width: 6),
                 Text(
                   ticket.category,
                   style: GoogleFonts.inter(
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
                 ),
                 const Spacer(),
@@ -437,7 +480,11 @@ class BadgeWidget extends StatelessWidget {
   final Color color;
   final Color textColor;
 
-  const BadgeWidget({super.key, required this.label, required this.color, required this.textColor});
+  const BadgeWidget(
+      {super.key,
+      required this.label,
+      required this.color,
+      required this.textColor});
 
   @override
   Widget build(BuildContext context) {
@@ -450,8 +497,8 @@ class BadgeWidget extends StatelessWidget {
       child: Text(
         label.toUpperCase(),
         style: GoogleFonts.inter(
-          fontSize: 10, 
-          fontWeight: FontWeight.w800, 
+          fontSize: 10,
+          fontWeight: FontWeight.w800,
           color: textColor,
           letterSpacing: 0.5,
         ),

@@ -40,5 +40,6 @@ class NotificationEntity extends Equatable {
   }
 
   @override
-  List<Object?> get props => [id, userId, title, message, ticketId, isRead, createdAt];
+  List<Object?> get props =>
+      [id, userId, title, message, ticketId, isRead, createdAt];
 }

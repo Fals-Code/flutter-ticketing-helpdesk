@@ -11,7 +11,7 @@ import '../../../../shared/widgets/loading_widget.dart';
 import '../../../../shared/widgets/aurora_background.dart';
 import '../../presentation/bloc/auth_bloc.dart';
 import '../../presentation/bloc/auth_state.dart';
-import 'package:uts/core/router/app_router.dart';
+import 'package:ticket_q/core/router/app_router.dart';
 
 class SplashPage extends StatefulWidget {
   const SplashPage({super.key});
@@ -64,7 +64,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
       ),
     );
 
-    _textSlide = Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
+    _textSlide =
+        Tween<Offset>(begin: const Offset(0, 0.2), end: Offset.zero).animate(
       CurvedAnimation(
         parent: _entranceController,
         curve: const Interval(0.4, 0.7, curve: Curves.easeOutCubic),
@@ -105,22 +106,23 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
     if (_isNavigating || !_minDelayPassed) return;
 
     final state = context.read<AuthBloc>().state;
-    
+
     // Conclusive states
-    if (state.status == AuthStatus.authenticated || 
+    if (state.status == AuthStatus.authenticated ||
         state.status == AuthStatus.unauthenticated ||
         state.status == AuthStatus.error) {
-      
       _isNavigating = true;
-      
+
       // Trigger redirect evaluation
       appRouter.refresh();
-      
+
       // Secondary explicit navigation as failsafe if router refresh is too slow
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted && GoRouterState.of(context).matchedLocation == '/') {
           if (state.status == AuthStatus.authenticated) {
-            context.go(state.user.role == UserRole.user ? '/dashboard' : '/staff-dashboard');
+            context.go(state.user.role == UserRole.user
+                ? '/dashboard'
+                : '/staff-dashboard');
           } else {
             context.go('/login');
           }
@@ -139,7 +141,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
         body: AuroraBackground(
           child: Center(
             child: AnimatedBuilder(
-              animation: Listenable.merge([_entranceController, _idleController]),
+              animation:
+                  Listenable.merge([_entranceController, _idleController]),
               builder: (context, child) {
                 return Opacity(
                   opacity: _cardFade.value,
@@ -150,7 +153,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
                         child: Container(
-                          padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 24),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 48, horizontal: 24),
                           decoration: BoxDecoration(
                             color: Colors.white.withValues(alpha: 0.05),
                             borderRadius: BorderRadius.circular(32),
@@ -171,14 +175,17 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                             children: [
                               // Floating Logo Container
                               Transform.translate(
-                                offset: Offset(0, sin(_idleController.value * 2 * 3.14159) * 8),
+                                offset: Offset(
+                                    0,
+                                    sin(_idleController.value * 2 * 3.14159) *
+                                        8),
                                 child: Transform.scale(
                                   scale: _logoScale.value,
                                   child: _buildLogoIcon(),
                                 ),
                               ),
                               const SizedBox(height: 32),
-                              
+
                               // Branding Info
                               FadeTransition(
                                 opacity: _textFade,
@@ -193,7 +200,8 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                         style: GoogleFonts.plusJakartaSans(
                                           fontSize: 10,
                                           fontWeight: FontWeight.w800,
-                                          color: Colors.white.withValues(alpha: 0.4),
+                                          color: Colors.white
+                                              .withValues(alpha: 0.4),
                                           letterSpacing: 3.0,
                                         ),
                                       ),
@@ -201,9 +209,9 @@ class _SplashPageState extends State<SplashPage> with TickerProviderStateMixin {
                                   ),
                                 ),
                               ),
-                              
+
                               const SizedBox(height: 48),
-                              
+
                               // Footer Loading
                               Opacity(
                                 opacity: _textFade.value,

@@ -20,5 +20,6 @@ class AppSettings extends Equatable {
         defaultPriority = 'Medium';
 
   @override
-  List<Object?> get props => [maintenanceMode, slaHours, autoAssign, defaultPriority];
+  List<Object?> get props =>
+      [maintenanceMode, slaHours, autoAssign, defaultPriority];
 }

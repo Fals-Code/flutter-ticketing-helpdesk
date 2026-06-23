@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 
 /// Entity User yang mewakili data pengguna di Domain Layer.
 class AuthUser extends Equatable {
@@ -22,7 +22,8 @@ class AuthUser extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, email, fullName, role, token, avatarUrl, isEmailVerified];
+  List<Object?> get props =>
+      [id, email, fullName, role, token, avatarUrl, isEmailVerified];
 
   /// Menghasilkan state "Kosong" saat tidak terautentikasi.
   static const AuthUser empty = AuthUser(

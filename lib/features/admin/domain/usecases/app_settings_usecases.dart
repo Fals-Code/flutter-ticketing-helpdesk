@@ -4,7 +4,8 @@ import '../../../../core/usecases/usecase.dart';
 import '../entities/app_settings_entity.dart';
 import '../repositories/admin_repository.dart';
 
-class GetAppSettingsUseCase implements UseCase<Either<Failure, AppSettings>, NoParams> {
+class GetAppSettingsUseCase
+    implements UseCase<Either<Failure, AppSettings>, NoParams> {
   final AdminRepository repository;
   GetAppSettingsUseCase(this.repository);
 
@@ -14,7 +15,8 @@ class GetAppSettingsUseCase implements UseCase<Either<Failure, AppSettings>, NoP
   }
 }
 
-class UpdateAppSettingsUseCase implements UseCase<Either<Failure, void>, AppSettings> {
+class UpdateAppSettingsUseCase
+    implements UseCase<Either<Failure, void>, AppSettings> {
   final AdminRepository repository;
   UpdateAppSettingsUseCase(this.repository);
 

@@ -29,8 +29,10 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
     emit(state.copyWith(status: AdminStatus.loading));
     final result = await getUsersUseCase(const NoParams());
     result.fold(
-      (failure) => emit(state.copyWith(status: AdminStatus.error, errorMessage: failure.message)),
-      (users) => emit(state.copyWith(status: AdminStatus.success, users: users)),
+      (failure) => emit(state.copyWith(
+          status: AdminStatus.error, errorMessage: failure.message)),
+      (users) =>
+          emit(state.copyWith(status: AdminStatus.success, users: users)),
     );
   }
 
@@ -44,9 +46,12 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
       newRole: event.newRole,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(status: AdminStatus.error, errorMessage: failure.message)),
+      (failure) => emit(state.copyWith(
+          status: AdminStatus.error, errorMessage: failure.message)),
       (_) {
-        emit(state.copyWith(status: AdminStatus.success, successMessage: 'Peran pengguna berhasil diperbarui'));
+        emit(state.copyWith(
+            status: AdminStatus.success,
+            successMessage: 'Peran pengguna berhasil diperbarui'));
         add(const FetchAllUsersRequested()); // Refresh list
       },
     );
@@ -63,9 +68,12 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
       email: event.email,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(status: AdminStatus.error, errorMessage: failure.message)),
+      (failure) => emit(state.copyWith(
+          status: AdminStatus.error, errorMessage: failure.message)),
       (_) {
-        emit(state.copyWith(status: AdminStatus.success, successMessage: 'Profil pengguna berhasil diperbarui'));
+        emit(state.copyWith(
+            status: AdminStatus.success,
+            successMessage: 'Profil pengguna berhasil diperbarui'));
         add(const FetchAllUsersRequested()); // Refresh list
       },
     );
@@ -81,8 +89,10 @@ class AdminBloc extends Bloc<AdminEvent, AdminState> {
       endDate: event.endDate,
     ));
     result.fold(
-      (failure) => emit(state.copyWith(status: AdminStatus.error, errorMessage: failure.message)),
-      (report) => emit(state.copyWith(status: AdminStatus.success, report: report)),
+      (failure) => emit(state.copyWith(
+          status: AdminStatus.error, errorMessage: failure.message)),
+      (report) =>
+          emit(state.copyWith(status: AdminStatus.success, report: report)),
     );
   }
 }

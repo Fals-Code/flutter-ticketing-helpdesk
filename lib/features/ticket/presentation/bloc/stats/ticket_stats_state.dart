@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
-import 'package:uts/features/auth/domain/entities/user_entity.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
+import 'package:ticket_q/features/ticket/domain/repositories/ticket_repository.dart';
+import 'package:ticket_q/features/auth/domain/entities/user_entity.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_history_entity.dart';
 
 class TicketStatsState extends Equatable {
   final TicketStats stats;
@@ -47,5 +47,14 @@ class TicketStatsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [stats, staffUsers, history, errorMessage, isLoading, startDate, endDate, assignedToId];
+  List<Object?> get props => [
+        stats,
+        staffUsers,
+        history,
+        errorMessage,
+        isLoading,
+        startDate,
+        endDate,
+        assignedToId
+      ];
 }

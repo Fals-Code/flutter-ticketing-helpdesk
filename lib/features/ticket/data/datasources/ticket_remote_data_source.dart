@@ -5,7 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 
 abstract class TicketRemoteDataSource {
   Future<List<TicketModel>> getTickets(int page, int limit,

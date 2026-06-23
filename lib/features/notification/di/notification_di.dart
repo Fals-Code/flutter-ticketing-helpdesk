@@ -1,13 +1,13 @@
 import 'package:get_it/get_it.dart';
-import 'package:uts/core/services/local_notification_service.dart';
-import 'package:uts/core/services/fcm_service.dart';
+import 'package:ticket_q/core/services/local_notification_service.dart';
+import 'package:ticket_q/core/services/fcm_service.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uts/features/notification/data/datasources/notification_remote_data_source.dart';
-import 'package:uts/features/notification/data/repositories/notification_repository_impl.dart';
-import 'package:uts/features/notification/domain/repositories/notification_repository.dart';
-import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
-import 'package:uts/features/notification/domain/usecases/delete_notification_usecases.dart';
-import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:ticket_q/features/notification/data/datasources/notification_remote_data_source.dart';
+import 'package:ticket_q/features/notification/data/repositories/notification_repository_impl.dart';
+import 'package:ticket_q/features/notification/domain/repositories/notification_repository.dart';
+import 'package:ticket_q/features/notification/domain/usecases/notification_usecases.dart';
+import 'package:ticket_q/features/notification/domain/usecases/delete_notification_usecases.dart';
+import 'package:ticket_q/features/notification/presentation/bloc/notification_bloc.dart';
 
 Future<void> initNotificationDependencies(GetIt sl) async {
   // Datasource

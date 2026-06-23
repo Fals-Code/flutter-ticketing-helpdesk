@@ -1,8 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uts/core/constants/enums.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:ticket_q/core/constants/enums.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_entity.dart';
 
 import 'ticket_list_bloc.dart';
 import 'ticket_list_event.dart';
@@ -98,7 +98,8 @@ class SafeTicketListBloc extends TicketListBloc {
     _RealtimeTicketsFailed event,
     Emitter<TicketListState> emit,
   ) {
-    emit(state.copyWith(errorMessage: 'Realtime tiket terputus: ${event.message}'));
+    emit(state.copyWith(
+        errorMessage: 'Realtime tiket terputus: ${event.message}'));
   }
 
   List<TicketEntity> _filter(List<TicketEntity> tickets) {

@@ -3,7 +3,14 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import 'app_button.dart';
 
-enum EmptyStateType { tickets, notifications, search, history, error, defaultState }
+enum EmptyStateType {
+  tickets,
+  notifications,
+  search,
+  history,
+  error,
+  defaultState
+}
 
 /// Widget empty state yang modern dengan gaya desain Linear/Raycast.
 /// Menampilkan ilustrasi SVG/Icon dengan efek subtle glow/glassmorphism,
@@ -24,17 +31,26 @@ class EmptyStateWidget extends StatelessWidget {
     this.onAction,
   });
 
-  factory EmptyStateWidget.emptyTickets({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyTickets(
+      {String? title,
+      String? subtitle,
+      String? actionLabel,
+      VoidCallback? onAction}) {
     return EmptyStateWidget(
       type: EmptyStateType.tickets,
       title: title ?? 'Belum Ada Laporan',
-      subtitle: subtitle ?? 'Buat tiket pertamamu untuk mendapat bantuan dari tim helpdesk kami.',
+      subtitle: subtitle ??
+          'Buat tiket pertamamu untuk mendapat bantuan dari tim helpdesk kami.',
       actionLabel: actionLabel ?? 'Buat Tiket Sekarang',
       onAction: onAction,
     );
   }
 
-  factory EmptyStateWidget.emptyNotifications({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyNotifications(
+      {String? title,
+      String? subtitle,
+      String? actionLabel,
+      VoidCallback? onAction}) {
     return EmptyStateWidget(
       type: EmptyStateType.notifications,
       title: title ?? 'Semua Beres',
@@ -44,7 +60,11 @@ class EmptyStateWidget extends StatelessWidget {
     );
   }
 
-  factory EmptyStateWidget.emptySearch({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptySearch(
+      {String? title,
+      String? subtitle,
+      String? actionLabel,
+      VoidCallback? onAction}) {
     return EmptyStateWidget(
       type: EmptyStateType.search,
       title: title ?? 'Tidak Ditemukan',
@@ -54,7 +74,11 @@ class EmptyStateWidget extends StatelessWidget {
     );
   }
 
-  factory EmptyStateWidget.emptyHistory({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyHistory(
+      {String? title,
+      String? subtitle,
+      String? actionLabel,
+      VoidCallback? onAction}) {
     return EmptyStateWidget(
       type: EmptyStateType.history,
       title: title ?? 'Belum Ada Riwayat',
@@ -64,11 +88,16 @@ class EmptyStateWidget extends StatelessWidget {
     );
   }
 
-  factory EmptyStateWidget.error({String? title, String? subtitle, String? actionLabel, VoidCallback? onAction}) {
+  factory EmptyStateWidget.error(
+      {String? title,
+      String? subtitle,
+      String? actionLabel,
+      VoidCallback? onAction}) {
     return EmptyStateWidget(
       type: EmptyStateType.error,
       title: title ?? 'Terjadi Kesalahan',
-      subtitle: subtitle ?? 'Gagal memuat data. Silakan coba beberapa saat lagi.',
+      subtitle:
+          subtitle ?? 'Gagal memuat data. Silakan coba beberapa saat lagi.',
       actionLabel: actionLabel,
       onAction: onAction,
     );
@@ -77,10 +106,11 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    
+
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space32, vertical: AppDimensions.space64),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.space32, vertical: AppDimensions.space64),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.center,
@@ -92,7 +122,9 @@ class EmptyStateWidget extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w600,
-                color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                color: isDark
+                    ? AppColors.textPrimaryDark
+                    : AppColors.textPrimaryLight,
                 letterSpacing: -0.5,
               ),
               textAlign: TextAlign.center,
@@ -102,24 +134,26 @@ class EmptyStateWidget extends StatelessWidget {
               subtitle ?? 'There is no data available to display at this time.',
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
                 height: 1.5,
               ),
               textAlign: TextAlign.center,
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppDimensions.space24),
-              type == EmptyStateType.search 
-               ? AppButton.ghost(
-                  label: actionLabel!,
-                  onPressed: onAction,
-                  size: AppButtonSize.normal,
-                )
-               : AppButton.primary(
-                  label: actionLabel!,
-                  onPressed: onAction,
-                  size: AppButtonSize.normal,
-                ),
+              type == EmptyStateType.search
+                  ? AppButton.ghost(
+                      label: actionLabel!,
+                      onPressed: onAction,
+                      size: AppButtonSize.normal,
+                    )
+                  : AppButton.primary(
+                      label: actionLabel!,
+                      onPressed: onAction,
+                      size: AppButtonSize.normal,
+                    ),
             ]
           ],
         ),
@@ -159,13 +193,21 @@ class EmptyStateWidget extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: type == EmptyStateType.error 
-            ? [Colors.red.withValues(alpha: 0.15), Colors.redAccent.withValues(alpha: 0.05)]
-            : [AppColors.primary.withValues(alpha: 0.15), AppColors.accent.withValues(alpha: 0.05)],
+          colors: type == EmptyStateType.error
+              ? [
+                  Colors.red.withValues(alpha: 0.15),
+                  Colors.redAccent.withValues(alpha: 0.05)
+                ]
+              : [
+                  AppColors.primary.withValues(alpha: 0.15),
+                  AppColors.accent.withValues(alpha: 0.05)
+                ],
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark ? Colors.black.withValues(alpha: 0.3) : AppColors.borderLight.withValues(alpha: 0.5),
+            color: isDark
+                ? Colors.black.withValues(alpha: 0.3)
+                : AppColors.borderLight.withValues(alpha: 0.5),
             blurRadius: 24,
             spreadRadius: 0,
             offset: const Offset(0, 8),
@@ -186,9 +228,9 @@ class EmptyStateWidget extends StatelessWidget {
         child: Icon(
           fallbackIcon,
           size: 36,
-          color: type == EmptyStateType.error 
-            ? Colors.redAccent.withValues(alpha: 0.8)
-            : AppColors.primary.withValues(alpha: 0.8),
+          color: type == EmptyStateType.error
+              ? Colors.redAccent.withValues(alpha: 0.8)
+              : AppColors.primary.withValues(alpha: 0.8),
         ),
       ),
     );

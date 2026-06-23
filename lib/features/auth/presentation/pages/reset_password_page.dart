@@ -8,7 +8,7 @@ import '../../../../shared/widgets/app_text_field.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 
 class ResetPasswordPage extends StatefulWidget {
   const ResetPasswordPage({super.key});
@@ -17,10 +17,11 @@ class ResetPasswordPage extends StatefulWidget {
   State<ResetPasswordPage> createState() => _ResetPasswordPageState();
 }
 
-class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTickerProviderStateMixin {
+class _ResetPasswordPageState extends State<ResetPasswordPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
-  
+
   bool _isSuccess = false;
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
@@ -32,7 +33,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _animationController.forward();
@@ -47,7 +49,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
 
   void _onReset() {
     if (_formKey.currentState!.validate()) {
-      context.read<AuthBloc>().add(ResetPasswordRequested(_emailController.text.trim()));
+      context
+          .read<AuthBloc>()
+          .add(ResetPasswordRequested(_emailController.text.trim()));
     }
   }
 
@@ -74,7 +78,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
           if (state.status == AuthStatus.error) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? 'Gagal memproses permintaan'),
+                content:
+                    Text(state.errorMessage ?? 'Gagal memproses permintaan'),
                 backgroundColor: AppColors.danger,
                 behavior: SnackBarBehavior.floating,
               ),
@@ -89,7 +94,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
               position: _slideAnimation,
               child: FadeTransition(
                 opacity: _animationController,
-                child: _isSuccess ? _buildSuccessState(isDark) : _buildFormState(isDark),
+                child: _isSuccess
+                    ? _buildSuccessState(isDark)
+                    : _buildFormState(isDark),
               ),
             ),
           ),
@@ -131,7 +138,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
         Text(
           'Masukkan email yang terdaftar pada akun Anda\nuntuk menerima instruksi reset kata sandi.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
                 height: 1.5,
               ),
           textAlign: TextAlign.center,
@@ -149,7 +158,8 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
             onSubmitted: (_) => _onReset(),
             validator: (v) {
               if (v!.isEmpty) return 'Email wajib diisi';
-              if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v)) return 'Format email tidak valid';
+              if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v))
+                return 'Format email tidak valid';
               return null;
             },
           ),
@@ -202,7 +212,9 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> with SingleTicker
         Text(
           'Instruksi untuk mengatur ulang kata sandi telah\ndikirimkan ke ${_emailController.text}.',
           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
                 height: 1.5,
               ),
           textAlign: TextAlign.center,

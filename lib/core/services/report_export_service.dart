@@ -5,9 +5,9 @@ import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
-import 'package:uts/features/admin/domain/entities/admin_report_entity.dart';
+import 'package:ticket_q/features/admin/domain/entities/admin_report_entity.dart';
 
-import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
+import 'package:ticket_q/features/ticket/domain/repositories/ticket_repository.dart';
 
 class ReportExportService {
   /// Exports the admin report as a PDF file and opens the share dialog.
@@ -33,10 +33,12 @@ class ReportExportService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             pw.Text('Laporan E-Ticketing Helpdesk',
-                style: pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 20, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 4),
             pw.Text('Periode: $periodLabel  |  Dicetak: $now',
-                style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
+                style:
+                    const pw.TextStyle(fontSize: 10, color: PdfColors.grey600)),
             pw.Divider(thickness: 1, color: PdfColors.grey400),
             pw.SizedBox(height: 8),
           ],
@@ -44,7 +46,8 @@ class ReportExportService {
         build: (_) => [
           if (stats != null) ...[
             pw.Text('Ringkasan Status Tiket',
-                style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+                style:
+                    pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
             pw.SizedBox(height: 8),
             pw.Table(
               border: pw.TableBorder.all(color: PdfColors.grey300, width: 0.5),
@@ -78,7 +81,8 @@ class ReportExportService {
           ],
           // ── Team Performance ──────────────────────────────────────────
           pw.Text('Performa Tim (Tiket Selesai)',
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           if (report.teamPerformance.isEmpty)
             pw.Text('Belum ada data teknisi.',
@@ -117,7 +121,8 @@ class ReportExportService {
 
           // ── Category Distribution ────────────────────────────────────
           pw.Text('Distribusi Kategori Tiket',
-              style: pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
+              style:
+                  pw.TextStyle(fontSize: 14, fontWeight: pw.FontWeight.bold)),
           pw.SizedBox(height: 8),
           if (report.categoryDistribution.isEmpty)
             pw.Text('Belum ada data tiket.',
@@ -162,7 +167,8 @@ class ReportExportService {
 
     final bytes = await pdf.save();
     final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/laporan_helpdesk_${DateTime.now().millisecondsSinceEpoch}.pdf');
+    final file = File(
+        '${dir.path}/laporan_helpdesk_${DateTime.now().millisecondsSinceEpoch}.pdf');
     await file.writeAsBytes(bytes);
 
     await Share.shareXFiles(
@@ -183,7 +189,15 @@ class ReportExportService {
     // ── Summary section ─────────────────────────────────────────────
     if (stats != null) {
       rows.add(['=== RINGKASAN TIKET ===']);
-      rows.add(['Total Tiket', 'Terbuka', 'Diproses', 'Selesai', 'Tertunda', 'Kembali', 'Ditutup']);
+      rows.add([
+        'Total Tiket',
+        'Terbuka',
+        'Diproses',
+        'Selesai',
+        'Tertunda',
+        'Kembali',
+        'Ditutup'
+      ]);
       rows.add([
         stats.total,
         stats.open,

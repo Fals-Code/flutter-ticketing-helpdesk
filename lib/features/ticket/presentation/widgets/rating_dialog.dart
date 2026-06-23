@@ -7,7 +7,8 @@ class RatingDialog extends StatefulWidget {
 
   const RatingDialog({super.key, required this.onSubmitted});
 
-  static Future<void> show(BuildContext context, {required Function(int, String) onSubmitted}) {
+  static Future<void> show(BuildContext context,
+      {required Function(int, String) onSubmitted}) {
     return showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -20,7 +21,8 @@ class RatingDialog extends StatefulWidget {
   State<RatingDialog> createState() => _RatingDialogState();
 }
 
-class _RatingDialogState extends State<RatingDialog> with SingleTickerProviderStateMixin {
+class _RatingDialogState extends State<RatingDialog>
+    with SingleTickerProviderStateMixin {
   int _rating = 0;
   final TextEditingController _feedbackController = TextEditingController();
   bool _isSubmitting = false;
@@ -74,7 +76,9 @@ class _RatingDialogState extends State<RatingDialog> with SingleTickerProviderSt
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   fontSize: 14,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
               const SizedBox(height: 28),
@@ -97,9 +101,13 @@ class _RatingDialogState extends State<RatingDialog> with SingleTickerProviderSt
                           child: Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 6),
                             child: Icon(
-                              isActive ? Icons.star_rounded : Icons.star_outline_rounded,
+                              isActive
+                                  ? Icons.star_rounded
+                                  : Icons.star_outline_rounded,
                               size: 48,
-                              color: isActive ? Colors.amber : (isDark ? Colors.white24 : Colors.black12),
+                              color: isActive
+                                  ? Colors.amber
+                                  : (isDark ? Colors.white24 : Colors.black12),
                             ),
                           ),
                         );
@@ -129,24 +137,37 @@ class _RatingDialogState extends State<RatingDialog> with SingleTickerProviderSt
                 decoration: InputDecoration(
                   hintText: 'Tuliskan masukan Anda (opsional)',
                   hintStyle: TextStyle(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
                   filled: true,
-                  fillColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+                  fillColor: isDark
+                      ? AppColors.backgroundDark
+                      : AppColors.backgroundLight,
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    borderSide: BorderSide(
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight),
                   ),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                    borderSide: BorderSide(
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight),
                   ),
                   focusedBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(14),
-                    borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                    borderSide:
+                        const BorderSide(color: AppColors.primary, width: 1.5),
                   ),
                 ),
-                style: TextStyle(fontSize: 14, color: isDark ? Colors.white : Colors.black87),
+                style: TextStyle(
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87),
               ),
               const SizedBox(height: 24),
 
@@ -174,12 +195,18 @@ class _RatingDialogState extends State<RatingDialog> with SingleTickerProviderSt
 
   String _ratingLabel(int rating) {
     switch (rating) {
-      case 1: return 'Sangat Buruk';
-      case 2: return 'Buruk';
-      case 3: return 'Cukup';
-      case 4: return 'Baik';
-      case 5: return 'Sangat Baik';
-      default: return '';
+      case 1:
+        return 'Sangat Buruk';
+      case 2:
+        return 'Buruk';
+      case 3:
+        return 'Cukup';
+      case 4:
+        return 'Baik';
+      case 5:
+        return 'Sangat Baik';
+      default:
+        return '';
     }
   }
 }

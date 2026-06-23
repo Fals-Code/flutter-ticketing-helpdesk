@@ -3,14 +3,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup
     show AuthChangeEvent, SupabaseClient;
-import 'package:uts/core/usecases/usecase.dart';
-import 'package:uts/core/constants/enums.dart';
-import 'package:uts/features/auth/domain/usecases/auth_usecases.dart';
-import 'package:uts/features/auth/domain/usecases/update_password_usecase.dart';
-import 'package:uts/features/auth/domain/usecases/update_avatar_usecase.dart';
-import 'package:uts/features/auth/domain/usecases/update_profile_usecase.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+import 'package:ticket_q/core/usecases/usecase.dart';
+import 'package:ticket_q/core/constants/enums.dart';
+import 'package:ticket_q/features/auth/domain/usecases/auth_usecases.dart';
+import 'package:ticket_q/features/auth/domain/usecases/update_password_usecase.dart';
+import 'package:ticket_q/features/auth/domain/usecases/update_avatar_usecase.dart';
+import 'package:ticket_q/features/auth/domain/usecases/update_profile_usecase.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_event.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_state.dart';
 
 /// AuthBloc mengelola status autentikasi global aplikasi.
 class AuthBloc extends Bloc<AuthEvent, AuthState> {

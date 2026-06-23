@@ -12,7 +12,8 @@ class LoginUseCase implements UseCase<Either<Failure, AuthUser>, LoginParams> {
 
   @override
   Future<Either<Failure, AuthUser>> call(LoginParams params) async {
-    return await repository.login(email: params.email, password: params.password);
+    return await repository.login(
+        email: params.email, password: params.password);
   }
 }
 
@@ -23,7 +24,8 @@ class LoginParams {
 }
 
 /// UseCase untuk Registrasi.
-class RegisterUseCase implements UseCase<Either<Failure, AuthUser>, RegisterParams> {
+class RegisterUseCase
+    implements UseCase<Either<Failure, AuthUser>, RegisterParams> {
   final AuthRepository repository;
 
   RegisterUseCase(this.repository);
@@ -62,7 +64,8 @@ class LogoutUseCase implements UseCase<Either<Failure, Unit>, NoParams> {
 }
 
 /// UseCase untuk Cek Sesi (Get Current User).
-class GetCurrentUserUseCase implements UseCase<Either<Failure, AuthUser>, NoParams> {
+class GetCurrentUserUseCase
+    implements UseCase<Either<Failure, AuthUser>, NoParams> {
   final AuthRepository repository;
 
   GetCurrentUserUseCase(this.repository);

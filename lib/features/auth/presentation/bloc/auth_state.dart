@@ -1,5 +1,5 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 import '../../domain/entities/user_entity.dart';
 
 class AuthState extends Equatable {
@@ -27,7 +27,8 @@ class AuthState extends Equatable {
       user: user ?? this.user,
       status: status ?? this.status,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
     );
   }
 

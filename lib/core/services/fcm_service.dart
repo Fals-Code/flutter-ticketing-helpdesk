@@ -1,9 +1,9 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uts/core/router/app_router.dart';
-import 'package:uts/core/di/injection_container.dart';
-import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
+import 'package:ticket_q/core/router/app_router.dart';
+import 'package:ticket_q/core/di/injection_container.dart';
+import 'package:ticket_q/features/notification/domain/usecases/notification_usecases.dart';
 import 'local_notification_service.dart';
 
 class FCMService {
@@ -47,7 +47,7 @@ class FCMService {
       debugPrint("Foreground message received: ${message.notification?.title}");
       final String ticketId = message.data['ticketId'] ?? '';
       final String notificationId = message.data['notificationId'] ?? '';
-      
+
       _localNotifications.showNotification(
         id: message.hashCode,
         title: message.notification?.title ?? 'New Ticket Update',
@@ -79,9 +79,8 @@ class FCMService {
 
       await _supabase
           .from('profiles')
-          .update({'fcm_token': fcmToken})
-          .eq('id', userId);
-      
+          .update({'fcm_token': fcmToken}).eq('id', userId);
+
       debugPrint("FCM Token synced to Supabase for user $userId");
     } catch (e) {
       debugPrint("Error syncing FCM token: $e");
@@ -95,8 +94,10 @@ class FCMService {
     if (notificationId != null && notificationId.isNotEmpty) {
       final result = await sl<MarkNotificationAsRead>().call(notificationId);
       result.fold(
-        (failure) => debugPrint('Failed to mark notification as read from background: ${failure.message}'),
-        (_) => debugPrint('Successfully marked notification $notificationId as read from FCM tap.'),
+        (failure) => debugPrint(
+            'Failed to mark notification as read from background: ${failure.message}'),
+        (_) => debugPrint(
+            'Successfully marked notification $notificationId as read from FCM tap.'),
       );
     }
 

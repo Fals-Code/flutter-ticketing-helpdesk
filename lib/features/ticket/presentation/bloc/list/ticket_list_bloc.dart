@@ -1,14 +1,14 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/features/ticket/domain/usecases/ticket_usecases.dart';
+import 'package:ticket_q/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
-import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
-import 'package:uts/features/ticket/data/models/ticket_model.dart';
-import 'package:uts/core/services/connectivity_service.dart';
+import 'package:ticket_q/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:ticket_q/features/ticket/data/models/ticket_model.dart';
+import 'package:ticket_q/core/services/connectivity_service.dart';
 
 class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final GetTicketsUseCase getTicketsUseCase;

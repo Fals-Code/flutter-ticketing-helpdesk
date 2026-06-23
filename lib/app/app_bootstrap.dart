@@ -6,33 +6,33 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' hide AuthState;
 
-import 'package:uts/core/constants/app_strings.dart';
-import 'package:uts/core/constants/enums.dart';
-import 'package:uts/core/constants/env_constants.dart';
-import 'package:uts/core/di/injection_container.dart';
-import 'package:uts/core/router/app_router.dart';
-import 'package:uts/core/services/fcm_service.dart';
-import 'package:uts/core/services/local_notification_service.dart';
-import 'package:uts/core/storage/secure_local_storage.dart';
-import 'package:uts/features/admin/presentation/bloc/admin_bloc.dart';
-import 'package:uts/features/admin/presentation/bloc/settings/app_settings_bloc.dart';
-import 'package:uts/features/admin/presentation/bloc/settings/app_settings_event.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
-import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
-import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_event.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+import 'package:ticket_q/core/constants/app_strings.dart';
+import 'package:ticket_q/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/env_constants.dart';
+import 'package:ticket_q/core/di/injection_container.dart';
+import 'package:ticket_q/core/router/app_router.dart';
+import 'package:ticket_q/core/services/fcm_service.dart';
+import 'package:ticket_q/core/services/local_notification_service.dart';
+import 'package:ticket_q/core/storage/secure_local_storage.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/admin_bloc.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/settings/app_settings_bloc.dart';
+import 'package:ticket_q/features/admin/presentation/bloc/settings/app_settings_event.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_event.dart';
+import 'package:ticket_q/features/auth/presentation/bloc/auth_state.dart';
+import 'package:ticket_q/features/notification/presentation/bloc/notification_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/detail/ticket_detail_event.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/list/ticket_list_event.dart'
     as list_event;
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
-import 'package:uts/shared/theme/app_theme.dart';
-import 'package:uts/shared/theme/theme_cubit.dart';
-import 'package:uts/shared/widgets/connectivity_banner_widget.dart';
-import 'package:uts/shared/widgets/global_error_boundary.dart';
+import 'package:ticket_q/shared/theme/app_theme.dart';
+import 'package:ticket_q/shared/theme/theme_cubit.dart';
+import 'package:ticket_q/shared/widgets/connectivity_banner_widget.dart';
+import 'package:ticket_q/shared/widgets/global_error_boundary.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -87,8 +87,7 @@ Future<void> bootstrapApplication() async {
 
     runApp(
       const StartupErrorApp(
-        message:
-            'Inisialisasi layanan gagal. Periksa konfigurasi Firebase, '
+        message: 'Inisialisasi layanan gagal. Periksa konfigurasi Firebase, '
             'Supabase, dan koneksi perangkat sebelum mencoba kembali.',
       ),
     );
@@ -157,9 +156,7 @@ class ETicketingApp extends StatelessWidget {
       context
           .read<TicketListBloc>()
           .add(const list_event.StartTicketListSubscription());
-      context
-          .read<NotificationBloc>()
-          .add(StartNotificationSubscription());
+      context.read<NotificationBloc>().add(StartNotificationSubscription());
       context
           .read<TicketStatsBloc>()
           .add(const stats_event.FetchTicketStatsRequested());
@@ -177,13 +174,9 @@ class ETicketingApp extends StatelessWidget {
   }
 
   void _resetSessionScopedState(BuildContext context) {
-    context
-        .read<TicketListBloc>()
-        .add(list_event.ResetTicketListState());
+    context.read<TicketListBloc>().add(list_event.ResetTicketListState());
     context.read<TicketDetailBloc>().add(ResetTicketDetailState());
-    context
-        .read<TicketStatsBloc>()
-        .add(stats_event.ResetTicketStatsState());
+    context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
     context.read<NotificationBloc>().add(ResetNotificationState());
   }
 
@@ -276,9 +269,10 @@ class _ConfigurationErrorPage extends StatelessWidget {
                       const SizedBox(height: 20),
                       Text(
                         'Konfigurasi Belum Terpasang',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -351,9 +345,10 @@ class StartupErrorApp extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Aplikasi Gagal Dimulai',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 12),
                     Text(

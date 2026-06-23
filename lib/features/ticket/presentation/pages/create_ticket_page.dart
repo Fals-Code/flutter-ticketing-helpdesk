@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/shared/widgets/app_button.dart';
-import 'package:uts/shared/widgets/app_text_field.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dart' as list_state;
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
-import 'package:uts/core/router/app_router.dart';
+import 'package:ticket_q/core/constants/app_colors.dart';
+import 'package:ticket_q/shared/widgets/app_button.dart';
+import 'package:ticket_q/shared/widgets/app_text_field.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+    as list_event;
+import 'package:ticket_q/features/ticket/presentation/bloc/list/ticket_list_state.dart'
+    as list_state;
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:ticket_q/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+    as stats_event;
+import 'package:ticket_q/core/router/app_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateTicketPage extends StatefulWidget {
@@ -21,12 +24,13 @@ class CreateTicketPage extends StatefulWidget {
   State<CreateTicketPage> createState() => _CreateTicketPageState();
 }
 
-class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerProviderStateMixin {
+class _CreateTicketPageState extends State<CreateTicketPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
-  
+
   final _subjectController = TextEditingController();
   final _descController = TextEditingController();
-  
+
   final _subjectFocus = FocusNode();
   final _descFocus = FocusNode();
 
@@ -54,9 +58,11 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     super.initState();
     _subjectController.addListener(_updateProgress);
     _descController.addListener(_updateProgress);
-    
-    _successAnimController = AnimationController(vsync: this, duration: const Duration(milliseconds: 500));
-    _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(parent: _successAnimController, curve: Curves.elasticOut));
+
+    _successAnimController = AnimationController(
+        vsync: this, duration: const Duration(milliseconds: 500));
+    _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
+        parent: _successAnimController, curve: Curves.elasticOut));
   }
 
   @override
@@ -87,9 +93,9 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   bool get _isFormValid {
     final title = _subjectController.text.trim();
     final desc = _descController.text.trim();
-    return title.isNotEmpty && 
-           _selectedCategory.isNotEmpty && 
-           desc.length >= 20;
+    return title.isNotEmpty &&
+        _selectedCategory.isNotEmpty &&
+        desc.length >= 20;
   }
 
   void _updateProgress() => setState(() {});
@@ -97,17 +103,13 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   Future<void> _pickImage(ImageSource source) async {
     if (_imagePaths.length >= 5) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Maksimal 5 foto lampiran.'))
-      );
+          const SnackBar(content: Text('Maksimal 5 foto lampiran.')));
       return;
     }
     try {
       final XFile? image = await _picker.pickImage(
-        source: source, 
-        imageQuality: 80, 
-        maxWidth: 1920
-      );
-      
+          source: source, imageQuality: 80, maxWidth: 1920);
+
       if (image != null) {
         final file = File(image.path);
         final sizeInBytes = await file.length();
@@ -144,7 +146,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
   void _showImageSourceSheet() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
       builder: (context) => SafeArea(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -177,7 +180,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     });
 
     final isFormValid = _formKey.currentState?.validate() ?? false;
-    
+
     if (!isFormValid || _selectedCategory.isEmpty) {
       // Show snackbar for better UX if hidden errors exist
       ScaffoldMessenger.of(context).showSnackBar(
@@ -193,7 +196,7 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     if (isLoading) return;
 
     FocusScope.of(context).unfocus();
-    
+
     final currentUser = Supabase.instance.client.auth.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -206,12 +209,12 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     }
 
     context.read<TicketListBloc>().add(list_event.CreateTicketRequested(
-      userId: currentUser.id,
-      title: _subjectController.text.trim(),
-      description: _descController.text.trim(),
-      category: _selectedCategory,
-      imagePaths: _imagePaths,
-    ));
+          userId: currentUser.id,
+          title: _subjectController.text.trim(),
+          description: _descController.text.trim(),
+          category: _selectedCategory,
+          imagePaths: _imagePaths,
+        ));
   }
 
   @override
@@ -219,16 +222,18 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocListener<TicketListBloc, list_state.TicketListState>(
-      listenWhen: (previous, current) => 
-        previous.successMessage != current.successMessage || 
-        previous.errorMessage != current.errorMessage,
+      listenWhen: (previous, current) =>
+          previous.successMessage != current.successMessage ||
+          previous.errorMessage != current.errorMessage,
       listener: (context, state) {
         if (state.successMessage != null && !_isSuccess) {
           setState(() {
             _isSuccess = true;
           });
           _successAnimController.forward();
-          context.read<TicketStatsBloc>().add(stats_event.FetchTicketStatsRequested());
+          context
+              .read<TicketStatsBloc>()
+              .add(stats_event.FetchTicketStatsRequested());
         }
         if (state.errorMessage != null && !_isSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -247,24 +252,30 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
         }
       },
       child: Scaffold(
-        backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-        appBar: _isSuccess ? null : AppBar(
-          elevation: 0,
-          backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-          leading: IconButton(
-            icon: const Icon(Icons.close_rounded),
-            onPressed: () => context.pop(),
-          ),
-          bottom: PreferredSize(
-            preferredSize: const Size.fromHeight(2),
-            child: LinearProgressIndicator(
-              value: _progress,
-              backgroundColor: isDark ? Colors.white12 : Colors.black12,
-              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
-              minHeight: 2,
-            ),
-          ),
-        ),
+        backgroundColor:
+            isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+        appBar: _isSuccess
+            ? null
+            : AppBar(
+                elevation: 0,
+                backgroundColor: isDark
+                    ? AppColors.backgroundDark
+                    : AppColors.backgroundLight,
+                leading: IconButton(
+                  icon: const Icon(Icons.close_rounded),
+                  onPressed: () => context.pop(),
+                ),
+                bottom: PreferredSize(
+                  preferredSize: const Size.fromHeight(2),
+                  child: LinearProgressIndicator(
+                    value: _progress,
+                    backgroundColor: isDark ? Colors.white12 : Colors.black12,
+                    valueColor:
+                        const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                    minHeight: 2,
+                  ),
+                ),
+              ),
         body: _isSuccess ? _buildSuccessState(isDark) : _buildFormState(isDark),
       ),
     );
@@ -279,13 +290,18 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
           children: [
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
                 child: Form(
                   key: _formKey,
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Buat Laporan', style: TextStyle(fontSize: 32, fontWeight: FontWeight.w800, letterSpacing: -1)),
+                      const Text('Buat Laporan',
+                          style: TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: -1)),
                       const SizedBox(height: 32),
 
                       // SECTION 1
@@ -297,11 +313,14 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         controller: _subjectController,
                         focusNode: _subjectFocus,
                         textInputAction: TextInputAction.next,
-                        onSubmitted: (_) => FocusScope.of(context).requestFocus(_descFocus),
+                        onSubmitted: (_) =>
+                            FocusScope.of(context).requestFocus(_descFocus),
                         maxLength: 100,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Harap isi judul laporan';
-                          if (v.trim().length < 5) return 'Judul terlalu pendek (min. 5 karakter)';
+                          if (v == null || v.trim().isEmpty)
+                            return 'Harap isi judul laporan';
+                          if (v.trim().length < 5)
+                            return 'Judul terlalu pendek (min. 5 karakter)';
                           return null;
                         },
                       ),
@@ -309,16 +328,27 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Kategori', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87)),
+                          Text('Kategori',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.black87)),
                           if (_showCategoryError && _selectedCategory.isEmpty)
-                            const Text('Pilih kategori', style: TextStyle(fontSize: 11, color: AppColors.danger, fontWeight: FontWeight.w600)),
+                            const Text('Pilih kategori',
+                                style: TextStyle(
+                                    fontSize: 11,
+                                    color: AppColors.danger,
+                                    fontWeight: FontWeight.w600)),
                         ],
                       ),
                       const SizedBox(height: 12),
                       GridView.builder(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
                           crossAxisCount: 2,
                           childAspectRatio: 3,
                           crossAxisSpacing: 10,
@@ -328,8 +358,9 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         itemBuilder: (context, index) {
                           final cat = _categories[index];
                           final isSelected = _selectedCategory == cat['value'];
-                          final hasError = _showCategoryError && _selectedCategory.isEmpty;
-                          
+                          final hasError =
+                              _showCategoryError && _selectedCategory.isEmpty;
+
                           return GestureDetector(
                             onTap: () {
                               setState(() {
@@ -341,23 +372,45 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 200),
                               decoration: BoxDecoration(
-                                color: isSelected ? AppColors.primary.withValues(alpha: 0.1) : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
+                                color: isSelected
+                                    ? AppColors.primary.withValues(alpha: 0.1)
+                                    : (isDark
+                                        ? AppColors.surfaceDark
+                                        : AppColors.surfaceLight),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isSelected 
-                                      ? AppColors.primary 
-                                      : (hasError ? AppColors.danger.withValues(alpha: 0.5) : (isDark ? AppColors.borderDark : AppColors.borderLight)),
+                                  color: isSelected
+                                      ? AppColors.primary
+                                      : (hasError
+                                          ? AppColors.danger
+                                              .withValues(alpha: 0.5)
+                                          : (isDark
+                                              ? AppColors.borderDark
+                                              : AppColors.borderLight)),
                                   width: isSelected || hasError ? 1.5 : 1.0,
                                 ),
                               ),
                               alignment: Alignment.centerLeft,
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              padding:
+                                  const EdgeInsets.symmetric(horizontal: 12),
                               child: Row(
                                 children: [
-                                  Text(cat['icon']!, style: const TextStyle(fontSize: 18)),
+                                  Text(cat['icon']!,
+                                      style: const TextStyle(fontSize: 18)),
                                   const SizedBox(width: 8),
-                                  Expanded(child: Text(cat['label']!, style: TextStyle(fontSize: 13, fontWeight: isSelected ? FontWeight.bold : FontWeight.normal, color: isDark ? Colors.white : Colors.black87))),
-                                  if (isSelected) const Icon(Icons.check_circle_rounded, size: 16, color: AppColors.primary),
+                                  Expanded(
+                                      child: Text(cat['label']!,
+                                          style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: isSelected
+                                                  ? FontWeight.bold
+                                                  : FontWeight.normal,
+                                              color: isDark
+                                                  ? Colors.white
+                                                  : Colors.black87))),
+                                  if (isSelected)
+                                    const Icon(Icons.check_circle_rounded,
+                                        size: 16, color: AppColors.primary),
                                 ],
                               ),
                             ),
@@ -365,7 +418,10 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         },
                       ),
                       const SizedBox(height: 32),
-                      Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                      Divider(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight),
                       const SizedBox(height: 24),
 
                       // SECTION 2
@@ -373,7 +429,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       const SizedBox(height: 16),
                       AppTextField(
                         label: 'Deskripsi',
-                        hint: 'Jelaskan masalah secara rinci (minimal 20 karakter)...',
+                        hint:
+                            'Jelaskan masalah secara rinci (minimal 20 karakter)...',
                         controller: _descController,
                         focusNode: _descFocus,
                         maxLines: 8,
@@ -382,13 +439,18 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                         keyboardType: TextInputType.multiline,
                         maxLength: 500,
                         validator: (v) {
-                          if (v == null || v.trim().isEmpty) return 'Harap isi deskripsi masalah';
-                          if (v.trim().length < 20) return 'Deskripsi terlalu pendek (min. 20 karakter)';
+                          if (v == null || v.trim().isEmpty)
+                            return 'Harap isi deskripsi masalah';
+                          if (v.trim().length < 20)
+                            return 'Deskripsi terlalu pendek (min. 20 karakter)';
                           return null;
                         },
                       ),
                       const SizedBox(height: 32),
-                      Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                      Divider(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight),
                       const SizedBox(height: 24),
 
                       // SECTION 3
@@ -397,8 +459,19 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Lampiran Foto', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: isDark ? Colors.white70 : Colors.black87)),
-                          Text('${_imagePaths.length}/5', style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54)),
+                          Text('Lampiran Foto',
+                              style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark
+                                      ? Colors.white70
+                                      : Colors.black87)),
+                          Text('${_imagePaths.length}/5',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDark
+                                      ? Colors.white54
+                                      : Colors.black54)),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -409,13 +482,19 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                 ),
               ),
             ),
-            
+
             // BOTTOM ACTION AREA
             Container(
-              padding: EdgeInsets.fromLTRB(24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
+              padding: EdgeInsets.fromLTRB(
+                  24, 16, 24, MediaQuery.of(context).padding.bottom + 16),
               decoration: BoxDecoration(
-                color: isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
-                border: Border(top: BorderSide(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+                color:
+                    isDark ? AppColors.backgroundDark : AppColors.surfaceLight,
+                border: Border(
+                    top: BorderSide(
+                        color: isDark
+                            ? AppColors.borderDark
+                            : AppColors.borderLight)),
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
@@ -425,10 +504,13 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       padding: const EdgeInsets.only(bottom: 12),
                       child: Text(
                         'Kategori: ${_selectedCategory.isEmpty ? '-' : _categories.firstWhere((e) => e['value'] == _selectedCategory)['label']}',
-                        style: TextStyle(fontSize: 12, color: isDark ? Colors.white54 : Colors.black54, fontWeight: FontWeight.w500),
+                        style: TextStyle(
+                            fontSize: 12,
+                            color: isDark ? Colors.white54 : Colors.black54,
+                            fontWeight: FontWeight.w500),
                       ),
                     ),
-                    SizedBox(
+                  SizedBox(
                     width: double.infinity,
                     child: AppButton.primary(
                       label: isLoading ? 'Mengirim...' : 'Kirim Laporan',
@@ -444,7 +526,9 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
         if (isLoading)
           AbsorbPointer(
             child: Container(
-              color: isDark ? Colors.black.withValues(alpha: 0.3) : Colors.white.withValues(alpha: 0.3),
+              color: isDark
+                  ? Colors.black.withValues(alpha: 0.3)
+                  : Colors.white.withValues(alpha: 0.3),
             ),
           ),
       ],
@@ -476,11 +560,18 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.03),
+                  color: isDark
+                      ? Colors.white.withValues(alpha: 0.05)
+                      : Colors.black.withValues(alpha: 0.03),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: isDark ? AppColors.borderDark : AppColors.borderLight, width: 1, style: BorderStyle.solid),
+                  border: Border.all(
+                      color:
+                          isDark ? AppColors.borderDark : AppColors.borderLight,
+                      width: 1,
+                      style: BorderStyle.solid),
                 ),
-                child: const Icon(Icons.add_a_photo_outlined, color: Colors.grey, size: 24),
+                child: const Icon(Icons.add_a_photo_outlined,
+                    color: Colors.grey, size: 24),
               ),
             ),
           if (_imagePaths.length < 5) const SizedBox(width: 12),
@@ -492,7 +583,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
               height: 72,
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(image: FileImage(File(entry.value)), fit: BoxFit.cover),
+                image: DecorationImage(
+                    image: FileImage(File(entry.value)), fit: BoxFit.cover),
               ),
               child: Stack(
                 children: [
@@ -503,8 +595,11 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                       onTap: () => _removeImage(entry.key),
                       child: Container(
                         padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(color: Colors.black.withValues(alpha: 0.6), shape: BoxShape.circle),
-                        child: const Icon(Icons.close, size: 12, color: Colors.white),
+                        decoration: BoxDecoration(
+                            color: Colors.black.withValues(alpha: 0.6),
+                            shape: BoxShape.circle),
+                        child: const Icon(Icons.close,
+                            size: 12, color: Colors.white),
                       ),
                     ),
                   ),
@@ -533,15 +628,23 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
                   color: AppColors.success.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.check_circle_rounded, color: AppColors.success, size: 64),
+                child: const Icon(Icons.check_circle_rounded,
+                    color: AppColors.success, size: 64),
               ),
             ),
             const SizedBox(height: 32),
-            Text('Laporan Terkirim!', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: isDark ? Colors.white : Colors.black87)),
+            Text('Laporan Terkirim!',
+                style: TextStyle(
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black87)),
             const SizedBox(height: 12),
             Text(
               'Tim helpdesk kami akan segera menindaklanjuti masalah Anda.',
-              style: TextStyle(fontSize: 15, color: isDark ? Colors.white70 : Colors.black54, height: 1.5),
+              style: TextStyle(
+                  fontSize: 15,
+                  color: isDark ? Colors.white70 : Colors.black54,
+                  height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 48),
@@ -549,7 +652,8 @@ class _CreateTicketPageState extends State<CreateTicketPage> with SingleTickerPr
               width: double.infinity,
               child: AppButton.primary(
                 label: 'Lihat Tiket',
-                onPressed: () => context.go('/tickets'), // Adjust to actual detail route once ID is parsed well
+                onPressed: () => context.go(
+                    '/tickets'), // Adjust to actual detail route once ID is parsed well
               ),
             ),
             const SizedBox(height: 16),

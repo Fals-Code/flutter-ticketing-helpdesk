@@ -1,7 +1,7 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:ticket_q/features/ticket/domain/entities/comment_entity.dart';
+import 'package:ticket_q/features/ticket/domain/entities/ticket_history_entity.dart';
 
 class TicketDetailState extends Equatable {
   final bool isLoading;

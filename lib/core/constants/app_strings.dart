@@ -2,7 +2,7 @@
 /// Memudahkan lokalisasi di masa depan.
 abstract class AppStrings {
   // ── App Info ───────────────────────────────────────────────────────────────
-  static const String appName = 'E-Ticketing Helpdesk';
+  static const String appName = 'TICKET-Q';
   static const String appTagline = 'Solusi Cepat, Laporan Tepat';
 
   // ── Auth ───────────────────────────────────────────────────────────────────

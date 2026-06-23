@@ -37,7 +37,7 @@ abstract class AppDimensions {
   static const double spaceLG = space24;
   static const double spaceXL = space32;
   static const double spaceXXL = space48;
-  
+
   static const double marginXS = space4;
   static const double marginS = space8;
   static const double marginM = space16;
@@ -49,7 +49,7 @@ abstract class AppDimensions {
   static const double paddingM = space16;
   static const double paddingL = space24;
   static const double paddingXL = space32;
-  
+
   static const double radiusS = radiusSM;
   static const double radiusM = radiusMD;
   static const double radiusL = radiusLG;

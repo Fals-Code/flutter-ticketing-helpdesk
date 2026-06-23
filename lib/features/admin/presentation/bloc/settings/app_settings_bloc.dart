@@ -23,8 +23,10 @@ class AppSettingsBloc extends Bloc<AppSettingsEvent, AppSettingsState> {
     emit(state.copyWith(status: AppSettingsStatus.loading));
     final result = await getAppSettingsUseCase(const NoParams());
     result.fold(
-      (failure) => emit(state.copyWith(status: AppSettingsStatus.error, errorMessage: failure.message)),
-      (settings) => emit(state.copyWith(status: AppSettingsStatus.success, settings: settings)),
+      (failure) => emit(state.copyWith(
+          status: AppSettingsStatus.error, errorMessage: failure.message)),
+      (settings) => emit(state.copyWith(
+          status: AppSettingsStatus.success, settings: settings)),
     );
   }
 
@@ -35,7 +37,8 @@ class AppSettingsBloc extends Bloc<AppSettingsEvent, AppSettingsState> {
     emit(state.copyWith(status: AppSettingsStatus.loading));
     final result = await updateAppSettingsUseCase(event.settings);
     result.fold(
-      (failure) => emit(state.copyWith(status: AppSettingsStatus.error, errorMessage: failure.message)),
+      (failure) => emit(state.copyWith(
+          status: AppSettingsStatus.error, errorMessage: failure.message)),
       (_) {
         emit(state.copyWith(
           status: AppSettingsStatus.success,

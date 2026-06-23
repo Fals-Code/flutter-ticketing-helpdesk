@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:uts/features/ticket/data/datasources/typed_ticket_remote_data_source.dart';
-import 'package:uts/features/ticket/data/models/ticket_model.dart';
+import 'package:ticket_q/features/ticket/data/datasources/typed_ticket_remote_data_source.dart';
+import 'package:ticket_q/features/ticket/data/models/ticket_model.dart';
 
 void main() {
   late TypedSupabaseTicketRemoteDataSourceImpl dataSource;

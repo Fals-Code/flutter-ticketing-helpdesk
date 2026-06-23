@@ -4,7 +4,7 @@ import '../../../../core/usecases/usecase.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import '../entities/ticket_entity.dart';
 import 'ticket_usecases.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:ticket_q/core/constants/enums.dart';
 import '../repositories/ticket_repository.dart';
 
 /// UseCase untuk mengambil semua tiket di sistem (untuk Admin/Staff).

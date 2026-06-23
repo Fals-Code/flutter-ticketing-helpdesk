@@ -1,13 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:uts/core/services/connectivity_service.dart';
-import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
-import 'package:uts/features/ticket/data/models/ticket_model.dart';
-import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
+import 'package:ticket_q/core/services/connectivity_service.dart';
+import 'package:ticket_q/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:ticket_q/features/ticket/data/models/ticket_model.dart';
+import 'package:ticket_q/features/ticket/domain/entities/comment_entity.dart';
+import 'package:ticket_q/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:ticket_q/features/ticket/domain/usecases/ticket_usecases.dart';
+import 'package:ticket_q/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
 
 import 'ticket_detail_event.dart';
 import 'ticket_detail_state.dart';

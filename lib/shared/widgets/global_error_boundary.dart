@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:uts/core/constants/app_colors.dart';
-import 'package:uts/core/constants/app_dimensions.dart';
-import 'package:uts/shared/widgets/app_button.dart';
+import 'package:ticket_q/core/constants/app_colors.dart';
+import 'package:ticket_q/core/constants/app_dimensions.dart';
+import 'package:ticket_q/shared/widgets/app_button.dart';
 
 class GlobalErrorBoundary extends StatefulWidget {
   final Widget child;
@@ -22,7 +22,6 @@ class _GlobalErrorBoundaryState extends State<GlobalErrorBoundary> {
     // In actual Flutter 3.x, we might use ErrorWidget.builder globally in main.dart
     // but this boundary can also be used as a wrapper.
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -81,7 +80,9 @@ class _ErrorUI extends StatelessWidget {
               'Aplikasi mengalami kendala teknis. Jangan khawatir, data Anda tetap aman.',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
                   ),
             ),
             const SizedBox(height: 32),
@@ -93,7 +94,10 @@ class _ErrorUI extends StatelessWidget {
             const SizedBox(height: 24),
             Text(
               'Error Detail: $error',
-              style: const TextStyle(fontSize: 10, color: Colors.grey, fontStyle: FontStyle.italic),
+              style: const TextStyle(
+                  fontSize: 10,
+                  color: Colors.grey,
+                  fontStyle: FontStyle.italic),
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
             ),

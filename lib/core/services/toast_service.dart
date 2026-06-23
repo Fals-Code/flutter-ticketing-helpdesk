@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:uts/core/constants/app_colors.dart';
+import 'package:ticket_q/core/constants/app_colors.dart';
 
 enum ToastType { success, error, info }
 
@@ -27,7 +27,8 @@ class ToastService {
     });
   }
 
-  OverlayEntry _createOverlayEntry(BuildContext context, String message, ToastType type) {
+  OverlayEntry _createOverlayEntry(
+      BuildContext context, String message, ToastType type) {
     Color bgColor;
     IconData icon;
 
@@ -76,7 +77,8 @@ class _ToastWidget extends StatefulWidget {
   State<_ToastWidget> createState() => _ToastWidgetState();
 }
 
-class _ToastWidgetState extends State<_ToastWidget> with SingleTickerProviderStateMixin {
+class _ToastWidgetState extends State<_ToastWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
   late Animation<Offset> _slideAnimation;

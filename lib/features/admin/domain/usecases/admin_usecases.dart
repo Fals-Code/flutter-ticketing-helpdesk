@@ -5,7 +5,8 @@ import '../../../auth/domain/entities/user_entity.dart';
 import '../entities/admin_report_entity.dart';
 import '../repositories/admin_repository.dart';
 
-class GetUsersUseCase implements UseCase<Either<Failure, List<AuthUser>>, NoParams> {
+class GetUsersUseCase
+    implements UseCase<Either<Failure, List<AuthUser>>, NoParams> {
   final AdminRepository repository;
   GetUsersUseCase(this.repository);
 
@@ -15,7 +16,8 @@ class GetUsersUseCase implements UseCase<Either<Failure, List<AuthUser>>, NoPara
   }
 }
 
-class UpdateUserRoleUseCase implements UseCase<Either<Failure, void>, UpdateRoleParams> {
+class UpdateUserRoleUseCase
+    implements UseCase<Either<Failure, void>, UpdateRoleParams> {
   final AdminRepository repository;
   UpdateUserRoleUseCase(this.repository);
 
@@ -25,17 +27,20 @@ class UpdateUserRoleUseCase implements UseCase<Either<Failure, void>, UpdateRole
   }
 }
 
-class UpdateUserDetailsUseCase implements UseCase<Either<Failure, void>, UpdateDetailsParams> {
+class UpdateUserDetailsUseCase
+    implements UseCase<Either<Failure, void>, UpdateDetailsParams> {
   final AdminRepository repository;
   UpdateUserDetailsUseCase(this.repository);
 
   @override
   Future<Either<Failure, void>> call(UpdateDetailsParams params) async {
-    return await repository.updateUserDetails(params.userId, params.fullName, params.email);
+    return await repository.updateUserDetails(
+        params.userId, params.fullName, params.email);
   }
 }
 
-class GetAdminReportsUseCase implements UseCase<Either<Failure, AdminReport>, GetReportParams> {
+class GetAdminReportsUseCase
+    implements UseCase<Either<Failure, AdminReport>, GetReportParams> {
   final AdminRepository repository;
   GetAdminReportsUseCase(this.repository);
 
@@ -65,5 +70,6 @@ class UpdateDetailsParams {
   final String userId;
   final String fullName;
   final String email;
-  UpdateDetailsParams({required this.userId, required this.fullName, required this.email});
+  UpdateDetailsParams(
+      {required this.userId, required this.fullName, required this.email});
 }

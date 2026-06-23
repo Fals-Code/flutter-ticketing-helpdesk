@@ -1,11 +1,11 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uts/core/services/connectivity_service.dart';
-import 'package:uts/shared/theme/theme_cubit.dart';
-import 'package:uts/features/auth/di/auth_di.dart';
-import 'package:uts/features/ticket/di/ticket_di.dart';
-import 'package:uts/features/notification/di/notification_di.dart';
-import 'package:uts/features/admin/di/admin_di.dart';
+import 'package:ticket_q/core/services/connectivity_service.dart';
+import 'package:ticket_q/shared/theme/theme_cubit.dart';
+import 'package:ticket_q/features/auth/di/auth_di.dart';
+import 'package:ticket_q/features/ticket/di/ticket_di.dart';
+import 'package:ticket_q/features/notification/di/notification_di.dart';
+import 'package:ticket_q/features/admin/di/admin_di.dart';
 
 /// Global service locator instance.
 final GetIt sl = GetIt.instance;

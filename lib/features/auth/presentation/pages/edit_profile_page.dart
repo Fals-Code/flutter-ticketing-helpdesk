@@ -56,13 +56,12 @@ class _EditProfilePageState extends State<EditProfilePage>
     );
     _slideAnimation =
         Tween<Offset>(begin: const Offset(0.0, 0.08), end: Offset.zero).animate(
-      CurvedAnimation(
-          parent: _animationController, curve: Curves.easeOutCubic),
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _animationController.forward();
 
-    _nameController.addListener(
-        () => setState(() => _isNameValid = _nameController.text.trim().isNotEmpty));
+    _nameController.addListener(() =>
+        setState(() => _isNameValid = _nameController.text.trim().isNotEmpty));
     _emailController.addListener(() {
       final val = _emailController.text.trim();
       setState(() => _isEmailValid =
@@ -80,11 +79,9 @@ class _EditProfilePageState extends State<EditProfilePage>
     super.dispose();
   }
 
-  bool get _emailChanged =>
-      _emailController.text.trim() != _originalEmail;
+  bool get _emailChanged => _emailController.text.trim() != _originalEmail;
 
-  bool get _nameChanged =>
-      _nameController.text.trim() != _originalName;
+  bool get _nameChanged => _nameController.text.trim() != _originalName;
 
   bool get _hasChanges =>
       (_nameChanged && _isNameValid) || _emailChanged || _pickedImage != null;
@@ -108,10 +105,10 @@ class _EditProfilePageState extends State<EditProfilePage>
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildSourceOption(
-                      ctx, Icons.camera_alt_rounded, 'Kamera', ImageSource.camera),
-                  _buildSourceOption(
-                      ctx, Icons.photo_library_rounded, 'Galeri', ImageSource.gallery),
+                  _buildSourceOption(ctx, Icons.camera_alt_rounded, 'Kamera',
+                      ImageSource.camera),
+                  _buildSourceOption(ctx, Icons.photo_library_rounded, 'Galeri',
+                      ImageSource.gallery),
                 ],
               ),
               const SizedBox(height: 12),
@@ -150,7 +147,8 @@ class _EditProfilePageState extends State<EditProfilePage>
           ),
           const SizedBox(height: 8),
           Text(label,
-              style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
+              style:
+                  GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600)),
         ],
       ),
     );
@@ -252,9 +250,14 @@ class _EditProfilePageState extends State<EditProfilePage>
   Color _getNameColor(String name) {
     final int hash = name.hashCode;
     final List<Color> palette = [
-      const Color(0xFF6366F1), const Color(0xFF8B5CF6), const Color(0xFFEC4899),
-      const Color(0xFFF43F5E), const Color(0xFFF97316), const Color(0xFF10B981),
-      const Color(0xFF06B6D4), const Color(0xFF3B82F6),
+      const Color(0xFF6366F1),
+      const Color(0xFF8B5CF6),
+      const Color(0xFFEC4899),
+      const Color(0xFFF43F5E),
+      const Color(0xFFF97316),
+      const Color(0xFF10B981),
+      const Color(0xFF06B6D4),
+      const Color(0xFF3B82F6),
     ];
     return palette[hash.abs() % palette.length];
   }
@@ -286,8 +289,9 @@ class _EditProfilePageState extends State<EditProfilePage>
                 behavior: SnackBarBehavior.floating,
               ),
             );
-            Future.delayed(const Duration(milliseconds: 800),
-                () { if (context.mounted) context.pop(); });
+            Future.delayed(const Duration(milliseconds: 800), () {
+              if (context.mounted) context.pop();
+            });
           }
         }
         if (state.status == AuthStatus.error && state.errorMessage != null) {
@@ -343,7 +347,8 @@ class _EditProfilePageState extends State<EditProfilePage>
                             final user = state.user;
                             final name = user.fullName ?? 'Pengguna';
                             final avatarColor = _getNameColor(name);
-                            final isLoading = state.status == AuthStatus.loading;
+                            final isLoading =
+                                state.status == AuthStatus.loading;
 
                             return Stack(
                               alignment: Alignment.bottomRight,
@@ -355,7 +360,8 @@ class _EditProfilePageState extends State<EditProfilePage>
                                     shape: BoxShape.circle,
                                     color: avatarColor.withValues(alpha: 0.15),
                                     border: Border.all(
-                                        color: avatarColor.withValues(alpha: 0.3),
+                                        color:
+                                            avatarColor.withValues(alpha: 0.3),
                                         width: 3),
                                     image: _pickedImage != null
                                         ? DecorationImage(
@@ -363,7 +369,8 @@ class _EditProfilePageState extends State<EditProfilePage>
                                             fit: BoxFit.cover)
                                         : user.avatarUrl != null
                                             ? DecorationImage(
-                                                image: NetworkImage(user.avatarUrl!),
+                                                image: NetworkImage(
+                                                    user.avatarUrl!),
                                                 fit: BoxFit.cover)
                                             : null,
                                   ),
@@ -375,12 +382,15 @@ class _EditProfilePageState extends State<EditProfilePage>
                                               ? const SizedBox(
                                                   width: 28,
                                                   height: 28,
-                                                  child: CircularProgressIndicator(
-                                                      strokeWidth: 2.5))
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                          strokeWidth: 2.5))
                                               : Text(
-                                                  name.substring(0, 1).toUpperCase(),
-                                                  style:
-                                                      GoogleFonts.plusJakartaSans(
+                                                  name
+                                                      .substring(0, 1)
+                                                      .toUpperCase(),
+                                                  style: GoogleFonts
+                                                      .plusJakartaSans(
                                                     fontSize: 38,
                                                     fontWeight: FontWeight.w800,
                                                     color: avatarColor,
@@ -406,8 +416,10 @@ class _EditProfilePageState extends State<EditProfilePage>
                                               offset: const Offset(0, 3)),
                                         ],
                                       ),
-                                      child: const Icon(Icons.camera_alt_rounded,
-                                          size: 16, color: Colors.white),
+                                      child: const Icon(
+                                          Icons.camera_alt_rounded,
+                                          size: 16,
+                                          color: Colors.white),
                                     ),
                                   ),
                               ],

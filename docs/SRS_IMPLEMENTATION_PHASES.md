@@ -7,14 +7,14 @@ Dokumen ini membagi perbaikan dan pengembangan E-Ticketing Helpdesk berdasarkan 
 - Setiap fase harus memiliki commit terpisah.
 - Fase berikutnya dimulai setelah analyzer dan test fase aktif lulus.
 - Authorization sensitif harus diamankan pada Supabase RLS/RPC, bukan hanya UI Flutter.
-- Tidak ada credential produksi yang disimpan dalam repository.
+- Tidak ada konfigurasi production yang disimpan dalam repository.
 
 ## Fase pengerjaan
 
 | Fase | Fokus | Status |
 |---|---|---|
 | 0 | Pulihkan entrypoint Helpdesk, pisahkan demo Modul 8, perbaiki startup fallback dan smoke test | Selesai dan tervalidasi lokal/CI |
-| 1 | Audit baseline arsitektur, environment, dependency injection, lifecycle BLoC, dan dokumentasi teknis | Belum dimulai |
+| 1 | Project baseline, identitas, dependency, dokumentasi, dan quality gate | Selesai diimplementasikan; menunggu hasil quality gate final |
 | 2 | Schema Supabase, migration, Storage policy, RLS, RPC, audit trail, dan security matrix | Belum dimulai |
 | 3 | Authentication, session, akun nonaktif, dan route-based access control | Belum dimulai |
 | 4 | Pembuatan, daftar, detail, attachment umum, pagination, dan soft-delete tiket | Belum dimulai |
@@ -34,14 +34,24 @@ Dokumen ini membagi perbaikan dan pengembangan E-Ticketing Helpdesk berdasarkan 
 - Kegagalan startup menghasilkan fallback yang dapat dibaca.
 - Smoke test lama yang mengharapkan `Assets dan Media` telah diganti.
 
-## Validasi lokal yang wajib dijalankan setelah pull
+## Acceptance criteria Fase 1
+
+- Fresh clone dapat menjalankan `flutter pub get` tanpa mengubah lockfile.
+- Format, analyze, dan test lulus.
+- Identitas TICKET-Q, versi 2.0.0+1, dan Android application ID tidak memakai placeholder.
+- README dan panduan setup dapat diikuti pengguna baru.
+- File environment, signing, build, dan cache lokal diabaikan Git.
+- Workflow quality gate tersedia.
+
+## Validasi standar
 
 ```bash
 flutter clean
 flutter pub get
-dart format .
+dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
+git status --short
 ```
 
 Jalankan aplikasi menggunakan konfigurasi lokal yang tidak masuk Git:

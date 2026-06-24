@@ -16,7 +16,8 @@ jobs:
     steps:
       - name: Checkout repository
         run: |
-          git clone --depth 1 --branch "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" .
+          REF="${GITHUB_HEAD_REF:-$GITHUB_REF_NAME}"
+          git clone --depth 1 --branch "$REF" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" .
 
       - name: Set up Flutter
         run: |

@@ -14,7 +14,8 @@ class TicketHistoryModel extends TicketHistoryEntity {
   factory TicketHistoryModel.fromJson(Map<String, dynamic> json) {
     // Handle join with profiles if available
     final profile = json['profiles'];
-    final changedByName = profile != null ? profile['full_name'] : json['changed_by_name'];
+    final changedByName =
+        profile != null ? profile['full_name'] : json['changed_by_name'];
 
     return TicketHistoryModel(
       id: json['id'] ?? '',
@@ -23,7 +24,8 @@ class TicketHistoryModel extends TicketHistoryEntity {
       newStatus: json['new_status'] ?? '',
       changedBy: json['changed_by'] ?? '',
       changedByName: changedByName,
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 

@@ -135,15 +135,31 @@ enum TicketStatus {
   List<TicketStatus> get nextValidStates {
     switch (this) {
       case TicketStatus.open:
-        return [TicketStatus.inProgress, TicketStatus.pending, TicketStatus.closed];
+        return [
+          TicketStatus.inProgress,
+          TicketStatus.pending,
+          TicketStatus.closed
+        ];
       case TicketStatus.pending:
-        return [TicketStatus.inProgress, TicketStatus.resolved, TicketStatus.closed];
+        return [
+          TicketStatus.inProgress,
+          TicketStatus.resolved,
+          TicketStatus.closed
+        ];
       case TicketStatus.inProgress:
-        return [TicketStatus.resolved, TicketStatus.pending, TicketStatus.closed];
+        return [
+          TicketStatus.resolved,
+          TicketStatus.pending,
+          TicketStatus.closed
+        ];
       case TicketStatus.resolved:
         return [TicketStatus.closed, TicketStatus.reopened];
       case TicketStatus.reopened:
-        return [TicketStatus.inProgress, TicketStatus.pending, TicketStatus.resolved];
+        return [
+          TicketStatus.inProgress,
+          TicketStatus.pending,
+          TicketStatus.resolved
+        ];
       case TicketStatus.closed:
         return [TicketStatus.reopened]; // Opsional: admin bisa reopen
     }
@@ -178,17 +194,23 @@ enum TicketPriority {
 
   String get label {
     switch (this) {
-      case TicketPriority.low: return 'Rendah';
-      case TicketPriority.medium: return 'Sedang';
-      case TicketPriority.high: return 'Tinggi';
+      case TicketPriority.low:
+        return 'Rendah';
+      case TicketPriority.medium:
+        return 'Sedang';
+      case TicketPriority.high:
+        return 'Tinggi';
     }
   }
 
   Color get color {
     switch (this) {
-      case TicketPriority.low: return AppColors.success;
-      case TicketPriority.medium: return AppColors.warning;
-      case TicketPriority.high: return AppColors.danger;
+      case TicketPriority.low:
+        return AppColors.success;
+      case TicketPriority.medium:
+        return AppColors.warning;
+      case TicketPriority.high:
+        return AppColors.danger;
     }
   }
 }
@@ -205,10 +227,4 @@ enum TicketStatusFilter {
 }
 
 /// Filter Prioritas Tiket untuk List
-enum TicketPriorityFilter {
-  all,
-  low,
-  medium,
-  high
-}
-
+enum TicketPriorityFilter { all, low, medium, high }

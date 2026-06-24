@@ -47,5 +47,14 @@ class TicketStatsState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [stats, staffUsers, history, errorMessage, isLoading, startDate, endDate, assignedToId];
+  List<Object?> get props => [
+        stats,
+        staffUsers,
+        history,
+        errorMessage,
+        isLoading,
+        startDate,
+        endDate,
+        assignedToId
+      ];
 }

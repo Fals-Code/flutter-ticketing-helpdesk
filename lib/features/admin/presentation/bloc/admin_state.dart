@@ -36,5 +36,6 @@ class AdminState extends Equatable {
   }
 
   @override
-  List<Object?> get props => [status, users, report, errorMessage, successMessage];
+  List<Object?> get props =>
+      [status, users, report, errorMessage, successMessage];
 }

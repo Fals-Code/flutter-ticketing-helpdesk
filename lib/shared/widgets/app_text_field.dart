@@ -59,8 +59,10 @@ class _AppTextFieldState extends State<AppTextField> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
-    final secondaryTextColor = isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
+    final primaryTextColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryTextColor =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,11 +101,13 @@ class _AppTextFieldState extends State<AppTextField> {
               helperMaxLines: 2,
               prefixIcon: widget.prefixIcon != null
                   ? Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space12),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.space12),
                       child: Icon(
                         widget.prefixIcon,
                         size: AppDimensions.iconMD,
-                        color: _isFocused ? AppColors.primary : secondaryTextColor,
+                        color:
+                            _isFocused ? AppColors.primary : secondaryTextColor,
                       ),
                     )
                   : null,
@@ -115,14 +119,18 @@ class _AppTextFieldState extends State<AppTextField> {
               // Success border adjustments
               enabledBorder: widget.isSuccess
                   ? OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide: const BorderSide(color: AppColors.success, width: 1.5),
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide: const BorderSide(
+                          color: AppColors.success, width: 1.5),
                     )
                   : null,
               focusedBorder: widget.isSuccess
                   ? OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide: const BorderSide(color: AppColors.success, width: 2),
+                      borderRadius:
+                          BorderRadius.circular(AppDimensions.radiusMD),
+                      borderSide:
+                          const BorderSide(color: AppColors.success, width: 2),
                     )
                   : null,
             ),
@@ -136,7 +144,9 @@ class _AppTextFieldState extends State<AppTextField> {
     if (widget.isPassword) {
       return IconButton(
         icon: Icon(
-          _obscureText ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+          _obscureText
+              ? Icons.visibility_outlined
+              : Icons.visibility_off_outlined,
           size: AppDimensions.iconMD,
           color: secondaryColor,
         ),

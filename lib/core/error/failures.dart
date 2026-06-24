@@ -26,7 +26,8 @@ class CacheFailure extends Failure {
 
 class NetworkFailure extends Failure {
   const NetworkFailure({
-    super.message = 'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
+    super.message =
+        'Tidak dapat terhubung ke server. Periksa koneksi internet Anda.',
     super.code,
   });
 }

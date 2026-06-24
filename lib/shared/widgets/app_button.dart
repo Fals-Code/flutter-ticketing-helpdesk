@@ -3,6 +3,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 
 enum AppButtonType { primary, secondary, ghost, danger }
+
 enum AppButtonSize { small, normal, large }
 
 class AppButton extends StatefulWidget {
@@ -58,7 +59,8 @@ class AppButton extends StatefulWidget {
   State<AppButton> createState() => _AppButtonState();
 }
 
-class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMixin {
+class _AppButtonState extends State<AppButton>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _scaleAnimation;
   bool _isHovered = false;
@@ -133,7 +135,9 @@ class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMix
         return BoxDecoration(
           borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
           border: Border.all(color: AppColors.primary, width: 1.5),
-          color: _isHovered ? AppColors.primary.withValues(alpha: 0.05) : Colors.transparent,
+          color: _isHovered
+              ? AppColors.primary.withValues(alpha: 0.05)
+              : Colors.transparent,
         );
       case AppButtonType.ghost:
         return BoxDecoration(
@@ -219,7 +223,8 @@ class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMix
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      cursor: _isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
+      cursor:
+          _isDisabled ? SystemMouseCursors.forbidden : SystemMouseCursors.click,
       child: GestureDetector(
         onTapDown: _isDisabled ? null : (_) => _controller.forward(),
         onTapUp: _isDisabled
@@ -237,4 +242,3 @@ class _AppButtonState extends State<AppButton> with SingleTickerProviderStateMix
     );
   }
 }
-

@@ -17,11 +17,12 @@ class ChangePasswordPage extends StatefulWidget {
   State<ChangePasswordPage> createState() => _ChangePasswordPageState();
 }
 
-class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTickerProviderStateMixin {
+class _ChangePasswordPageState extends State<ChangePasswordPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  
+
   final _newPasswordFocus = FocusNode();
   final _confirmFocus = FocusNode();
 
@@ -37,7 +38,8 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
       vsync: this,
       duration: const Duration(milliseconds: 400),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.1), end: Offset.zero).animate(
       CurvedAnimation(parent: _animationController, curve: Curves.easeOutCubic),
     );
     _animationController.forward();
@@ -86,7 +88,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
     int score = 0;
     if (pass.length > 5) score++;
     if (pass.length > 8) score++;
-    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[0-9]').hasMatch(pass)) score++;
+    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[0-9]').hasMatch(pass)) {
+      score++;
+    }
     if (RegExp(r'[!@#\$&*~]').hasMatch(pass)) score++;
     return score;
   }
@@ -97,12 +101,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
 
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) async {
-        if (state.status == AuthStatus.success && state.successMessage != null) {
+        if (state.status == AuthStatus.success &&
+            state.successMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.check_circle_outline, color: Colors.white, size: 20),
+                  const Icon(Icons.check_circle_outline,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Expanded(child: Text(state.successMessage!)),
                 ],
@@ -113,12 +119,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
           );
           await Future.delayed(const Duration(milliseconds: 1500));
           if (context.mounted) context.pop();
-        } else if (state.status == AuthStatus.error && state.errorMessage != null) {
+        } else if (state.status == AuthStatus.error &&
+            state.errorMessage != null) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
-                  const Icon(Icons.error_outline, color: Colors.white, size: 20),
+                  const Icon(Icons.error_outline,
+                      color: Colors.white, size: 20),
                   const SizedBox(width: 8),
                   Expanded(child: Text(state.errorMessage!)),
                 ],
@@ -135,7 +143,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
             'Ubah Kata Sandi',
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
           centerTitle: true,
@@ -160,7 +170,10 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
                       const SizedBox(height: AppDimensions.space16),
                       Text(
                         'Perbarui Keamanan Akun',
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(
                               fontWeight: FontWeight.w700,
                               letterSpacing: -0.5,
                             ),
@@ -169,7 +182,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
                       Text(
                         'Pastikan kata sandi baru Anda kuat dan sulit ditebak oleh orang lain.',
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                              color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                              color: isDark
+                                  ? AppColors.textSecondaryDark
+                                  : AppColors.textSecondaryLight,
                               height: 1.5,
                             ),
                       ),
@@ -197,15 +212,19 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
                       const SizedBox(height: AppDimensions.space12),
                       Row(
                         children: List.generate(4, (index) {
-                          final score = _calculatePasswordStrength(_newPasswordController.text);
-                          final color = index < score 
-                              ? _getPasswordStrengthColor(score) 
-                              : (isDark ? AppColors.borderDark : AppColors.borderLight);
+                          final score = _calculatePasswordStrength(
+                              _newPasswordController.text);
+                          final color = index < score
+                              ? _getPasswordStrengthColor(score)
+                              : (isDark
+                                  ? AppColors.borderDark
+                                  : AppColors.borderLight);
                           return Expanded(
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 300),
                               height: 4,
-                              margin: EdgeInsets.only(right: index == 3 ? 0 : 4),
+                              margin:
+                                  EdgeInsets.only(right: index == 3 ? 0 : 4),
                               decoration: BoxDecoration(
                                 color: color,
                                 borderRadius: BorderRadius.circular(2),
@@ -233,8 +252,9 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> with SingleTick
                           }
                           return null;
                         },
-                        isSuccess: _confirmPasswordController.text.isNotEmpty && 
-                                   _confirmPasswordController.text == _newPasswordController.text,
+                        isSuccess: _confirmPasswordController.text.isNotEmpty &&
+                            _confirmPasswordController.text ==
+                                _newPasswordController.text,
                       ),
                       const SizedBox(height: AppDimensions.space40),
                       BlocBuilder<AuthBloc, AuthState>(

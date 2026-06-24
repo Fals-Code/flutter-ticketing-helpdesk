@@ -20,5 +20,6 @@ class TicketHistoryEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, ticketId, oldStatus, newStatus, changedBy, changedByName, createdAt];
+  List<Object?> get props =>
+      [id, ticketId, oldStatus, newStatus, changedBy, changedByName, createdAt];
 }

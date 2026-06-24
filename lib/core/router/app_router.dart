@@ -53,11 +53,11 @@ final GoRouter appRouter = GoRouter(
     final authState = sl<AuthBloc>().state;
     final status = authState.status;
     final location = state.matchedLocation;
-    
-    final bool isLoggingIn = location == AppRoutes.login || 
-                             location == AppRoutes.register ||
-                             location == AppRoutes.resetPassword;
-    
+
+    final bool isLoggingIn = location == AppRoutes.login ||
+        location == AppRoutes.register ||
+        location == AppRoutes.resetPassword;
+
     final bool isSplash = location == AppRoutes.splash;
 
     // 1. Handle Initialization & Loading
@@ -81,17 +81,18 @@ final GoRouter appRouter = GoRouter(
     if (status == AuthStatus.authenticated) {
       final role = authState.user.role;
       final bool isAdmin = role == UserRole.admin;
-      final bool isStaff = role == UserRole.admin || role == UserRole.technician;
-      
-      // If user is already logged in and tries to go to login/register, 
+      final bool isStaff =
+          role == UserRole.admin || role == UserRole.technician;
+
+      // If user is already logged in and tries to go to login/register,
       // check for 'from' parameter or go to role-based dashboard
       if (isLoggingIn || isSplash) {
         final from = state.uri.queryParameters['from'];
         if (from != null && from.isNotEmpty) return from;
-        
+
         return isStaff ? AppRoutes.staffDashboard : AppRoutes.dashboard;
       }
-      
+
       // RBAC Guard: Role 3 (Customer) Restrictions
       if (!isStaff) {
         final blockedForCustomer = [
@@ -111,10 +112,11 @@ final GoRouter appRouter = GoRouter(
         ];
         if (blockedForStaff.contains(location)) return AppRoutes.staffDashboard;
       }
-    } 
-    
+    }
+
     // 3. Handle Unauthenticated State
-    else if (status == AuthStatus.unauthenticated || status == AuthStatus.sessionExpired) {
+    else if (status == AuthStatus.unauthenticated ||
+        status == AuthStatus.sessionExpired) {
       if (!isLoggingIn && !isSplash) {
         // Preserve current location to redirect back after login
         return '${AppRoutes.login}?from=${state.matchedLocation}';
@@ -337,7 +339,8 @@ class _ErrorPage extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            const Text('Halaman tidak ditemukan', style: TextStyle(fontSize: 18)),
+            const Text('Halaman tidak ditemukan',
+                style: TextStyle(fontSize: 18)),
             const SizedBox(height: 8),
             Text(error?.toString() ?? '', style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 24),

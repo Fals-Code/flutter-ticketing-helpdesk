@@ -25,20 +25,24 @@ class AuthRepositoryImpl implements AuthRepository {
   }) async {
     try {
       final userModel = await remoteDataSource.login(email, password);
-      
+
       // Sync FCM Token on login
       await fcmService.syncTokenToSupabase(userModel.id);
-      
+
       return Right(userModel.toEntity());
     } on sup.AuthException catch (e) {
       // Security: Use generic error messages to prevent account enumeration
       // We only distinguish "Email not confirmed" for UX, others are generic.
       if (e.message.toLowerCase().contains('email not confirmed')) {
-        return const Left(ServerFailure(message: 'Silakan verifikasi email Anda terlebih dahulu.', code: 401));
+        return const Left(ServerFailure(
+            message: 'Silakan verifikasi email Anda terlebih dahulu.',
+            code: 401));
       }
-      return const Left(ServerFailure(message: 'Email atau password tidak valid.', code: 401));
+      return const Left(ServerFailure(
+          message: 'Email atau password tidak valid.', code: 401));
     } catch (e) {
-      return Left(UnknownFailure(message: 'Terjadi kesalahan saat masuk. Silakan coba lagi.'));
+      return Left(UnknownFailure(
+          message: 'Terjadi kesalahan saat masuk. Silakan coba lagi.'));
     }
   }
 
@@ -49,11 +53,12 @@ class AuthRepositoryImpl implements AuthRepository {
     required String fullName,
   }) async {
     try {
-      final userModel = await remoteDataSource.register(email, password, fullName);
-      
+      final userModel =
+          await remoteDataSource.register(email, password, fullName);
+
       // Sync FCM Token on registration
       await fcmService.syncTokenToSupabase(userModel.id);
-      
+
       return Right(userModel.toEntity());
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 400));
@@ -94,7 +99,8 @@ class AuthRepositoryImpl implements AuthRepository {
       // but we return unit (Right) so the UI shows success.
       return const Right(unit);
     } catch (e) {
-      return Left(UnknownFailure(message: 'Gagal mengirim instruksi reset password.'));
+      return Left(
+          UnknownFailure(message: 'Gagal mengirim instruksi reset password.'));
     }
   }
 
@@ -105,7 +111,7 @@ class AuthRepositoryImpl implements AuthRepository {
       if (userModel != null) {
         // Sync FCM Token on session recovery
         await fcmService.syncTokenToSupabase(userModel.id);
-        
+
         return Right(userModel.toEntity());
       }
       return const Left(CacheFailure(message: 'Sesi tidak ditemukan'));
@@ -122,13 +128,13 @@ class AuthRepositoryImpl implements AuthRepository {
     } on sup.AuthException catch (e) {
       // Security: Use generic error messages to prevent account enumeration
       String message = 'Email atau password tidak valid.';
-      
-      // Keep specific message only for unconfirmed email if your business logic requires it, 
-      // otherwise keep it generic. 
+
+      // Keep specific message only for unconfirmed email if your business logic requires it,
+      // otherwise keep it generic.
       if (e.message.toLowerCase().contains('email not confirmed')) {
         message = 'Silakan verifikasi email Anda terlebih dahulu.';
       }
-      
+
       return Left(ServerFailure(message: message, code: 400));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
@@ -140,13 +146,14 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       // 1. Upload ke storage
       final String publicUrl = await remoteDataSource.uploadAvatar(image);
-      
+
       // 2. Update database profiles
       await remoteDataSource.updateAvatarUrl(publicUrl);
-      
+
       return Right(publicUrl);
     } on sup.StorageException catch (e) {
-      return Left(ServerFailure(message: 'Gagal mengunggah foto: ${e.message}', code: 500));
+      return Left(ServerFailure(
+          message: 'Gagal mengunggah foto: ${e.message}', code: 500));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -170,13 +177,13 @@ class AuthRepositoryImpl implements AuthRepository {
     } on sup.AuthException catch (e) {
       // Security: Use generic error messages to prevent account enumeration
       String message = 'Email atau password tidak valid.';
-      
-      // Keep specific message only for unconfirmed email if your business logic requires it, 
-      // otherwise keep it generic. 
+
+      // Keep specific message only for unconfirmed email if your business logic requires it,
+      // otherwise keep it generic.
       if (e.message.toLowerCase().contains('email not confirmed')) {
         message = 'Silakan verifikasi email Anda terlebih dahulu.';
       }
-      
+
       return Left(ServerFailure(message: message, code: 400));
     } catch (e) {
       return Left(UnknownFailure(message: 'Gagal memperbarui profil: $e'));

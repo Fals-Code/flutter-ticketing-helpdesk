@@ -22,7 +22,8 @@ class AdminReportModel {
   AdminReport toEntity() {
     return AdminReport(
       teamPerformance: teamPerformance.map((e) => e.toEntity()).toList(),
-      categoryDistribution: categoryDistribution.map((e) => e.toEntity()).toList(),
+      categoryDistribution:
+          categoryDistribution.map((e) => e.toEntity()).toList(),
     );
   }
 }

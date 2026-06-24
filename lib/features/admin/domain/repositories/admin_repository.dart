@@ -8,8 +8,10 @@ import '../entities/app_settings_entity.dart';
 abstract class AdminRepository {
   Future<Either<Failure, List<AuthUser>>> getUsers();
   Future<Either<Failure, void>> updateUserRole(String userId, int newRole);
-  Future<Either<Failure, void>> updateUserDetails(String userId, String fullName, String email);
-  Future<Either<Failure, AdminReport>> getAdminReports({DateTime? startDate, DateTime? endDate});
+  Future<Either<Failure, void>> updateUserDetails(
+      String userId, String fullName, String email);
+  Future<Either<Failure, AdminReport>> getAdminReports(
+      {DateTime? startDate, DateTime? endDate});
   Future<Either<Failure, AppSettings>> getAppSettings();
   Future<Either<Failure, void>> updateAppSettings(AppSettings settings);
 }

@@ -24,7 +24,8 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateUserRole(String userId, int newRole) async {
+  Future<Either<Failure, void>> updateUserRole(
+      String userId, int newRole) async {
     try {
       await remoteDataSource.updateUserRole(userId, newRole);
       return const Right(null);
@@ -34,7 +35,8 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
-  Future<Either<Failure, void>> updateUserDetails(String userId, String fullName, String email) async {
+  Future<Either<Failure, void>> updateUserDetails(
+      String userId, String fullName, String email) async {
     try {
       await remoteDataSource.updateUserDetails(userId, fullName, email);
       return const Right(null);
@@ -44,7 +46,8 @@ class AdminRepositoryImpl implements AdminRepository {
   }
 
   @override
-  Future<Either<Failure, AdminReport>> getAdminReports({DateTime? startDate, DateTime? endDate}) async {
+  Future<Either<Failure, AdminReport>> getAdminReports(
+      {DateTime? startDate, DateTime? endDate}) async {
     try {
       final report = await remoteDataSource.getAdminReports(
         startDate: startDate,
@@ -69,7 +72,8 @@ class AdminRepositoryImpl implements AdminRepository {
   @override
   Future<Either<Failure, void>> updateAppSettings(AppSettings settings) async {
     try {
-      await remoteDataSource.updateAppSettings(AppSettingsModel.fromEntity(settings));
+      await remoteDataSource
+          .updateAppSettings(AppSettingsModel.fromEntity(settings));
       return const Right(null);
     } catch (e) {
       return Left(ServerFailure(message: e.toString()));

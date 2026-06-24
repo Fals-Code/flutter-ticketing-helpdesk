@@ -28,14 +28,16 @@ class _LazyIndexedStackState extends State<LazyIndexedStack> {
   @override
   void initState() {
     super.initState();
-    _activated = List<bool>.generate(widget.children.length, (i) => i == widget.index);
+    _activated =
+        List<bool>.generate(widget.children.length, (i) => i == widget.index);
   }
 
   @override
   void didUpdateWidget(LazyIndexedStack oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.children.length != widget.children.length) {
-      _activated = List<bool>.generate(widget.children.length, (i) => i < _activated.length ? _activated[i] : (i == widget.index));
+      _activated = List<bool>.generate(widget.children.length,
+          (i) => i < _activated.length ? _activated[i] : (i == widget.index));
     }
     _activated[widget.index] = true;
   }

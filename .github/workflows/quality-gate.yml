@@ -1,0 +1,10 @@
+name: Flutter Quality Gate
+
+on: workflow_dispatch
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - run: flutter analyze
+      - run: flutter test

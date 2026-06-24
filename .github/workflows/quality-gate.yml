@@ -1,10 +1,36 @@
 name: Flutter Quality Gate
 
-on: workflow_dispatch
+on:
+  push:
+    branches:
+      - refactor/phase-1-project-baseline
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
 
 jobs:
   validate:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
-      - run: flutter analyze
-      - run: flutter test
+      - name: Checkout repository
+        run: |
+          git clone --depth 1 --branch "$GITHUB_REF_NAME" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git" .
+
+      - name: Set up Flutter
+        run: |
+          git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
+          echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
+
+      - name: Resolve dependencies
+        run: flutter pub get
+
+      - name: Verify formatting
+        run: dart format --output=none --set-exit-if-changed .
+
+      - name: Analyze
+        run: flutter analyze
+
+      - name: Test
+        run: flutter test

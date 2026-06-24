@@ -54,13 +54,6 @@ Copy-Item define_config.example.json define_config.json
 
 Isi `define_config.json` dengan nilai environment lokal. Jangan commit file tersebut.
 
-```json
-{
-  "SUPABASE_URL": "https://your-project.supabase.co",
-  "SUPABASE_ANON_KEY": "your-supabase-anon-key"
-}
-```
-
 Jalankan aplikasi:
 
 ```bash
@@ -99,9 +92,9 @@ Setiap feature mengikuti pemisahan `data`, `domain`, dan `presentation` sejauh d
 
 ## Dokumentasi
 
-- [Panduan setup](docs/SETUP.md)
-- [Strategi branch](docs/BRANCH_STRATEGY.md)
-- [Troubleshooting](docs/TROUBLESHOOTING.md)
+- [Panduan setup](docs/setup.md)
+- [Strategi branch](docs/branch-strategy.md)
+- [Troubleshooting](docs/troubleshooting.md)
 - [Catatan Phase 1](docs/phases/PHASE_1_PROJECT_BASELINE.md)
 - [Roadmap implementasi SRS](docs/SRS_IMPLEMENTATION_PHASES.md)
 

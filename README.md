@@ -6,8 +6,8 @@ Target produk mengikuti SRS Mobile Apps versi 2.0.0. Backend utama menggunakan S
 
 ## Status baseline
 
-- Branch Phase 1: `refactor/phase-1-project-baseline`
-- Baseline asal: Phase 0 tervalidasi `9b2e738f84942431a4ab13121fc58ac225c88d8b`
+- Branch aktif: `feat/phase-2-supabase-security`
+- Baseline Phase 1 PASS: `eb31a70f455f6ba611a37bd004bfb7010ed6b17a`
 - Versi aplikasi: `2.0.0+1`
 - Android application ID: `com.falscode.ticketq`
 - Android label: `TICKET-Q`
@@ -15,8 +15,9 @@ Target produk mengikuti SRS Mobile Apps versi 2.0.0. Backend utama menggunakan S
 - State management: BLoC
 - Routing: GoRouter
 - Dependency injection: GetIt
+- Backend authorization: Supabase RLS/RPC
 
-Phase 1 hanya membentuk repository baseline yang bersih, terdokumentasi, aman, dan mudah dijalankan dari fresh clone. RLS, policy backend, dan fitur autentikasi lanjutan tidak dikerjakan pada phase ini.
+Phase 2 menambahkan schema versioned, migration, private Storage bucket, RLS, RPC, trigger audit, policy test, dan dokumentasi backend. Flutter tetap menggunakan anon key; `service_role` tidak digunakan di aplikasi.
 
 ## Menjalankan dari fresh clone
 
@@ -26,7 +27,7 @@ Prasyarat:
 - Android Studio dan Android SDK untuk target Android
 - Java 17
 - Xcode dan CocoaPods bila menguji target iOS
-- Project Supabase untuk environment lokal
+- Docker dan Supabase CLI bila menjalankan backend lokal
 - Project Firebase bila menguji FCM pada perangkat nyata
 
 Langkah awal:
@@ -34,7 +35,7 @@ Langkah awal:
 ```bash
 git clone https://github.com/Fals-Code/flutter-ticketing-helpdesk.git
 cd flutter-ticketing-helpdesk
-git switch refactor/phase-1-project-baseline
+git switch feat/phase-2-supabase-security
 flutter doctor
 flutter clean
 flutter pub get
@@ -62,6 +63,16 @@ flutter run --dart-define-from-file=define_config.json
 
 `android/app/google-services.json` di repository adalah placeholder aman untuk baseline. Ganti dengan file dari Firebase Console saat menguji Firebase/FCM pada project nyata, lalu pastikan tidak ada credential privat yang ikut masuk commit.
 
+## Supabase lokal dan policy test
+
+```bash
+supabase start
+supabase db reset
+supabase test db supabase/tests/phase_2_policy_test.sql
+```
+
+Migration tidak memuat operasi destruktif. Deployment ke production tetap membutuhkan backup, dry run staging, pemeriksaan data existing, dan konfirmasi eksplisit.
+
 ## Quality gate lokal
 
 Sebelum commit atau pull request, jalankan:
@@ -86,9 +97,15 @@ lib/
 ├── features/            # Modul auth, ticket, notification, dashboard, admin
 ├── shared/              # Widget dan theme lintas feature
 └── labs/                # Hasil praktikum yang tidak menjadi entrypoint produksi
+
+supabase/
+├── migrations/          # Schema, trigger, RPC, RLS, dan storage policy
+├── tests/               # Reproducible SQL policy tests
+├── config.toml          # Local Supabase configuration
+└── README.md            # Backend setup and safety gate
 ```
 
-Setiap feature mengikuti pemisahan `data`, `domain`, dan `presentation` sejauh dibutuhkan. Phase 1 tidak memindahkan logic bisnis dan tidak mengubah workflow tiket.
+Setiap feature mengikuti pemisahan `data`, `domain`, dan `presentation` sejauh dibutuhkan.
 
 ## Dokumentasi
 
@@ -96,6 +113,10 @@ Setiap feature mengikuti pemisahan `data`, `domain`, dan `presentation` sejauh d
 - [Strategi branch](docs/branch-strategy.md)
 - [Troubleshooting](docs/troubleshooting.md)
 - [Catatan Phase 1](docs/phases/PHASE_1_PROJECT_BASELINE.md)
+- [Catatan Phase 2](docs/phases/PHASE_2_SUPABASE_SECURITY.md)
+- [Audit schema Phase 2](docs/backend/PHASE_2_SCHEMA_AUDIT.md)
+- [Supabase Backend API](docs/backend/SUPABASE_BACKEND_API.md)
+- [Security policy testing](docs/backend/SECURITY_POLICY_TESTING.md)
 - [Roadmap implementasi SRS](docs/SRS_IMPLEMENTATION_PHASES.md)
 
 ## Keamanan repository
@@ -108,5 +129,6 @@ File berikut tidak boleh masuk Git:
 - keystore Android
 - file signing/provisioning lokal
 - output `build`, `.dart_tool`, cache IDE, dan artefak hasil pengujian
+- `supabase/.temp`, branch cache, dan credential local development
 
 Jangan menaruh service role key, password, private key, atau credential signing dalam README, workflow, issue, maupun source code.

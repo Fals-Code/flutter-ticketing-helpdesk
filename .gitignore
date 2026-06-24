@@ -64,3 +64,9 @@ android/app/key.properties
 ios/Pods/
 ios/.symlinks/
 ios/Flutter/Flutter.podspec
+
+# Supabase local runtime/cache
+supabase/.branches/
+supabase/.temp/
+supabase/.env
+supabase/.env.*

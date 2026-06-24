@@ -14,7 +14,7 @@ Dokumen ini membagi perbaikan dan pengembangan E-Ticketing Helpdesk berdasarkan 
 | Fase | Fokus | Status |
 |---|---|---|
 | 0 | Pulihkan entrypoint Helpdesk, pisahkan demo Modul 8, perbaiki startup fallback dan smoke test | Selesai dan tervalidasi lokal/CI |
-| 1 | Audit baseline arsitektur, environment, dependency injection, lifecycle BLoC, dan dokumentasi teknis | Belum dimulai |
+| 1 | Project baseline, repository hygiene, identitas aplikasi, dokumentasi, dan quality gate | Selesai dikerjakan pada branch Phase 1 |
 | 2 | Schema Supabase, migration, Storage policy, RLS, RPC, audit trail, dan security matrix | Belum dimulai |
 | 3 | Authentication, session, akun nonaktif, dan route-based access control | Belum dimulai |
 | 4 | Pembuatan, daftar, detail, attachment umum, pagination, dan soft-delete tiket | Belum dimulai |
@@ -34,14 +34,23 @@ Dokumen ini membagi perbaikan dan pengembangan E-Ticketing Helpdesk berdasarkan 
 - Kegagalan startup menghasilkan fallback yang dapat dibaca.
 - Smoke test lama yang mengharapkan `Assets dan Media` telah diganti.
 
+## Acceptance criteria Fase 1
+
+- Fresh clone dapat menjalankan `flutter pub get`.
+- Nama aplikasi, versi, Android application ID, dan label tidak memakai placeholder.
+- README dan dokumentasi setup dapat diikuti pengguna baru.
+- Secret, keystore, environment lokal, dan artefak build tidak masuk Git.
+- Quality gate tersedia untuk format, analyze, dan test.
+
 ## Validasi lokal yang wajib dijalankan setelah pull
 
 ```bash
 flutter clean
 flutter pub get
-dart format .
+dart format --output=none --set-exit-if-changed .
 flutter analyze
 flutter test
+git status --short
 ```
 
 Jalankan aplikasi menggunakan konfigurasi lokal yang tidak masuk Git:

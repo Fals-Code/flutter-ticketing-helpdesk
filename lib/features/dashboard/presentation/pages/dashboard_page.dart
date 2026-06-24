@@ -6,9 +6,11 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart' as list_event;
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+    as list_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart' as stats_event;
+import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
+    as stats_event;
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
 import 'package:uts/features/ticket/presentation/pages/staff_dashboard_page.dart';
@@ -28,12 +30,13 @@ class DashboardPage extends StatefulWidget {
   State<DashboardPage> createState() => _DashboardPageState();
 }
 
-class _DashboardPageState extends State<DashboardPage> with SingleTickerProviderStateMixin {
+class _DashboardPageState extends State<DashboardPage>
+    with SingleTickerProviderStateMixin {
   int _currentIndex = 0;
-  
+
   late AnimationController _fadeController;
   late Animation<double> _fadeAnimation;
-  
+
   bool _isTransitioning = false;
   int _targetIndex = 0;
 
@@ -49,7 +52,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
     );
     _fetchInitialData();
   }
-  
+
   @override
   void dispose() {
     _fadeController.dispose();
@@ -65,7 +68,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
 
     statsBloc.add(const stats_event.FetchTicketStatsRequested());
     listBloc.add(const list_event.FetchTicketsRequested(page: 0, limit: 5));
-    
+
     context.read<NotificationBloc>().add(FetchNotificationsRequested());
     context.read<NotificationBloc>().add(StartNotificationSubscription());
 
@@ -77,48 +80,69 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
   }
 
   static const _navItems = [
-    {'label': AppStrings.navDashboard, 'icon': Icons.home_outlined, 'activeIcon': Icons.home_rounded},
-    {'label': AppStrings.navTickets, 'icon': Icons.confirmation_number_outlined, 'activeIcon': Icons.confirmation_number_rounded},
-    {'label': AppStrings.navNotifications, 'icon': Icons.notifications_outlined, 'activeIcon': Icons.notifications_rounded},
-    {'label': AppStrings.navProfile, 'icon': Icons.person_outline, 'activeIcon': Icons.person_rounded},
+    {
+      'label': AppStrings.navDashboard,
+      'icon': Icons.home_outlined,
+      'activeIcon': Icons.home_rounded
+    },
+    {
+      'label': AppStrings.navTickets,
+      'icon': Icons.confirmation_number_outlined,
+      'activeIcon': Icons.confirmation_number_rounded
+    },
+    {
+      'label': AppStrings.navNotifications,
+      'icon': Icons.notifications_outlined,
+      'activeIcon': Icons.notifications_rounded
+    },
+    {
+      'label': AppStrings.navProfile,
+      'icon': Icons.person_outline,
+      'activeIcon': Icons.person_rounded
+    },
   ];
 
   void _onTabTapped(int index) async {
     if (index == _currentIndex || _isTransitioning) return;
-    
+
     setState(() {
       _isTransitioning = true;
       _targetIndex = index;
     });
-    
+
     await _fadeController.forward();
-    
+
     if (!mounted) return;
 
     setState(() {
       _currentIndex = _targetIndex;
     });
-    
+
     // Trigger logic fetching data for tickets tab
     if (index == 1) {
       if (!mounted) return;
       final authState = context.read<AuthBloc>().state;
       if (authState.user.isNotEmpty) {
         final user = authState.user;
-        final isStaff = user.role == UserRole.admin || user.role == UserRole.technician;
+        final isStaff =
+            user.role == UserRole.admin || user.role == UserRole.technician;
         final isTechnician = user.role == UserRole.technician;
-        
-        context.read<TicketListBloc>().add(const list_event.FetchTicketsRequested(page: 0, limit: 10));
+
+        context
+            .read<TicketListBloc>()
+            .add(const list_event.FetchTicketsRequested(page: 0, limit: 10));
         if (isStaff) {
-          context.read<TicketListBloc>().add(list_event.FetchAllTicketsRequested(
-            page: 0, 
-            limit: 10,
-            assignedToId: isTechnician ? user.id : null,
-          ));
+          context
+              .read<TicketListBloc>()
+              .add(list_event.FetchAllTicketsRequested(
+                page: 0,
+                limit: 10,
+                assignedToId: isTechnician ? user.id : null,
+              ));
         }
       }
     }
-    
+
     await _fadeController.reverse();
     setState(() => _isTransitioning = false);
   }
@@ -141,11 +165,13 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
             child: LazyIndexedStack(
               index: _currentIndex,
               children: [
-                state.user.role == UserRole.admin 
-                    ? const AdminHomeTab() 
-                    : (state.user.role == UserRole.technician ? const StaffDashboardPage() : DashboardHomeTab(
-                        onSeeAll: () => _onTabTapped(1),
-                      )),
+                state.user.role == UserRole.admin
+                    ? const AdminHomeTab()
+                    : (state.user.role == UserRole.technician
+                        ? const StaffDashboardPage()
+                        : DashboardHomeTab(
+                            onSeeAll: () => _onTabTapped(1),
+                          )),
                 const TicketListPage(),
                 const NotificationTab(),
                 const ProfileTab(),
@@ -173,7 +199,7 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                 final item = _navItems[index];
                 final isActive = _currentIndex == index;
                 final isNotification = index == 2;
-                
+
                 return GestureDetector(
                   onTap: () => _onTabTapped(index),
                   behavior: HitTestBehavior.opaque,
@@ -192,24 +218,31 @@ class _DashboardPageState extends State<DashboardPage> with SingleTickerProvider
                               width: isActive ? 64 : 0,
                               height: 32,
                               decoration: BoxDecoration(
-                                color: isActive 
-                                  ? AppColors.primary.withValues(alpha: 0.15) 
-                                  : Colors.transparent,
+                                color: isActive
+                                    ? AppColors.primary.withValues(alpha: 0.15)
+                                    : Colors.transparent,
                                 borderRadius: BorderRadius.circular(16),
                               ),
                             ),
                             Icon(
-                              isActive ? item['activeIcon'] as IconData : item['icon'] as IconData,
-                              color: isActive 
-                                  ? AppColors.primary 
-                                  : (isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+                              isActive
+                                  ? item['activeIcon'] as IconData
+                                  : item['icon'] as IconData,
+                              color: isActive
+                                  ? AppColors.primary
+                                  : (isDark
+                                      ? AppColors.textSecondaryDark
+                                      : AppColors.textSecondaryLight),
                               size: 24,
                             ),
                             if (isNotification)
                               BlocBuilder<NotificationBloc, NotificationState>(
                                 builder: (context, state) {
-                                  final hasUnread = state.notifications.any((n) => !n.isRead);
-                                  if (!hasUnread) return const SizedBox.shrink();
+                                  final hasUnread =
+                                      state.notifications.any((n) => !n.isRead);
+                                  if (!hasUnread) {
+                                    return const SizedBox.shrink();
+                                  }
                                   return Positioned(
                                     top: 2,
                                     right: 18, // offset relative to icon

@@ -18,7 +18,8 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMixin {
+class _RegisterPageState extends State<RegisterPage>
+    with TickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -50,12 +51,13 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     for (int i = 0; i < 6; i++) {
       final double start = i * 0.1;
       final double end = (start + 0.4).clamp(0.0, 1.0);
-      _slideAnimations.add(Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero)
-          .animate(CurvedAnimation(
-              parent: _pageAnimationController,
-              curve: Interval(start, end, curve: Curves.easeOutCubic))));
-      _fadeAnimations.add(Tween<double>(begin: 0.0, end: 1.0)
-          .animate(CurvedAnimation(
+      _slideAnimations.add(
+          Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero)
+              .animate(CurvedAnimation(
+                  parent: _pageAnimationController,
+                  curve: Interval(start, end, curve: Curves.easeOutCubic))));
+      _fadeAnimations.add(Tween<double>(begin: 0.0, end: 1.0).animate(
+          CurvedAnimation(
               parent: _pageAnimationController,
               curve: Interval(start, end, curve: Curves.easeOutCubic))));
     }
@@ -71,7 +73,8 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     _emailFocus.addListener(() {
       if (!_emailFocus.hasFocus) {
         final val = _emailController.text.trim();
-        setState(() => _isEmailValid = RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val));
+        setState(() => _isEmailValid =
+            RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val));
       }
     });
 
@@ -132,7 +135,9 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
     int score = 0;
     if (pass.length > 5) score++;
     if (pass.length > 8) score++;
-    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[0-9]').hasMatch(pass)) score++;
+    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[0-9]').hasMatch(pass)) {
+      score++;
+    }
     if (RegExp(r'[!@#\$&*~]').hasMatch(pass)) score++;
     return score;
   }
@@ -253,8 +258,10 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
             builder: (context, value, _) {
               return LinearProgressIndicator(
                 value: value,
-                backgroundColor: isDark ? AppColors.surfaceDark2 : AppColors.borderLight,
-                valueColor: const AlwaysStoppedAnimation<Color>(AppColors.primary),
+                backgroundColor:
+                    isDark ? AppColors.surfaceDark2 : AppColors.borderLight,
+                valueColor:
+                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
                 minHeight: 4,
               );
             },
@@ -290,10 +297,11 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     0,
                     Text(
                       'Buat Akun Baru',
-                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: -0.5,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: -0.5,
+                              ),
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space8),
@@ -302,12 +310,13 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     Text(
                       'Lengkapi data di bawah untuk bergabung dengan TICKET-Q.',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                           ),
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space32),
-                  
                   _buildStaggeredItem(
                     1,
                     AppTextField(
@@ -323,7 +332,6 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space20),
-                  
                   _buildStaggeredItem(
                     2,
                     AppTextField(
@@ -337,14 +345,16 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                       onSubmitted: (_) => _passwordFocus.requestFocus(),
                       validator: (v) {
                         if (v!.isEmpty) return 'Email wajib diisi';
-                        if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(v)) return 'Email tidak valid';
+                        if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$')
+                            .hasMatch(v)) {
+                          return 'Email tidak valid';
+                        }
                         return null;
                       },
                       isSuccess: _isEmailValid,
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space20),
-                  
                   _buildStaggeredItem(
                     3,
                     Column(
@@ -359,19 +369,26 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                           prefixIcon: Icons.lock_outline,
                           textInputAction: TextInputAction.next,
                           onSubmitted: (_) => _confirmFocus.requestFocus(),
-                          validator: (v) => v!.length < 6 ? 'Terlalu pendek' : null,
+                          validator: (v) =>
+                              v!.length < 6 ? 'Terlalu pendek' : null,
                           isSuccess: _isPasswordValid,
                         ),
                         const SizedBox(height: 12),
                         Row(
                           children: List.generate(4, (index) {
-                            final score = _calculatePasswordStrength(_passwordController.text);
-                            final color = index < score ? _getPasswordStrengthColor(score) : (isDark ? AppColors.borderDark : AppColors.borderLight);
+                            final score = _calculatePasswordStrength(
+                                _passwordController.text);
+                            final color = index < score
+                                ? _getPasswordStrengthColor(score)
+                                : (isDark
+                                    ? AppColors.borderDark
+                                    : AppColors.borderLight);
                             return Expanded(
                               child: AnimatedContainer(
                                 duration: const Duration(milliseconds: 300),
                                 height: 4,
-                                margin: EdgeInsets.only(right: index == 3 ? 0 : 4),
+                                margin:
+                                    EdgeInsets.only(right: index == 3 ? 0 : 4),
                                 decoration: BoxDecoration(
                                   color: color,
                                   borderRadius: BorderRadius.circular(2),
@@ -384,7 +401,6 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space20),
-                  
                   _buildStaggeredItem(
                     4,
                     AppTextField(
@@ -400,11 +416,12 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                         if (v != _passwordController.text) return 'Tidak cocok';
                         return null;
                       },
-                      isSuccess: _confirmPasswordController.text.isNotEmpty && _confirmPasswordController.text == _passwordController.text,
+                      isSuccess: _confirmPasswordController.text.isNotEmpty &&
+                          _confirmPasswordController.text ==
+                              _passwordController.text,
                     ),
                   ),
                   const SizedBox(height: AppDimensions.space40),
-                  
                   _buildStaggeredItem(
                     5,
                     Column(
@@ -424,7 +441,9 @@ class _RegisterPageState extends State<RegisterPage> with TickerProviderStateMix
                           'Dengan mendaftar, Anda menyetujui Ketentuan Layanan\ndan Kebijakan Privasi kami.',
                           style: TextStyle(
                             fontSize: 12,
-                            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                            color: isDark
+                                ? AppColors.textSecondaryDark
+                                : AppColors.textSecondaryLight,
                             height: 1.5,
                           ),
                           textAlign: TextAlign.center,

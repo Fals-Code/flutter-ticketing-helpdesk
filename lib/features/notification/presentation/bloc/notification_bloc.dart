@@ -91,14 +91,22 @@ class NotificationState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       notifications: notifications ?? this.notifications,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
       selectionMode: selectionMode ?? this.selectionMode,
       selectedIds: selectedIds ?? this.selectedIds,
     );
   }
 
   @override
-  List<Object?> get props => [isLoading, notifications, errorMessage, successMessage, selectionMode, selectedIds];
+  List<Object?> get props => [
+        isLoading,
+        notifications,
+        errorMessage,
+        successMessage,
+        selectionMode,
+        selectedIds
+      ];
 }
 
 // Bloc
@@ -127,7 +135,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<NotificationStreamUpdated>(_onStreamUpdated);
     on<MarkAllReadRequested>(_onMarkAllRead);
     on<ResetNotificationState>(_onResetState);
-    
+
     // Selection handlers
     on<ToggleSelectionModeRequested>(_onToggleSelectionMode);
     on<ToggleNotificationSelectionRequested>(_onToggleSelection);
@@ -153,7 +161,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     emit(state.copyWith(
       notifications: event.notifications,
-      clearError: true, 
+      clearError: true,
       clearSuccess: true,
     ));
   }
@@ -172,8 +180,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     final result = await getNotifications();
     result.fold(
       (failure) => emit(state.copyWith(
-          isLoading: false,
-          errorMessage: 'Gagal mengambil notifikasi')),
+          isLoading: false, errorMessage: 'Gagal mengambil notifikasi')),
       (notifications) =>
           emit(state.copyWith(isLoading: false, notifications: notifications)),
     );
@@ -195,7 +202,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     final result = await markNotificationAsRead(event.notificationId);
     result.fold(
       (failure) {
-        developer.log('Failed to mark notification as read! ${failure.message}', name: 'NotificationBloc');
+        developer.log('Failed to mark notification as read! ${failure.message}',
+            name: 'NotificationBloc');
         emit(state.copyWith(notifications: originalList));
       },
       (_) {},
@@ -206,17 +214,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     MarkAllReadRequested event,
     Emitter<NotificationState> emit,
   ) async {
-    final unreadIds = state.notifications
-        .where((n) => !n.isRead)
-        .map((n) => n.id)
-        .toList();
+    final unreadIds =
+        state.notifications.where((n) => !n.isRead).map((n) => n.id).toList();
     if (unreadIds.isEmpty) return;
 
     final updatedList = state.notifications.map((n) {
       if (!n.isRead) return n.copyWith(isRead: true);
       return n;
     }).toList();
-    emit(state.copyWith(notifications: updatedList, successMessage: 'Semua notifikasi ditandai dibaca'));
+    emit(state.copyWith(
+        notifications: updatedList,
+        successMessage: 'Semua notifikasi ditandai dibaca'));
 
     await Future.wait(
       unreadIds.map((id) => markNotificationAsRead(id)),
@@ -224,7 +232,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }
 
   // Selection Logic
-  void _onToggleSelectionMode(ToggleSelectionModeRequested event, Emitter<NotificationState> emit) {
+  void _onToggleSelectionMode(
+      ToggleSelectionModeRequested event, Emitter<NotificationState> emit) {
     final newMode = !state.selectionMode;
     emit(state.copyWith(
       selectionMode: newMode,
@@ -232,7 +241,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     ));
   }
 
-  void _onToggleSelection(ToggleNotificationSelectionRequested event, Emitter<NotificationState> emit) {
+  void _onToggleSelection(ToggleNotificationSelectionRequested event,
+      Emitter<NotificationState> emit) {
     final current = Set<String>.from(state.selectedIds);
     if (current.contains(event.notificationId)) {
       current.remove(event.notificationId);
@@ -242,7 +252,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     emit(state.copyWith(selectedIds: current));
   }
 
-  void _onSelectAll(SelectAllNotificationsRequested event, Emitter<NotificationState> emit) {
+  void _onSelectAll(
+      SelectAllNotificationsRequested event, Emitter<NotificationState> emit) {
     if (state.selectedIds.length == state.notifications.length) {
       emit(state.copyWith(selectedIds: {}));
     } else {
@@ -251,15 +262,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     }
   }
 
-  Future<void> _onDeleteSelected(DeleteSelectedNotificationsRequested event, Emitter<NotificationState> emit) async {
+  Future<void> _onDeleteSelected(DeleteSelectedNotificationsRequested event,
+      Emitter<NotificationState> emit) async {
     if (state.selectedIds.isEmpty) return;
-    
+
     final idsToDelete = List<String>.from(state.selectedIds);
     emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
-    
+
     final result = await deleteMultipleNotifications(idsToDelete);
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (_) {
         emit(state.copyWith(
           isLoading: false,
@@ -273,11 +286,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     );
   }
 
-  Future<void> _onDeleteAll(DeleteAllNotificationsRequested event, Emitter<NotificationState> emit) async {
+  Future<void> _onDeleteAll(DeleteAllNotificationsRequested event,
+      Emitter<NotificationState> emit) async {
     emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
     final result = await deleteAllNotifications();
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (_) {
         emit(state.copyWith(
           isLoading: false,
@@ -291,11 +306,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     );
   }
 
-  Future<void> _onDeleteSingle(DeleteNotificationRequested event, Emitter<NotificationState> emit) async {
+  Future<void> _onDeleteSingle(DeleteNotificationRequested event,
+      Emitter<NotificationState> emit) async {
     emit(state.copyWith(isLoading: true, clearSuccess: true, clearError: true));
     final result = await deleteNotification(event.notificationId);
     result.fold(
-      (failure) => emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
+      (failure) =>
+          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
       (_) {
         emit(state.copyWith(
           isLoading: false,

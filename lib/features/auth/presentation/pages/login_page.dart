@@ -21,7 +21,8 @@ class LoginPage extends StatefulWidget {
   State<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMixin {
+class _LoginPageState extends State<LoginPage>
+    with SingleTickerProviderStateMixin {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
@@ -38,11 +39,13 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       vsync: this,
       duration: const Duration(milliseconds: 300),
     );
-    _slideAnimation = Tween<Offset>(begin: const Offset(0.0, 0.05), end: Offset.zero).animate(
-      CurvedAnimation(parent: _pageAnimationController, curve: Curves.easeOutCubic),
+    _slideAnimation =
+        Tween<Offset>(begin: const Offset(0.0, 0.05), end: Offset.zero).animate(
+      CurvedAnimation(
+          parent: _pageAnimationController, curve: Curves.easeOutCubic),
     );
     _pageAnimationController.forward();
-    
+
     // Auto focus username/email field
     Future.microtask(() => _emailFocus.requestFocus());
   }
@@ -59,11 +62,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
 
   void _handleLogin() {
     if (!_formKey.currentState!.validate()) return;
-    
+
     context.read<AuthBloc>().add(LoginSubmitted(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    ));
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        ));
   }
 
   void _showErrorSnackBar(String message) {
@@ -93,8 +96,8 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       child: BlocListener<AuthBloc, AuthState>(
         listener: (context, state) async {
           if (state.status == AuthStatus.authenticated) {
-            // Kita tidak perlu memanggil context.go() manual di sini 
-            // karena GoRouter.redirect akan otomatis menangani perpindahan 
+            // Kita tidak perlu memanggil context.go() manual di sini
+            // karena GoRouter.redirect akan otomatis menangani perpindahan
             // halaman setelah status berubah menjadi authenticated.
           }
           if (state.status == AuthStatus.error) {
@@ -106,7 +109,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
             child: Center(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space24, vertical: AppDimensions.space32),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: AppDimensions.space24,
+                    vertical: AppDimensions.space32),
                 child: SlideTransition(
                   position: _slideAnimation,
                   child: FadeTransition(
@@ -156,9 +161,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
         Text(
           'Selamat Datang Kembali ',
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
+                fontWeight: FontWeight.w700,
+                letterSpacing: -0.5,
+              ),
           textAlign: TextAlign.center,
         ),
         const SizedBox(height: AppDimensions.space8),
@@ -166,7 +171,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
           'Masuk untuk melanjutkan ke dashboard Anda',
           style: TextStyle(
             fontSize: 14,
-            color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+            color: isDark
+                ? AppColors.textSecondaryDark
+                : AppColors.textSecondaryLight,
           ),
           textAlign: TextAlign.center,
         ),
@@ -199,8 +206,11 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               prefixIcon: Icons.email_outlined,
               onSubmitted: (_) => _passwordFocus.requestFocus(),
               validator: (value) {
-                if (value == null || value.isEmpty) return AppStrings.emailRequired;
-                if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(value)) {
+                if (value == null || value.isEmpty) {
+                  return AppStrings.emailRequired;
+                }
+                if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$')
+                    .hasMatch(value)) {
                   return AppStrings.emailInvalid;
                 }
                 return null;
@@ -217,19 +227,22 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               textInputAction: TextInputAction.done,
               onSubmitted: (_) => _handleLogin(),
               validator: (value) {
-                if (value == null || value.isEmpty) return AppStrings.passwordRequired;
+                if (value == null || value.isEmpty) {
+                  return AppStrings.passwordRequired;
+                }
                 if (value.length < 6) return AppStrings.passwordMinLength;
                 return null;
               },
             ),
-            
+
             // Right-aligned Forgot Password
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () => context.push(AppRoutes.resetPassword),
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   minimumSize: Size.zero,
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
@@ -243,20 +256,21 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 ),
               ),
             ),
-            
+
             const SizedBox(height: AppDimensions.space32),
-            
+
             BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) {
                 final isSuccess = state.status == AuthStatus.authenticated;
                 // If success display green color state briefly
                 if (isSuccess) {
                   return const AppButton.danger(
-                    label: 'Berhasil', // Not exactly danger, but we use a distinct style or just standard primary.
+                    label:
+                        'Berhasil', // Not exactly danger, but we use a distinct style or just standard primary.
                     // Instead of misusing danger, we stick to primary or build specialized, but the requirements just say primary
                   ); // fallback below
                 }
-                
+
                 return AppButton.primary(
                   label: isSuccess ? 'Berhasil Masuk' : AppStrings.login,
                   onPressed: _handleLogin,
@@ -276,18 +290,27 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
       children: [
         Row(
           children: [
-            Expanded(child: Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+            Expanded(
+                child: Divider(
+                    color:
+                        isDark ? AppColors.borderDark : AppColors.borderLight)),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
+              padding:
+                  const EdgeInsets.symmetric(horizontal: AppDimensions.space16),
               child: Text(
                 'atau',
                 style: TextStyle(
                   fontSize: 12,
-                  color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight,
                 ),
               ),
             ),
-            Expanded(child: Divider(color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+            Expanded(
+                child: Divider(
+                    color:
+                        isDark ? AppColors.borderDark : AppColors.borderLight)),
           ],
         ),
         const SizedBox(height: AppDimensions.space24),
@@ -298,7 +321,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
               'Belum punya akun?',
               style: TextStyle(
                 fontSize: 14,
-                color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
               ),
             ),
             const SizedBox(width: AppDimensions.space4),
@@ -314,7 +339,9 @@ class _LoginPageState extends State<LoginPage> with SingleTickerProviderStateMix
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w600,
-                  color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                  color: isDark
+                      ? AppColors.textPrimaryDark
+                      : AppColors.textPrimaryLight,
                 ),
               ),
             ),

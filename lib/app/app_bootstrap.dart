@@ -87,8 +87,7 @@ Future<void> bootstrapApplication() async {
 
     runApp(
       const StartupErrorApp(
-        message:
-            'Inisialisasi layanan gagal. Periksa konfigurasi Firebase, '
+        message: 'Inisialisasi layanan gagal. Periksa konfigurasi Firebase, '
             'Supabase, dan koneksi perangkat sebelum mencoba kembali.',
       ),
     );
@@ -157,9 +156,7 @@ class ETicketingApp extends StatelessWidget {
       context
           .read<TicketListBloc>()
           .add(const list_event.StartTicketListSubscription());
-      context
-          .read<NotificationBloc>()
-          .add(StartNotificationSubscription());
+      context.read<NotificationBloc>().add(StartNotificationSubscription());
       context
           .read<TicketStatsBloc>()
           .add(const stats_event.FetchTicketStatsRequested());
@@ -177,13 +174,9 @@ class ETicketingApp extends StatelessWidget {
   }
 
   void _resetSessionScopedState(BuildContext context) {
-    context
-        .read<TicketListBloc>()
-        .add(list_event.ResetTicketListState());
+    context.read<TicketListBloc>().add(list_event.ResetTicketListState());
     context.read<TicketDetailBloc>().add(ResetTicketDetailState());
-    context
-        .read<TicketStatsBloc>()
-        .add(stats_event.ResetTicketStatsState());
+    context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
     context.read<NotificationBloc>().add(ResetNotificationState());
   }
 
@@ -276,9 +269,10 @@ class _ConfigurationErrorPage extends StatelessWidget {
                       const SizedBox(height: 20),
                       Text(
                         'Konfigurasi Belum Terpasang',
-                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
+                        style:
+                            Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
                       ),
                       const SizedBox(height: 12),
                       Text(
@@ -351,9 +345,10 @@ class StartupErrorApp extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(
                       'Aplikasi Gagal Dimulai',
-                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
+                      style:
+                          Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
                     ),
                     const SizedBox(height: 12),
                     Text(

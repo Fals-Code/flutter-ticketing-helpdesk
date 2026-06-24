@@ -22,7 +22,8 @@ class AuthUser extends Equatable {
   });
 
   @override
-  List<Object?> get props => [id, email, fullName, role, token, avatarUrl, isEmailVerified];
+  List<Object?> get props =>
+      [id, email, fullName, role, token, avatarUrl, isEmailVerified];
 
   /// Menghasilkan state "Kosong" saat tidak terautentikasi.
   static const AuthUser empty = AuthUser(

@@ -53,7 +53,8 @@ class SupabaseNotificationRemoteDataSourceImpl
             'No rows updated. Check RLS policies for notifications table.');
       }
     } on PostgrestException catch (e) {
-      throw Exception('Database error marking read: ${e.message} (code: ${e.code})');
+      throw Exception(
+          'Database error marking read: ${e.message} (code: ${e.code})');
     } catch (e) {
       throw Exception('Failed to mark notification as read: $e');
     }
@@ -83,9 +84,10 @@ class SupabaseNotificationRemoteDataSourceImpl
           .delete()
           .eq('id', notificationId)
           .select();
-      
+
       if ((response as List).isEmpty) {
-        throw Exception('Notifikasi tidak ditemukan atau izin dihapus ditolak (RLS).');
+        throw Exception(
+            'Notifikasi tidak ditemukan atau izin dihapus ditolak (RLS).');
       }
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message} (code: ${e.code})');
@@ -102,9 +104,10 @@ class SupabaseNotificationRemoteDataSourceImpl
           .delete()
           .inFilter('id', notificationIds)
           .select();
-      
+
       if ((response as List).isEmpty) {
-        throw Exception('Tidak ada notifikasi yang berhasil dihapus. Cek izin RLS.');
+        throw Exception(
+            'Tidak ada notifikasi yang berhasil dihapus. Cek izin RLS.');
       }
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message} (code: ${e.code})');
@@ -121,10 +124,10 @@ class SupabaseNotificationRemoteDataSourceImpl
           .delete()
           .eq('user_id', supabaseClient.auth.currentUser!.id)
           .select();
-          
+
       if ((response as List).isEmpty) {
         // Only throw if there were actually notifications to delete
-        // We can't easily check that without another query, but usually 
+        // We can't easily check that without another query, but usually
         // if user clicks "Hapus Semua" there are notifications.
       }
     } on PostgrestException catch (e) {

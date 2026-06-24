@@ -45,7 +45,9 @@ class SharedPrefsTicketLocalDataSource implements TicketLocalDataSource {
     final jsonString = sharedPreferences.getString(_cacheKey);
     if (jsonString == null) throw CacheException();
     final List<dynamic> decoded = jsonDecode(jsonString);
-    return decoded.map((json) => TicketModel.fromJson(json as Map<String, dynamic>)).toList();
+    return decoded
+        .map((json) => TicketModel.fromJson(json as Map<String, dynamic>))
+        .toList();
   }
 
   @override
@@ -58,7 +60,8 @@ class SharedPrefsTicketLocalDataSource implements TicketLocalDataSource {
 
   @override
   Future<TicketModel?> getCachedTicketDetail(String ticketId) async {
-    final jsonString = sharedPreferences.getString('$_detailCachePrefix$ticketId');
+    final jsonString =
+        sharedPreferences.getString('$_detailCachePrefix$ticketId');
     if (jsonString == null) return null;
     return TicketModel.fromJson(jsonDecode(jsonString));
   }

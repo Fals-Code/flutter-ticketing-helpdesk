@@ -98,7 +98,8 @@ class SafeTicketListBloc extends TicketListBloc {
     _RealtimeTicketsFailed event,
     Emitter<TicketListState> emit,
   ) {
-    emit(state.copyWith(errorMessage: 'Realtime tiket terputus: ${event.message}'));
+    emit(state.copyWith(
+        errorMessage: 'Realtime tiket terputus: ${event.message}'));
   }
 
   List<TicketEntity> _filter(List<TicketEntity> tickets) {

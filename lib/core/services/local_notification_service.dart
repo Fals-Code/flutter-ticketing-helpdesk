@@ -8,11 +8,13 @@ import 'package:uts/core/di/injection_container.dart';
 import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
 
 class LocalNotificationService {
-  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _notificationsPlugin =
+      FlutterLocalNotificationsPlugin();
 
   static const String _channelId = 'high_importance_channel';
   static const String _channelName = 'High Importance Notifications';
-  static const String _channelDescription = 'This channel is used for important helpdesk notifications.';
+  static const String _channelDescription =
+      'This channel is used for important helpdesk notifications.';
 
   Future<void> initialize() async {
     // Initialize timezone
@@ -30,7 +32,8 @@ class LocalNotificationService {
       requestSoundPermission: true,
     );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
     );
@@ -47,18 +50,22 @@ class LocalNotificationService {
           if (parts.length > 1) {
             final notificationId = parts[0];
             final ticketId = parts[1];
-            
+
             // Mark as read in the database
             if (notificationId.isNotEmpty) {
-              final result = await sl<MarkNotificationAsRead>().call(notificationId);
+              final result =
+                  await sl<MarkNotificationAsRead>().call(notificationId);
               result.fold(
-                (failure) => debugPrint('Failed to mark notification as read: ${failure.message}'),
-                (_) => debugPrint('Successfully marked notification $notificationId as read via background tap.'),
+                (failure) => debugPrint(
+                    'Failed to mark notification as read: ${failure.message}'),
+                (_) => debugPrint(
+                    'Successfully marked notification $notificationId as read via background tap.'),
               );
             }
 
             if (ticketId.isNotEmpty) {
-              appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));
+              appRouter
+                  .push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));
             }
           } else {
             // Fallback for old simple payloads (just ticketId)

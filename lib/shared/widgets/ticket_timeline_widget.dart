@@ -21,11 +21,14 @@ class TicketTimelineWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(vertical: 32),
           child: Column(
             children: [
-              Icon(Icons.timeline_rounded, size: 32, color: isDark ? Colors.white24 : Colors.black26),
+              Icon(Icons.timeline_rounded,
+                  size: 32, color: isDark ? Colors.white24 : Colors.black26),
               const SizedBox(height: 12),
               Text(
                 'Belum ada riwayat aktivitas.',
-                style: TextStyle(fontSize: 13, color: isDark ? Colors.white54 : Colors.black45),
+                style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white54 : Colors.black45),
               ),
             ],
           ),
@@ -87,7 +90,8 @@ class TicketTimelineWidget extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        _getActivityTitle(activity.oldStatus, activity.newStatus),
+                        _getActivityTitle(
+                            activity.oldStatus, activity.newStatus),
                         style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
@@ -117,20 +121,29 @@ class TicketTimelineWidget extends StatelessWidget {
                               child: Center(
                                 child: Text(
                                   activity.changedByName![0].toUpperCase(),
-                                  style: const TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: AppColors.primary),
+                                  style: const TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppColors.primary),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 6),
                             Text(
                               'oleh ${activity.changedByName}',
-                              style: const TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w500),
+                              style: const TextStyle(
+                                  fontSize: 11,
+                                  color: AppColors.primary,
+                                  fontWeight: FontWeight.w500),
                             ),
                             const SizedBox(width: 8),
                           ],
                           Text(
                             _relativeTime(activity.createdAt),
-                            style: TextStyle(fontSize: 11, color: isDark ? Colors.white38 : Colors.black38),
+                            style: TextStyle(
+                                fontSize: 11,
+                                color:
+                                    isDark ? Colors.white38 : Colors.black38),
                           ),
                         ],
                       ),
@@ -158,26 +171,37 @@ class TicketTimelineWidget extends StatelessWidget {
 
   Color _getActivityColor(String status) {
     switch (status.toLowerCase()) {
-      case 'open': return AppColors.statusOpen;
-      case 'in_progress': return AppColors.statusInProgress;
-      case 'resolved': return AppColors.statusResolved;
-      case 'closed': return AppColors.textSecondaryDark;
-      default: return AppColors.primary;
+      case 'open':
+        return AppColors.statusOpen;
+      case 'in_progress':
+        return AppColors.statusInProgress;
+      case 'resolved':
+        return AppColors.statusResolved;
+      case 'closed':
+        return AppColors.textSecondaryDark;
+      default:
+        return AppColors.primary;
     }
   }
 
   String _getActivityTitle(String? oldStatus, String newStatus) {
     if (oldStatus == null) return 'Tiket Dibuat';
     switch (newStatus.toLowerCase()) {
-      case 'in_progress': return 'Mulai Dikerjakan';
-      case 'resolved': return 'Penanganan Selesai';
-      case 'closed': return 'Tiket Ditutup';
-      default: return 'Status Diperbarui';
+      case 'in_progress':
+        return 'Mulai Dikerjakan';
+      case 'resolved':
+        return 'Penanganan Selesai';
+      case 'closed':
+        return 'Tiket Ditutup';
+      default:
+        return 'Status Diperbarui';
     }
   }
 
   String _getActivityDescription(TicketHistoryEntity activity) {
-    if (activity.oldStatus == null) return 'Tiket berhasil dibuat dengan status Terbuka.';
+    if (activity.oldStatus == null) {
+      return 'Tiket berhasil dibuat dengan status Terbuka.';
+    }
     final oldLabel = _statusLabel(activity.oldStatus!);
     final newLabel = _statusLabel(activity.newStatus);
     return 'Status berubah dari $oldLabel menjadi $newLabel.';
@@ -185,11 +209,16 @@ class TicketTimelineWidget extends StatelessWidget {
 
   String _statusLabel(String status) {
     switch (status.toLowerCase()) {
-      case 'open': return 'Terbuka';
-      case 'in_progress': return 'Diproses';
-      case 'resolved': return 'Selesai';
-      case 'closed': return 'Ditutup';
-      default: return status;
+      case 'open':
+        return 'Terbuka';
+      case 'in_progress':
+        return 'Diproses';
+      case 'resolved':
+        return 'Selesai';
+      case 'closed':
+        return 'Ditutup';
+      default:
+        return status;
     }
   }
 }

@@ -15,26 +15,32 @@ class UserModel extends AuthUser {
   });
 
   /// Factory untuk membuat UserModel dari Map JSON.
-  factory UserModel.fromJson(Map<String, dynamic> json, {String? token, int? roleInt}) {
+  factory UserModel.fromJson(Map<String, dynamic> json,
+      {String? token, int? roleInt}) {
     // Role can come from roleInt override, or metadata
-    final roleData = roleInt ?? json['role'] ?? json['user_metadata']?['role'] ?? 'user';
-    
+    final roleData =
+        roleInt ?? json['role'] ?? json['user_metadata']?['role'] ?? 'user';
+
     final UserRole role;
     if (roleData is int) {
       role = UserRole.fromInt(roleData);
     } else {
       role = UserRole.fromString(roleData.toString());
     }
-    
+
     return UserModel(
       id: json['id'] ?? '',
       email: json['email'] ?? '',
-      fullName: json['fullName'] ?? json['full_name'] ?? json['user_metadata']?['full_name'],
+      fullName: json['fullName'] ??
+          json['full_name'] ??
+          json['user_metadata']?['full_name'],
       role: role,
       token: token,
       avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
-      isEmailVerified: (json['email_confirmed_at'] != null && json['email_confirmed_at'].toString().isNotEmpty) || 
-                       (json['emailConfirmedAt'] != null && json['emailConfirmedAt'].toString().isNotEmpty),
+      isEmailVerified: (json['email_confirmed_at'] != null &&
+              json['email_confirmed_at'].toString().isNotEmpty) ||
+          (json['emailConfirmedAt'] != null &&
+              json['emailConfirmedAt'].toString().isNotEmpty),
     );
   }
 

@@ -42,7 +42,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteNotification(String notificationId) async {
+  Future<Either<Failure, void>> deleteNotification(
+      String notificationId) async {
     try {
       await remoteDataSource.deleteNotification(notificationId);
       return const Right(null);
@@ -52,7 +53,8 @@ class NotificationRepositoryImpl implements NotificationRepository {
   }
 
   @override
-  Future<Either<Failure, void>> deleteNotifications(List<String> notificationIds) async {
+  Future<Either<Failure, void>> deleteNotifications(
+      List<String> notificationIds) async {
     try {
       await remoteDataSource.deleteNotifications(notificationIds);
       return const Right(null);

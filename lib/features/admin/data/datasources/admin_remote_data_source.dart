@@ -7,7 +7,8 @@ abstract class AdminRemoteDataSource {
   Future<List<UserModel>> getUsers();
   Future<void> updateUserRole(String userId, int newRole);
   Future<void> updateUserDetails(String userId, String fullName, String email);
-  Future<AdminReportModel> getAdminReports({DateTime? startDate, DateTime? endDate});
+  Future<AdminReportModel> getAdminReports(
+      {DateTime? startDate, DateTime? endDate});
   Future<AppSettingsModel> getAppSettings();
   Future<void> updateAppSettings(AppSettingsModel settings);
 }
@@ -24,8 +25,10 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
           .from('profiles')
           .select('id, full_name, role, email')
           .order('full_name');
-      
-      return (response as List).map((json) => UserModel.fromJson(json)).toList();
+
+      return (response as List)
+          .map((json) => UserModel.fromJson(json))
+          .toList();
     } catch (e) {
       throw Exception('Gagal mengambil daftar pengguna: $e');
     }
@@ -36,32 +39,30 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
     try {
       await supabaseClient
           .from('profiles')
-          .update({'role': newRole})
-          .eq('id', userId);
+          .update({'role': newRole}).eq('id', userId);
     } catch (e) {
       throw Exception('Gagal memperbarui peran pengguna: $e');
     }
   }
 
   @override
-  Future<void> updateUserDetails(String userId, String fullName, String email) async {
+  Future<void> updateUserDetails(
+      String userId, String fullName, String email) async {
     try {
       // Note: Updating email in Auth usually requires different methods if using Supabase Auth,
       // but for 'profiles' table we just update the metadata.
-      await supabaseClient
-          .from('profiles')
-          .update({
-            'full_name': fullName,
-            'email': email,
-          })
-          .eq('id', userId);
+      await supabaseClient.from('profiles').update({
+        'full_name': fullName,
+        'email': email,
+      }).eq('id', userId);
     } catch (e) {
       throw Exception('Gagal memperbarui profil pengguna: $e');
     }
   }
 
   @override
-  Future<AdminReportModel> getAdminReports({DateTime? startDate, DateTime? endDate}) async {
+  Future<AdminReportModel> getAdminReports(
+      {DateTime? startDate, DateTime? endDate}) async {
     try {
       final response = await supabaseClient.rpc(
         'get_admin_reports',
@@ -103,13 +104,11 @@ class SupabaseAdminRemoteDataSourceImpl implements AdminRemoteDataSource {
   @override
   Future<void> updateAppSettings(AppSettingsModel settings) async {
     try {
-      await supabaseClient
-          .from('configs')
-          .upsert({
-            'key': 'app_settings',
-            'value': settings.toJson(),
-            'updated_at': DateTime.now().toIso8601String(),
-          }, onConflict: 'key');
+      await supabaseClient.from('configs').upsert({
+        'key': 'app_settings',
+        'value': settings.toJson(),
+        'updated_at': DateTime.now().toIso8601String(),
+      }, onConflict: 'key');
     } catch (e) {
       throw Exception('Gagal memperbarui pengaturan aplikasi: $e');
     }

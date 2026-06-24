@@ -22,7 +22,8 @@ class CommentModel extends CommentEntity {
           ? UserRole.fromInt(json['profiles']['role']).name
           : json['profiles']?['role']?.toString() ?? 'user',
       message: json['message'] ?? '',
-      createdAt: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.parse(
+          json['created_at'] ?? DateTime.now().toIso8601String()),
     );
   }
 

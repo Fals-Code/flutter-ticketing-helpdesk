@@ -9,15 +9,13 @@ class Module8AssetsMediaPage extends StatefulWidget {
   const Module8AssetsMediaPage({super.key});
 
   @override
-  State<Module8AssetsMediaPage> createState() =>
-      _Module8AssetsMediaPageState();
+  State<Module8AssetsMediaPage> createState() => _Module8AssetsMediaPageState();
 }
 
 class _Module8AssetsMediaPageState extends State<Module8AssetsMediaPage> {
   Future<Map<String, dynamic>> _loadConfig() async {
     try {
-      final response =
-          await rootBundle.loadString('assets/data/config.json');
+      final response = await rootBundle.loadString('assets/data/config.json');
       return json.decode(response) as Map<String, dynamic>;
     } catch (error) {
       throw Exception('Gagal membaca config.json: $error');

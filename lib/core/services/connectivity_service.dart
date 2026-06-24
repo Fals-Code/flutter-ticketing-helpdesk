@@ -10,7 +10,8 @@ class ConnectivityService {
   Stream<ConnectionStatus> get connectionStream => _controller.stream;
 
   ConnectivityService() {
-    _connectivity.onConnectivityChanged.listen((List<ConnectivityResult> results) {
+    _connectivity.onConnectivityChanged
+        .listen((List<ConnectivityResult> results) {
       _emitStatus(results);
     });
     // Initial check

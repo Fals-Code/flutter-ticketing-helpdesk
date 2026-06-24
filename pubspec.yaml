@@ -1,8 +1,8 @@
 name: uts
-description: "E-Ticketing Helpdesk — Aplikasi manajemen tiket layanan berbasis Flutter."
+description: "TICKET-Q — aplikasi mobile E-Ticketing Helpdesk untuk pelaporan, monitoring, dan penyelesaian tiket layanan."
 publish_to: 'none'
 
-version: 1.0.0+1
+version: 2.0.0+1
 
 environment:
   sdk: ^3.5.0

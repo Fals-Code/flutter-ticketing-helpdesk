@@ -12,7 +12,8 @@ class LoadingWidget extends StatefulWidget {
   State<LoadingWidget> createState() => _LoadingWidgetState();
 }
 
-class _LoadingWidgetState extends State<LoadingWidget> with SingleTickerProviderStateMixin {
+class _LoadingWidgetState extends State<LoadingWidget>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
@@ -78,7 +79,8 @@ class ShimmerCard extends StatefulWidget {
   State<ShimmerCard> createState() => _ShimmerCardState();
 }
 
-class _ShimmerCardState extends State<ShimmerCard> with SingleTickerProviderStateMixin {
+class _ShimmerCardState extends State<ShimmerCard>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
 
@@ -169,7 +171,8 @@ class FullPageLoader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final primaryTextColor = isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final primaryTextColor =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
 
     return Center(
       child: Column(

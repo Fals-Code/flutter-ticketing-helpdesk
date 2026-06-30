@@ -12,18 +12,23 @@ class TicketTrackingBloc
     extends Bloc<TicketTrackingEvent, TicketTrackingState> {
   final GetTicketDetailUseCase getTicketDetailUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
+  int _loadGeneration = 0;
 
   TicketTrackingBloc({
     required this.getTicketDetailUseCase,
     required this.getTicketHistoryUseCase,
   }) : super(const TicketTrackingState()) {
     on<LoadTicketTrackingRequested>(_onLoadRequested);
+    on<ResetTicketTrackingState>(_onResetState);
   }
 
   Future<void> _onLoadRequested(
     LoadTicketTrackingRequested event,
     Emitter<TicketTrackingState> emit,
   ) async {
+    _loadGeneration++;
+    final generation = _loadGeneration;
+
     emit(
       state.copyWith(
         status: TicketTrackingStatus.loading,
@@ -32,6 +37,9 @@ class TicketTrackingBloc
     );
 
     final ticketResult = await getTicketDetailUseCase(event.ticketId);
+    if (generation != _loadGeneration || isClosed) {
+      return;
+    }
     final ticket = ticketResult.fold<TicketEntity?>(
       (failure) {
         emit(
@@ -53,6 +61,9 @@ class TicketTrackingBloc
     emit(state.copyWith(ticket: ticket, clearErrorMessage: true));
 
     final historyResult = await getTicketHistoryUseCase(event.ticketId);
+    if (generation != _loadGeneration || isClosed) {
+      return;
+    }
     historyResult.fold(
       (failure) => emit(
         state.copyWith(
@@ -76,6 +87,14 @@ class TicketTrackingBloc
         );
       },
     );
+  }
+
+  void _onResetState(
+    ResetTicketTrackingState event,
+    Emitter<TicketTrackingState> emit,
+  ) {
+    _loadGeneration++;
+    emit(const TicketTrackingState());
   }
 
   List<TicketTrackingItem> _mapTrackingItems(
@@ -127,5 +146,11 @@ class TicketTrackingBloc
     }
 
     return TicketTrackingStatus.failure;
+  }
+
+  @override
+  Future<void> close() async {
+    _loadGeneration++;
+    await super.close();
   }
 }

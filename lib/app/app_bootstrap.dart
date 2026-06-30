@@ -140,9 +140,16 @@ class ETicketingApp extends StatelessWidget {
 
   void _handleAuthenticationState(BuildContext context, AuthState state) {
     if (state.status == AuthStatus.authenticated) {
-      context
-          .read<TicketListBloc>()
-          .add(const list_event.StartTicketListSubscription());
+      final user = state.user;
+      final isTechnician = user.role == UserRole.technician;
+      final isStaff = user.role == UserRole.admin || isTechnician;
+      context.read<TicketListBloc>().add(
+            list_event.StartTicketListSubscription(
+              userId: isStaff ? null : user.id,
+              assignedToId: isTechnician ? user.id : null,
+              isStaff: isStaff,
+            ),
+          );
       context.read<NotificationBloc>().add(StartNotificationSubscription());
       context
           .read<TicketStatsBloc>()

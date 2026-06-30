@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -146,6 +148,25 @@ void main() {
         expect(bloc.state.items, hasLength(1));
       },
     );
+
+    blocTest<TicketTrackingBloc, TicketTrackingState>(
+      'reset clears tracking state and ignores stale load result',
+      build: () => _buildBloc(_TrackingRepository(
+        detailCompleter: Completer<TicketEntity>(),
+      )),
+      act: (bloc) async {
+        final repository =
+            bloc.getTicketDetailUseCase.repository as _TrackingRepository;
+        bloc.add(const LoadTicketTrackingRequested('ticket-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const ResetTicketTrackingState());
+        repository.detailCompleter!.complete(_ticket());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      },
+      verify: (bloc) {
+        expect(bloc.state, const TicketTrackingState());
+      },
+    );
   });
 }
 
@@ -192,18 +213,23 @@ class _TrackingRepository implements TicketRepository {
   final Failure? detailFailure;
   final List<TicketHistoryEntity> history;
   final bool failHistoryOnce;
+  final Completer<TicketEntity>? detailCompleter;
   int _historyCalls = 0;
 
   _TrackingRepository({
     this.detailFailure,
     this.history = const [],
     this.failHistoryOnce = false,
+    this.detailCompleter,
   });
 
   @override
   Future<Either<Failure, TicketEntity>> getTicketDetail(String ticketId) async {
     if (detailFailure != null) {
       return Left(detailFailure!);
+    }
+    if (detailCompleter != null) {
+      return Right(await detailCompleter!.future);
     }
     return Right(_ticket());
   }

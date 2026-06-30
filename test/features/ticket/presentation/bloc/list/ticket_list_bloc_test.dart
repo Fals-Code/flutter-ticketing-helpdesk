@@ -168,6 +168,30 @@ void main() {
             ['3']),
       ],
     );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'reset clears list state and ignores stale fetch result',
+      build: () {
+        pendingUserPageCompleter = Completer<PaginatedResult<TicketEntity>>();
+        final repository = _FakeTicketRepository(
+          userPageHandler: (_) => pendingUserPageCompleter!.future,
+        );
+        return _buildBloc(repository);
+      },
+      act: (bloc) async {
+        bloc.add(const FetchTicketsRequested(page: 0, limit: 10));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(ResetTicketListState());
+        pendingUserPageCompleter!.complete(PaginatedResult<TicketEntity>(
+          items: [_ticket('late')],
+          hasMore: false,
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      },
+      verify: (bloc) {
+        expect(bloc.state, TicketListState.initial());
+      },
+    );
   });
 }
 
@@ -182,6 +206,8 @@ TicketListBloc _buildBloc(_FakeTicketRepository repository) {
     connectivityOverride: const Stream<ConnectionStatus>.empty(),
   );
 }
+
+Completer<PaginatedResult<TicketEntity>>? pendingUserPageCompleter;
 
 TicketEntity _ticket(String id, {String title = 'Printer error'}) {
   return TicketEntity(

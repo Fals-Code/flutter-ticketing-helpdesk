@@ -8,6 +8,7 @@ import 'ticket_create_state.dart';
 
 class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
   final CreateTicketUseCase createTicketUseCase;
+  int _operationGeneration = 0;
 
   TicketCreateBloc({
     required this.createTicketUseCase,
@@ -20,6 +21,9 @@ class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
     SubmitTicketCreateRequested event,
     Emitter<TicketCreateState> emit,
   ) async {
+    _operationGeneration++;
+    final generation = _operationGeneration;
+
     if (state.isBusy) {
       emit(state.copyWith(
         status: TicketCreateStatus.validationFailure,
@@ -44,14 +48,21 @@ class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
       category: event.category,
       attachments: event.attachments,
       onProgress: (progress) {
-        if (!emit.isDone) {
+        if (!emit.isDone && generation == _operationGeneration && !isClosed) {
           emit(state.applyProgress(progress));
         }
       },
     ));
 
+    if (generation != _operationGeneration || isClosed) {
+      return;
+    }
+
     result.fold(
       (failure) {
+        if (generation != _operationGeneration || isClosed) {
+          return;
+        }
         emit(state.copyWith(
           status: _statusFromFailure(failure),
           message: failure.message,
@@ -59,6 +70,9 @@ class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
         ));
       },
       (ticket) {
+        if (generation != _operationGeneration || isClosed) {
+          return;
+        }
         emit(state.copyWith(
           status: TicketCreateStatus.success,
           ticket: ticket,
@@ -75,6 +89,7 @@ class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
     TicketCreateResetRequested event,
     Emitter<TicketCreateState> emit,
   ) {
+    _operationGeneration++;
     emit(const TicketCreateState());
   }
 

@@ -15,3 +15,7 @@ class LoadTicketTrackingRequested extends TicketTrackingEvent {
   @override
   List<Object?> get props => [ticketId];
 }
+
+class ResetTicketTrackingState extends TicketTrackingEvent {
+  const ResetTicketTrackingState();
+}

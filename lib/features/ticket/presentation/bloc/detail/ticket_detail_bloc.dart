@@ -36,6 +36,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   StreamSubscription<ConnectionStatus>? _connectivitySubscription;
   int _detailGeneration = 0;
   int _commentGeneration = 0;
+  int _detailRequestGeneration = 0;
+  int _historyRequestGeneration = 0;
+  int _mutationGeneration = 0;
 
   TicketDetailBloc({
     required this.getTicketDetailUseCase,
@@ -81,6 +84,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     FetchTicketDetailRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _detailRequestGeneration++;
+    final requestGeneration = _detailRequestGeneration;
+
     emit(
       state.copyWith(
         status: state.ticket == null
@@ -92,6 +98,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     );
 
     final result = await getTicketDetailUseCase(event.ticketId);
+    if (requestGeneration != _detailRequestGeneration || isClosed) {
+      return;
+    }
 
     await result.fold(
       (failure) async {
@@ -119,6 +128,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
       },
       (ticket) async {
         final commentsResult = await getTicketCommentsUseCase(event.ticketId);
+        if (requestGeneration != _detailRequestGeneration || isClosed) {
+          return;
+        }
         final comments = commentsResult.getOrElse(() => state.comments);
         await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
         emit(
@@ -244,6 +256,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     AddCommentRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _mutationGeneration++;
+    final mutationGeneration = _mutationGeneration;
+
     if (state.isCommentSubmitting) {
       emit(
           state.copyWith(errorMessage: 'Pengiriman komentar sedang berjalan.'));
@@ -262,6 +277,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     final result = await addCommentUseCase(
       AddCommentParams(ticketId: event.ticketId, message: event.message),
     );
+    if (mutationGeneration != _mutationGeneration || isClosed) {
+      return;
+    }
     result.fold(
       (failure) => emit(
         state.copyWith(
@@ -282,6 +300,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     DeleteTicketRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _mutationGeneration++;
+    final mutationGeneration = _mutationGeneration;
+
     if (state.isDeleting) {
       emit(state.copyWith(
         errorMessage: 'Penghapusan tiket sedang berjalan.',
@@ -304,6 +325,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         reason: event.reason,
       ),
     );
+    if (mutationGeneration != _mutationGeneration || isClosed) {
+      return;
+    }
 
     await result.fold(
       (failure) async {
@@ -333,6 +357,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     SubmitRatingRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _mutationGeneration++;
+    final mutationGeneration = _mutationGeneration;
+
     emit(state.copyWith(isRatingSubmitting: true));
     final result = await submitRatingUseCase(
       SubmitRatingParams(
@@ -341,6 +368,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         feedback: event.feedback,
       ),
     );
+    if (mutationGeneration != _mutationGeneration || isClosed) {
+      return;
+    }
     result.fold(
       (failure) => emit(
         state.copyWith(
@@ -362,7 +392,13 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     FetchTicketActivitiesRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _historyRequestGeneration++;
+    final requestGeneration = _historyRequestGeneration;
+
     final result = await getTicketHistoryUseCase(event.ticketId);
+    if (requestGeneration != _historyRequestGeneration || isClosed) {
+      return;
+    }
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
       (history) => emit(state.copyWith(history: history)),
@@ -408,6 +444,9 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     ResetTicketDetailState event,
     Emitter<TicketDetailState> emit,
   ) async {
+    _detailRequestGeneration++;
+    _historyRequestGeneration++;
+    _mutationGeneration++;
     await _cancelTicketSubscriptions();
     emit(const TicketDetailState());
   }

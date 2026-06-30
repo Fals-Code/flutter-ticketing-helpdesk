@@ -111,6 +111,28 @@ void main() {
         ),
       ],
     );
+
+    blocTest<TicketDetailBloc, TicketDetailState>(
+      'reset clears detail state and ignores stale detail result',
+      build: () {
+        final repository = _FakeDetailRepository(
+          detailCompleter: Completer<TicketEntity>(),
+        );
+        return _buildBloc(repository);
+      },
+      act: (bloc) async {
+        final repository =
+            bloc.getTicketDetailUseCase.repository as _FakeDetailRepository;
+        bloc.add(const FetchTicketDetailRequested('ticket-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(ResetTicketDetailState());
+        repository.detailCompleter!.complete(_ticket());
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      },
+      verify: (bloc) {
+        expect(bloc.state, const TicketDetailState());
+      },
+    );
   });
 }
 
@@ -159,17 +181,22 @@ CommentEntity _comment(String id, String message, DateTime createdAt) {
 class _FakeDetailRepository implements TicketRepository {
   final Failure? detailFailure;
   final Completer<void>? addCommentCompleter;
+  final Completer<TicketEntity>? detailCompleter;
   int addCommentCallCount = 0;
 
   _FakeDetailRepository({
     this.detailFailure,
     this.addCommentCompleter,
+    this.detailCompleter,
   });
 
   @override
   Future<Either<Failure, TicketEntity>> getTicketDetail(String ticketId) async {
     if (detailFailure != null) {
       return Left(detailFailure!);
+    }
+    if (detailCompleter != null) {
+      return Right(await detailCompleter!.future);
     }
     return Right(_ticket());
   }

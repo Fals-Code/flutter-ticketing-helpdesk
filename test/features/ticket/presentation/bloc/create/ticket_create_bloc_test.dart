@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:bloc_test/bloc_test.dart';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -155,6 +157,44 @@ void main() {
         ),
       ],
     );
+
+    blocTest<TicketCreateBloc, TicketCreateState>(
+      'reset clears create state and ignores stale create completion',
+      build: () => TicketCreateBloc(
+        createTicketUseCase: CreateTicketUseCase(
+          _FakeCreateRepository(
+            completion: Completer<Either<Failure, TicketEntity>>(),
+          ),
+        ),
+      ),
+      act: (bloc) async {
+        final repository =
+            bloc.createTicketUseCase.repository as _FakeCreateRepository;
+        bloc.add(const SubmitTicketCreateRequested(
+          title: 'Printer error',
+          description: 'Printer lantai 2 tidak dapat mencetak dokumen.',
+          category: 'hardware',
+          attachments: [],
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const TicketCreateResetRequested());
+        repository.completion!.complete(
+          Right(TicketEntity(
+            id: 'late-ticket',
+            title: 'Printer error',
+            description: 'Printer lantai 2 tidak dapat mencetak dokumen.',
+            status: TicketStatus.open,
+            category: 'hardware',
+            createdAt: DateTime.parse('2026-06-30T00:00:00.000Z'),
+            userId: 'user-1',
+          )),
+        );
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+      },
+      verify: (bloc) {
+        expect(bloc.state, const TicketCreateState());
+      },
+    );
   });
 }
 
@@ -171,8 +211,9 @@ LocalAttachmentCandidate _attachment() {
 
 class _FakeCreateRepository implements TicketRepository {
   final Failure? failure;
+  final Completer<Either<Failure, TicketEntity>>? completion;
 
-  _FakeCreateRepository({this.failure});
+  _FakeCreateRepository({this.failure, this.completion});
 
   @override
   Future<Either<Failure, TicketEntity>> createTicket(
@@ -189,6 +230,10 @@ class _FakeCreateRepository implements TicketRepository {
       uploadedCount: params.attachments.length,
       totalCount: params.attachments.length,
     ));
+
+    if (completion != null) {
+      return completion!.future;
+    }
 
     if (failure != null) {
       return Left(failure!);

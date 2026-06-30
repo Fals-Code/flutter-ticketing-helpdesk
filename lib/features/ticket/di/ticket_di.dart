@@ -109,7 +109,14 @@ Future<void> initTicketDependencies(GetIt sl) async {
   }
 
   sl.registerLazySingleton<TicketLocalDataSource>(
-    () => SharedPrefsTicketLocalDataSource(sl<SharedPreferences>()),
+    () => SharedPrefsTicketLocalDataSource(
+      sl<SharedPreferences>(),
+      sessionProvider: sl<TicketCacheSessionProvider>(),
+    ),
+  );
+
+  sl.registerLazySingleton<TicketCacheSessionProvider>(
+    () => SupabaseTicketCacheSessionProvider(sl<SupabaseClient>()),
   );
 
   sl.registerLazySingleton<TicketRemoteDataSource>(

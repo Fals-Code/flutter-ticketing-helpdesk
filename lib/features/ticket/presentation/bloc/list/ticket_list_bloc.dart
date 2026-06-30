@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/services/ticket_collection_utils.dart';
@@ -112,8 +113,35 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       return;
     }
 
-    result.fold(
-      (failure) {
+    await result.fold<Future<void>>(
+      (failure) async {
+        if (!isLoadMore) {
+          try {
+            final cachedTickets = await localDataSource.getCachedTickets();
+            if (!isClosed && requestGeneration == _userGeneration) {
+              emit(
+                state.copyWith(
+                  query: query,
+                  tickets: cachedTickets
+                      .map((ticket) => ticket.toEntity())
+                      .toList(growable: false),
+                  isInitialLoading: false,
+                  isRefreshing: false,
+                  isLoadingMore: false,
+                  hasMore: false,
+                  isOffline: true,
+                  successMessage: 'Menampilkan data tiket dari cache.',
+                  clearErrorMessage: true,
+                  clearLoadMoreErrorMessage: true,
+                ),
+              );
+              return;
+            }
+          } catch (_) {
+            // Fallback to server failure state when user-scoped cache is unavailable.
+          }
+        }
+
         emit(
           state.copyWith(
             isInitialLoading: false,
@@ -124,7 +152,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           ),
         );
       },
-      (pageResult) {
+      (pageResult) async {
         final merged = isInitial
             ? sortTicketsDeterministically(pageResult.items)
             : mergeTicketPage(
@@ -137,6 +165,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           query: query,
           hasMore: pageResult.hasMore,
           assignedToId: null,
+        );
+
+        await localDataSource.cacheTickets(
+          items.map(TicketModel.fromEntity).toList(growable: false),
         );
 
         emit(
@@ -215,8 +247,36 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       return;
     }
 
-    result.fold(
-      (failure) {
+    await result.fold<Future<void>>(
+      (failure) async {
+        if (!isLoadMore) {
+          try {
+            final cachedTickets = await localDataSource.getCachedTickets();
+            if (!isClosed && requestGeneration == _staffGeneration) {
+              emit(
+                state.copyWith(
+                  query: query,
+                  assignedToId: assignedToId,
+                  allTickets: cachedTickets
+                      .map((ticket) => ticket.toEntity())
+                      .toList(growable: false),
+                  isInitialLoading: false,
+                  isRefreshing: false,
+                  isLoadingMore: false,
+                  hasMoreAll: false,
+                  isOffline: true,
+                  successMessage: 'Menampilkan data tiket dari cache.',
+                  clearErrorMessage: true,
+                  clearLoadMoreErrorMessage: true,
+                ),
+              );
+              return;
+            }
+          } catch (_) {
+            // Fallback to server failure state when user-scoped cache is unavailable.
+          }
+        }
+
         emit(
           state.copyWith(
             isInitialLoading: false,
@@ -227,7 +287,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           ),
         );
       },
-      (pageResult) {
+      (pageResult) async {
         final merged = isInitial
             ? sortTicketsDeterministically(pageResult.items)
             : mergeTicketPage(
@@ -240,6 +300,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           query: query,
           hasMore: pageResult.hasMore,
           assignedToId: assignedToId,
+        );
+
+        await localDataSource.cacheTickets(
+          items.map(TicketModel.fromEntity).toList(growable: false),
         );
 
         emit(
@@ -471,6 +535,8 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     ResetTicketListState event,
     Emitter<TicketListState> emit,
   ) async {
+    _userGeneration++;
+    _staffGeneration++;
     _subscriptionGeneration++;
     _latestRealtimeSnapshot = const [];
     _subscriptionAssignedToId = null;
@@ -480,7 +546,6 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     final previous = _ticketSubscription;
     _ticketSubscription = null;
     await previous?.cancel();
-    await localDataSource.clearCache();
     emit(TicketListState.initial());
   }
 

@@ -1,5 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/core/services/local_notification_service.dart';
 
 /// Membersihkan data yang hanya boleh hidup selama satu sesi akun.
@@ -8,32 +8,26 @@ class SessionCleanupService {
   static const String _ticketDetailCachePrefix = 'cached_ticket_detail_';
 
   final SharedPreferences preferences;
-  final SupabaseClient supabaseClient;
+  final FCMService fcmService;
   final LocalNotificationService localNotificationService;
 
   const SessionCleanupService({
     required this.preferences,
-    required this.supabaseClient,
+    required this.fcmService,
     required this.localNotificationService,
   });
 
-  /// Dipanggil sebelum Supabase sign-out agar penghapusan token perangkat
-  /// masih memiliki sesi autentikasi yang valid.
+  /// Cleanup lokal tetap dijalankan walaupun pencabutan token remote gagal.
   Future<void> clearBeforeLogout() async {
-    await _revokeDeviceTokens();
-    await localNotificationService.cancelAll();
-    await _clearTicketCache();
-  }
+    await fcmService.unregisterCurrentDeviceToken();
 
-  Future<void> _revokeDeviceTokens() async {
-    final userId = supabaseClient.auth.currentUser?.id;
-    if (userId == null) {
-      return;
+    try {
+      await localNotificationService.cancelAll();
+    } catch (_) {
+      // Local cache must still be cleared.
     }
-    await supabaseClient
-        .from('device_tokens')
-        .delete()
-        .eq('user_id', userId);
+
+    await _clearTicketCache();
   }
 
   Future<void> _clearTicketCache() async {
@@ -42,6 +36,7 @@ class SessionCleanupService {
               key == _ticketListCacheKey ||
               key.startsWith(_ticketDetailCachePrefix),
         );
+
     for (final key in keys.toList(growable: false)) {
       await preferences.remove(key);
     }

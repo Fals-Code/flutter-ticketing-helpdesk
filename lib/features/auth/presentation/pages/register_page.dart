@@ -1,15 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
-import 'package:google_fonts/google_fonts.dart';
-import '../../../../core/constants/app_colors.dart';
-import '../../../../core/constants/app_dimensions.dart';
-import '../../../../shared/widgets/app_button.dart';
-import '../../../../shared/widgets/app_text_field.dart';
-import '../bloc/auth_bloc.dart';
-import '../bloc/auth_event.dart';
-import '../bloc/auth_state.dart';
+import 'package:uts/core/constants/app_colors.dart';
+import 'package:uts/core/constants/app_dimensions.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/core/router/app_router.dart';
+import 'package:uts/features/auth/domain/value_objects/auth_identifier.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_event.dart';
+import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
+import 'package:uts/shared/widgets/app_button.dart';
+import 'package:uts/shared/widgets/app_text_field.dart';
 
 class RegisterPage extends StatefulWidget {
   const RegisterPage({super.key});
@@ -18,440 +19,191 @@ class RegisterPage extends StatefulWidget {
   State<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage>
-    with TickerProviderStateMixin {
+class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  final _nameFocus = FocusNode();
-  final _emailFocus = FocusNode();
-  final _passwordFocus = FocusNode();
-  final _confirmFocus = FocusNode();
-
-  bool _isNameValid = false;
-  bool _isEmailValid = false;
-  bool _isPasswordValid = false;
-
-  late AnimationController _pageAnimationController;
-  late List<Animation<Offset>> _slideAnimations;
-  late List<Animation<double>> _fadeAnimations;
-
-  @override
-  void initState() {
-    super.initState();
-    _pageAnimationController = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 600));
-
-    // Staggered animations
-    _slideAnimations = [];
-    _fadeAnimations = [];
-    for (int i = 0; i < 6; i++) {
-      final double start = i * 0.1;
-      final double end = (start + 0.4).clamp(0.0, 1.0);
-      _slideAnimations.add(
-          Tween<Offset>(begin: const Offset(0.0, 0.2), end: Offset.zero)
-              .animate(CurvedAnimation(
-                  parent: _pageAnimationController,
-                  curve: Interval(start, end, curve: Curves.easeOutCubic))));
-      _fadeAnimations.add(Tween<double>(begin: 0.0, end: 1.0).animate(
-          CurvedAnimation(
-              parent: _pageAnimationController,
-              curve: Interval(start, end, curve: Curves.easeOutCubic))));
-    }
-    _pageAnimationController.forward();
-
-    // Setup inline validation
-    _nameFocus.addListener(() {
-      if (!_nameFocus.hasFocus) {
-        setState(() => _isNameValid = _nameController.text.trim().isNotEmpty);
-      }
-    });
-
-    _emailFocus.addListener(() {
-      if (!_emailFocus.hasFocus) {
-        final val = _emailController.text.trim();
-        setState(() => _isEmailValid =
-            RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$').hasMatch(val));
-      }
-    });
-
-    _passwordController.addListener(() {
-      setState(() {
-        _isPasswordValid = _passwordController.text.length >= 6;
-      });
-    });
-  }
-
   @override
   void dispose() {
     _nameController.dispose();
+    _usernameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _nameFocus.dispose();
-    _emailFocus.dispose();
-    _passwordFocus.dispose();
-    _confirmFocus.dispose();
-    _pageAnimationController.dispose();
     super.dispose();
   }
 
-  double get _progressValue {
-    int score = 0;
-    if (_isNameValid) score++;
-    if (_isEmailValid) score++;
-    if (_isPasswordValid) score++;
-    return score / 3.0; // 3 implicit steps
-  }
-
-  bool get _isFormReady {
-    return _isNameValid &&
-        _isEmailValid &&
-        _isPasswordValid &&
-        _confirmPasswordController.text == _passwordController.text;
-  }
-
-  void _onRegister() {
-    if (_formKey.currentState!.validate() && _isFormReady) {
-      context.read<AuthBloc>().add(RegisterSubmitted(
-            email: _emailController.text.trim(),
-            password: _passwordController.text.trim(),
-            fullName: _nameController.text.trim(),
-          ));
+  void _submit() {
+    if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
     }
+
+    context.read<AuthBloc>().add(RegisterSubmitted(
+          email: _emailController.text.trim(),
+          username: AuthIdentifier.normalize(_usernameController.text),
+          password: _passwordController.text,
+          fullName: _nameController.text.trim(),
+        ));
   }
 
-  Color _getPasswordStrengthColor(int score) {
-    if (score <= 1) return AppColors.danger;
-    if (score == 2) return AppColors.warning;
-    return AppColors.success;
-  }
-
-  int _calculatePasswordStrength(String pass) {
-    if (pass.isEmpty) return 0;
-    int score = 0;
-    if (pass.length > 5) score++;
-    if (pass.length > 8) score++;
-    if (RegExp(r'[A-Z]').hasMatch(pass) && RegExp(r'[0-9]').hasMatch(pass)) {
-      score++;
-    }
-    if (RegExp(r'[!@#\$&*~]').hasMatch(pass)) score++;
-    return score;
-  }
-
-  Widget _buildStaggeredItem(int index, Widget child) {
-    return SlideTransition(
-      position: _slideAnimations[index],
-      child: FadeTransition(
-        opacity: _fadeAnimations[index],
-        child: child,
-      ),
-    );
-  }
-
-  void _showVerificationDialog() {
-    showGeneralDialog(
+  Future<void> _showVerificationDialog() async {
+    await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      barrierLabel: 'Verification',
-      transitionDuration: const Duration(milliseconds: 400),
-      pageBuilder: (context, anim1, anim2) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        return PopScope(
-          canPop: false,
-          child: Center(
-            child: Container(
-              margin: const EdgeInsets.symmetric(horizontal: 32),
-              padding: const EdgeInsets.all(32),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.surfaceDark : Colors.white,
-                borderRadius: BorderRadius.circular(28),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.2),
-                    blurRadius: 30,
-                    offset: const Offset(0, 10),
-                  ),
-                ],
-              ),
-              child: Material(
-                color: Colors.transparent,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.1),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.mark_email_read_rounded,
-                        color: AppColors.primary,
-                        size: 48,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Cek Email Anda',
-                      style: GoogleFonts.plusJakartaSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Kami telah mengirimkan link verifikasi ke ${_emailController.text}. Silakan cek kotak masuk atau folder spam Anda.',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.inter(
-                        fontSize: 14,
-                        color: isDark ? Colors.grey[400] : Colors.grey[600],
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 32),
-                    SizedBox(
-                      width: double.infinity,
-                      child: AppButton.primary(
-                        label: 'Masuk ke Aplikasi',
-                        onPressed: () {
-                          Navigator.pop(context);
-                          context.pop(); // Pergi ke halaman Login
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Verifikasi Email'),
+        content: Text(
+          'Tautan verifikasi telah dikirim ke ${_emailController.text.trim()}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(dialogContext).pop();
+              context.go(AppRoutes.login);
+            },
+            child: const Text('Kembali ke Login'),
           ),
-        );
-      },
-      transitionBuilder: (context, anim1, anim2, child) {
-        return ScaleTransition(
-          scale: CurvedAnimation(parent: anim1, curve: Curves.easeOutBack),
-          child: FadeTransition(opacity: anim1, child: child),
-        );
-      },
+        ],
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.pop(),
-        ),
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(4),
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.0, end: _progressValue),
-            duration: const Duration(milliseconds: 300),
-            builder: (context, value, _) {
-              return LinearProgressIndicator(
-                value: value,
-                backgroundColor:
-                    isDark ? AppColors.surfaceDark2 : AppColors.borderLight,
-                valueColor:
-                    const AlwaysStoppedAnimation<Color>(AppColors.primary),
-                minHeight: 4,
-              );
-            },
-          ),
-        ),
-      ),
-      body: BlocListener<AuthBloc, AuthState>(
-        listener: (context, state) {
-          if (state.status == AuthStatus.error) {
-            ScaffoldMessenger.of(context).showSnackBar(
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state.status == AuthStatus.error && state.errorMessage != null) {
+          ScaffoldMessenger.of(context)
+            ..hideCurrentSnackBar()
+            ..showSnackBar(
               SnackBar(
-                content: Text(state.errorMessage ?? 'Registrasi gagal'),
+                content: Text(state.errorMessage!),
                 backgroundColor: AppColors.danger,
                 behavior: SnackBarBehavior.floating,
               ),
             );
-          }
-          if (state.successMessage == 'VERIFY_EMAIL_REQUIRED') {
-            _showVerificationDialog();
-            context.read<AuthBloc>().add(ClearAuthStatus());
-          }
-        },
-        child: SafeArea(
-          child: SingleChildScrollView(
-            physics: const BouncingScrollPhysics(),
-            padding: const EdgeInsets.all(AppDimensions.space24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  _buildStaggeredItem(
-                    0,
-                    Text(
-                      'Buat Akun Baru',
-                      style:
-                          Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: -0.5,
-                              ),
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space8),
-                  _buildStaggeredItem(
-                    0,
-                    Text(
-                      'Lengkapi data di bawah untuk bergabung dengan TICKET-Q.',
-                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                          ),
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space32),
-                  _buildStaggeredItem(
-                    1,
-                    AppTextField(
-                      label: 'Nama Lengkap',
-                      hint: 'Masukan Nama Anda',
-                      controller: _nameController,
-                      focusNode: _nameFocus,
-                      prefixIcon: Icons.person_outline,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _emailFocus.requestFocus(),
-                      validator: (v) => v!.isEmpty ? 'Nama tidak valid' : null,
-                      isSuccess: _isNameValid,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-                  _buildStaggeredItem(
-                    2,
-                    AppTextField(
-                      label: 'Email',
-                      hint: 'Masukan Email Anda',
-                      controller: _emailController,
-                      focusNode: _emailFocus,
-                      keyboardType: TextInputType.emailAddress,
-                      prefixIcon: Icons.email_outlined,
-                      textInputAction: TextInputAction.next,
-                      onSubmitted: (_) => _passwordFocus.requestFocus(),
-                      validator: (v) {
-                        if (v!.isEmpty) return 'Email wajib diisi';
-                        if (!RegExp(r'^[\w-.]+@([\w-]+\.)+[\w-]{2,}$')
-                            .hasMatch(v)) {
-                          return 'Email tidak valid';
-                        }
-                        return null;
-                      },
-                      isSuccess: _isEmailValid,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space20),
-                  _buildStaggeredItem(
-                    3,
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        AppTextField(
-                          label: 'Kata Sandi',
-                          hint: 'Minimal 6 karakter',
-                          controller: _passwordController,
-                          focusNode: _passwordFocus,
-                          isPassword: true,
-                          prefixIcon: Icons.lock_outline,
-                          textInputAction: TextInputAction.next,
-                          onSubmitted: (_) => _confirmFocus.requestFocus(),
-                          validator: (v) =>
-                              v!.length < 6 ? 'Terlalu pendek' : null,
-                          isSuccess: _isPasswordValid,
+        }
+
+        if (state.successMessage == 'VERIFY_EMAIL_REQUIRED') {
+          _showVerificationDialog();
+          context.read<AuthBloc>().add(const ClearAuthStatus());
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(title: const Text('Buat Akun')),
+        body: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(AppDimensions.space24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 520),
+                child: Form(
+                  key: _formKey,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text(
+                        'Daftar sebagai User',
+                        style: Theme.of(context)
+                            .textTheme
+                            .headlineMedium
+                            ?.copyWith(fontWeight: FontWeight.w700),
+                      ),
+                      const SizedBox(height: AppDimensions.space8),
+                      const Text(
+                        'Pendaftaran publik selalu menghasilkan akun User.',
+                      ),
+                      const SizedBox(height: AppDimensions.space32),
+                      AppTextField(
+                        label: 'Nama Lengkap',
+                        hint: 'Masukkan nama lengkap',
+                        controller: _nameController,
+                        prefixIcon: Icons.badge_outlined,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          final text = value?.trim() ?? '';
+                          if (text.length < 2) {
+                            return 'Nama minimal 2 karakter';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppDimensions.space20),
+                      AppTextField(
+                        label: 'Username',
+                        hint: 'contoh: ahmad_01',
+                        controller: _usernameController,
+                        prefixIcon: Icons.alternate_email_rounded,
+                        textInputAction: TextInputAction.next,
+                        validator: AuthIdentifier.validateUsername,
+                      ),
+                      const SizedBox(height: AppDimensions.space20),
+                      AppTextField(
+                        label: 'Email',
+                        hint: 'nama@contoh.com',
+                        controller: _emailController,
+                        prefixIcon: Icons.email_outlined,
+                        keyboardType: TextInputType.emailAddress,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          if (!AuthIdentifier.isEmail(value ?? '')) {
+                            return 'Format email tidak valid';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppDimensions.space20),
+                      AppTextField(
+                        label: 'Kata Sandi',
+                        hint: 'Minimal 8 karakter',
+                        controller: _passwordController,
+                        prefixIcon: Icons.lock_outline,
+                        isPassword: true,
+                        textInputAction: TextInputAction.next,
+                        validator: (value) {
+                          if ((value ?? '').length < 8) {
+                            return 'Kata sandi minimal 8 karakter';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppDimensions.space20),
+                      AppTextField(
+                        label: 'Konfirmasi Kata Sandi',
+                        hint: 'Ulangi kata sandi',
+                        controller: _confirmPasswordController,
+                        prefixIcon: Icons.lock_reset_rounded,
+                        isPassword: true,
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submit(),
+                        validator: (value) {
+                          if (value != _passwordController.text) {
+                            return 'Konfirmasi kata sandi tidak cocok';
+                          }
+                          return null;
+                        },
+                      ),
+                      const SizedBox(height: AppDimensions.space32),
+                      BlocBuilder<AuthBloc, AuthState>(
+                        builder: (context, state) => AppButton.primary(
+                          label: 'Daftar',
+                          onPressed: _submit,
+                          isLoading: state.status == AuthStatus.loading,
+                          size: AppButtonSize.large,
                         ),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: List.generate(4, (index) {
-                            final score = _calculatePasswordStrength(
-                                _passwordController.text);
-                            final color = index < score
-                                ? _getPasswordStrengthColor(score)
-                                : (isDark
-                                    ? AppColors.borderDark
-                                    : AppColors.borderLight);
-                            return Expanded(
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 300),
-                                height: 4,
-                                margin:
-                                    EdgeInsets.only(right: index == 3 ? 0 : 4),
-                                decoration: BoxDecoration(
-                                  color: color,
-                                  borderRadius: BorderRadius.circular(2),
-                                ),
-                              ),
-                            );
-                          }),
-                        ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: AppDimensions.space16),
+                      TextButton(
+                        onPressed: () => context.go(AppRoutes.login),
+                        child: const Text('Sudah punya akun? Masuk'),
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppDimensions.space20),
-                  _buildStaggeredItem(
-                    4,
-                    AppTextField(
-                      label: 'Konfirmasi Kata Sandi',
-                      hint: 'Ulangi kata sandi di atas',
-                      controller: _confirmPasswordController,
-                      focusNode: _confirmFocus,
-                      isPassword: true,
-                      prefixIcon: Icons.lock_reset_outlined,
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _onRegister(),
-                      validator: (v) {
-                        if (v != _passwordController.text) return 'Tidak cocok';
-                        return null;
-                      },
-                      isSuccess: _confirmPasswordController.text.isNotEmpty &&
-                          _confirmPasswordController.text ==
-                              _passwordController.text,
-                    ),
-                  ),
-                  const SizedBox(height: AppDimensions.space40),
-                  _buildStaggeredItem(
-                    5,
-                    Column(
-                      children: [
-                        BlocBuilder<AuthBloc, AuthState>(
-                          builder: (context, state) {
-                            return AppButton.primary(
-                              label: 'Daftar Sekarang',
-                              isLoading: state.status == AuthStatus.loading,
-                              onPressed: _isFormReady ? _onRegister : null,
-                              size: AppButtonSize.large,
-                            );
-                          },
-                        ),
-                        const SizedBox(height: AppDimensions.space20),
-                        Text(
-                          'Dengan mendaftar, Anda menyetujui Ketentuan Layanan\ndan Kebijakan Privasi kami.',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: isDark
-                                ? AppColors.textSecondaryDark
-                                : AppColors.textSecondaryLight,
-                            height: 1.5,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
             ),
           ),

@@ -1,23 +1,26 @@
 import 'package:uts/features/auth/domain/entities/user_entity.dart';
 import 'package:uts/core/constants/enums.dart';
 
-/// Model User untuk Data Layer.
-/// Menangani serialisasi dari JSON (API/DB) ke Domain Entity.
+/// Model user pada data layer.
 class UserModel extends AuthUser {
   const UserModel({
     required super.id,
     required super.email,
+    super.username,
     super.fullName,
     required super.role,
     super.token,
     super.avatarUrl,
     super.isEmailVerified = false,
+    super.isActive = true,
   });
 
-  /// Factory untuk membuat UserModel dari Map JSON.
-  factory UserModel.fromJson(Map<String, dynamic> json,
-      {String? token, int? roleInt}) {
-    // Role can come from roleInt override, or metadata
+  factory UserModel.fromJson(
+    Map<String, dynamic> json, {
+    String? token,
+    int? roleInt,
+    bool? isActive,
+  }) {
     final roleData =
         roleInt ?? json['role'] ?? json['user_metadata']?['role'] ?? 'user';
 
@@ -29,31 +32,36 @@ class UserModel extends AuthUser {
     }
 
     return UserModel(
-      id: json['id'] ?? '',
-      email: json['email'] ?? '',
-      fullName: json['fullName'] ??
-          json['full_name'] ??
-          json['user_metadata']?['full_name'],
+      id: json['id']?.toString() ?? '',
+      email: json['email']?.toString() ?? '',
+      username: json['username']?.toString() ??
+          json['user_metadata']?['username']?.toString(),
+      fullName: json['fullName']?.toString() ??
+          json['full_name']?.toString() ??
+          json['user_metadata']?['full_name']?.toString(),
       role: role,
       token: token,
-      avatarUrl: json['avatar_url'] ?? json['avatarUrl'],
+      avatarUrl:
+          json['avatar_url']?.toString() ?? json['avatarUrl']?.toString(),
       isEmailVerified: (json['email_confirmed_at'] != null &&
               json['email_confirmed_at'].toString().isNotEmpty) ||
           (json['emailConfirmedAt'] != null &&
               json['emailConfirmedAt'].toString().isNotEmpty),
+      isActive: isActive ?? json['is_active'] as bool? ?? true,
     );
   }
 
-  /// Konversi ke JSON (untuk local storage).
   Map<String, dynamic> toJson() {
     return {
       'id': id,
       'email': email,
+      'username': username,
       'fullName': fullName,
       'role': role.name,
       'token': token,
       'avatarUrl': avatarUrl,
       'isEmailVerified': isEmailVerified,
+      'isActive': isActive,
     };
   }
 
@@ -61,11 +69,13 @@ class UserModel extends AuthUser {
     return AuthUser(
       id: id,
       email: email,
+      username: username,
       fullName: fullName,
       role: role,
       token: token,
       avatarUrl: avatarUrl,
       isEmailVerified: isEmailVerified,
+      isActive: isActive,
     );
   }
 }

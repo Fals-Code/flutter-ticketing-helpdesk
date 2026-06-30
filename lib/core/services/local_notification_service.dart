@@ -17,21 +17,16 @@ class LocalNotificationService {
       'This channel is used for important helpdesk notifications.';
 
   Future<void> initialize() async {
-    // Initialize timezone
     tz.initializeTimeZones();
 
-    // Android Settings
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
-
-    // iOS Settings
     const DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
     );
-
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
@@ -41,41 +36,39 @@ class LocalNotificationService {
     await _notificationsPlugin.initialize(
       settings: initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        // Handle notification tap logic here
         final String? payload = response.payload;
         if (payload != null && payload.isNotEmpty) {
           debugPrint('Notification tapped with payload: $payload');
-          // Payload format: "notificationId|ticketId"
           final parts = payload.split('|');
           if (parts.length > 1) {
             final notificationId = parts[0];
             final ticketId = parts[1];
-
-            // Mark as read in the database
             if (notificationId.isNotEmpty) {
               final result =
                   await sl<MarkNotificationAsRead>().call(notificationId);
               result.fold(
                 (failure) => debugPrint(
-                    'Failed to mark notification as read: ${failure.message}'),
+                  'Failed to mark notification as read: ${failure.message}',
+                ),
                 (_) => debugPrint(
-                    'Successfully marked notification $notificationId as read via background tap.'),
+                  'Successfully marked notification $notificationId as read.',
+                ),
               );
             }
-
             if (ticketId.isNotEmpty) {
-              appRouter
-                  .push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));
+              appRouter.push(
+                AppRoutes.ticketDetail.replaceAll(':id', ticketId),
+              );
             }
           } else {
-            // Fallback for old simple payloads (just ticketId)
-            appRouter.push(AppRoutes.ticketDetail.replaceAll(':id', payload));
+            appRouter.push(
+              AppRoutes.ticketDetail.replaceAll(':id', payload),
+            );
           }
         }
       },
     );
 
-    // Request permissions for Android 13+
     if (Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidPlatform =
           _notificationsPlugin.resolvePlatformSpecificImplementation<
@@ -117,5 +110,9 @@ class LocalNotificationService {
       notificationDetails: platformChannelSpecifics,
       payload: payload,
     );
+  }
+
+  Future<void> cancelAll() async {
+    await _notificationsPlugin.cancelAll();
   }
 }

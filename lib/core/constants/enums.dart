@@ -7,6 +7,7 @@ enum AuthStatus {
   loading,
   authenticated,
   unauthenticated,
+  passwordRecovery,
   error,
   success,
   sessionExpired,
@@ -161,7 +162,7 @@ enum TicketStatus {
           TicketStatus.resolved
         ];
       case TicketStatus.closed:
-        return [TicketStatus.reopened]; // Opsional: admin bisa reopen
+        return [TicketStatus.reopened];
     }
   }
 
@@ -186,7 +187,7 @@ enum TicketPriority {
       case 'tinggi':
         return TicketPriority.high;
       default:
-        return TicketPriority.medium; // Default
+        return TicketPriority.medium;
     }
   }
 

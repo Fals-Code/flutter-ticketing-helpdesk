@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:uts/main.dart';
+import 'package:uts/app/startup_status_apps.dart';
 
 void main() {
   group('Application bootstrap', () {

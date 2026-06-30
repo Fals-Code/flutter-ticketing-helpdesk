@@ -1,0 +1,36 @@
+name: Phase 3 Supabase Validation
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  validate-auth-policies:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Start local Supabase
+        run: npx --yes supabase@2.108.0 start
+
+      - name: Reset database and apply migrations
+        run: npx --yes supabase@2.108.0 db reset
+
+      - name: Run Phase 2 security regression test
+        run: npx --yes supabase@2.108.0 test db supabase/tests/phase_2_policy_test.sql
+
+      - name: Run Phase 3 authentication test
+        run: npx --yes supabase@2.108.0 test db supabase/tests/phase_3_auth_test.sql
+
+      - name: Stop local Supabase
+        if: always()
+        run: npx --yes supabase@2.108.0 stop --no-backup

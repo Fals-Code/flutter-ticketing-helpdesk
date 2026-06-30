@@ -14,6 +14,9 @@ class AppSettingsBloc extends Bloc<AppSettingsEvent, AppSettingsState> {
   }) : super(const AppSettingsState()) {
     on<FetchAppSettingsRequested>(_onFetchSettings);
     on<UpdateAppSettingsRequested>(_onUpdateSettings);
+    on<ResetAppSettingsState>(
+      (event, emit) => emit(const AppSettingsState()),
+    );
   }
 
   Future<void> _onFetchSettings(
@@ -24,9 +27,13 @@ class AppSettingsBloc extends Bloc<AppSettingsEvent, AppSettingsState> {
     final result = await getAppSettingsUseCase(const NoParams());
     result.fold(
       (failure) => emit(state.copyWith(
-          status: AppSettingsStatus.error, errorMessage: failure.message)),
+        status: AppSettingsStatus.error,
+        errorMessage: failure.message,
+      )),
       (settings) => emit(state.copyWith(
-          status: AppSettingsStatus.success, settings: settings)),
+        status: AppSettingsStatus.success,
+        settings: settings,
+      )),
     );
   }
 
@@ -38,14 +45,14 @@ class AppSettingsBloc extends Bloc<AppSettingsEvent, AppSettingsState> {
     final result = await updateAppSettingsUseCase(event.settings);
     result.fold(
       (failure) => emit(state.copyWith(
-          status: AppSettingsStatus.error, errorMessage: failure.message)),
-      (_) {
-        emit(state.copyWith(
-          status: AppSettingsStatus.success,
-          settings: event.settings,
-          successMessage: 'Pengaturan berhasil disimpan',
-        ));
-      },
+        status: AppSettingsStatus.error,
+        errorMessage: failure.message,
+      )),
+      (_) => emit(state.copyWith(
+        status: AppSettingsStatus.success,
+        settings: event.settings,
+        successMessage: 'Pengaturan berhasil disimpan',
+      )),
     );
   }
 }

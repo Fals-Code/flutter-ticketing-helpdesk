@@ -1,111 +1,120 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
+import 'package:uts/core/constants/env_constants.dart';
+import 'package:uts/features/auth/domain/value_objects/auth_identifier.dart';
 import '../models/user_model.dart';
 
-/// Interface untuk Remote Data Source Autentikasi.
+class InactiveAccountException implements Exception {
+  const InactiveAccountException();
+}
+
+class UsernameAlreadyUsedException implements Exception {
+  const UsernameAlreadyUsedException();
+}
+
 abstract class AuthRemoteDataSource {
-  Future<UserModel> login(String email, String password);
-  Future<UserModel> register(String email, String password, String fullName);
+  Future<UserModel> login(String identifier, String password);
+
+  Future<UserModel> register(
+    String email,
+    String username,
+    String password,
+    String fullName,
+  );
+
   Future<void> logout();
   Future<void> resetPassword(String email);
   Future<void> updatePassword(String newPassword);
   Future<UserModel?> getCurrentSession();
-
-  /// Unggah foto ke storage.
   Future<String> uploadAvatar(File image);
-
-  /// Perbarui field avatar_url di tabel profiles.
   Future<void> updateAvatarUrl(String url);
-
-  /// Perbarui nama lengkap di tabel profiles.
   Future<void> updateProfile({required String fullName});
-
-  /// Perbarui email melalui Supabase Auth (memerlukan konfirmasi email baru).
   Future<void> updateEmail(String newEmail);
 }
 
-/// Implementasi AuthRemoteDataSource menggunakan Supabase.
 class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   final sup.SupabaseClient supabaseClient;
 
   SupabaseAuthRemoteDataSourceImpl(this.supabaseClient);
 
   @override
-  Future<UserModel> login(String email, String password) async {
-    try {
-      final response = await supabaseClient.auth.signInWithPassword(
-        email: email,
-        password: password,
-      );
+  Future<UserModel> login(String identifier, String password) async {
+    final normalized = AuthIdentifier.normalize(identifier);
+    final email = AuthIdentifier.isEmail(normalized)
+        ? normalized
+        : await _resolveEmailFromUsername(normalized);
 
-      if (response.user == null) {
-        throw const sup.AuthException('Login gagal: User tidak ditemukan');
-      }
-
-      // Fetch role & avatar from profiles table
-      final profileResponse = await supabaseClient
-          .from('profiles')
-          .select('role, avatar_url')
-          .eq('id', response.user!.id)
-          .single();
-
-      final int roleInt = profileResponse['role'] as int;
-      final String? avatarUrl = profileResponse['avatar_url'];
-
-      final userJson = response.user!.toJson();
-      userJson['avatar_url'] = avatarUrl;
-
-      return UserModel.fromJson(
-        userJson,
-        token: response.session?.accessToken,
-        roleInt: roleInt,
-      );
-    } on sup.AuthException catch (e) {
-      // Handle the specific "Email not confirmed" case as requested by user
-      if (e.message.toLowerCase().contains('email not confirmed')) {
-        throw const sup.AuthException(
-            'Silakan verifikasi email Anda terlebih dahulu');
-      }
-      rethrow;
+    if (email == null || email.isEmpty) {
+      throw const sup.AuthException('INVALID_CREDENTIALS');
     }
-  }
 
-  @override
-  Future<UserModel> register(
-      String email, String password, String fullName) async {
-    final response = await supabaseClient.auth.signUp(
+    final response = await supabaseClient.auth.signInWithPassword(
       email: email,
       password: password,
-      data: {
-        'full_name': fullName,
-        'role': 3, // Role 3 = Customer (Integer based)
-      },
     );
 
-    if (response.user == null) {
-      throw const sup.AuthException('Registrasi gagal');
+    final user = response.user;
+    if (user == null) {
+      throw const sup.AuthException('INVALID_CREDENTIALS');
     }
 
-    return UserModel.fromJson(
-      response.user!.toJson(),
+    return _buildActiveUser(
+      user: user,
       token: response.session?.accessToken,
     );
   }
 
   @override
-  Future<void> logout() async {
-    await supabaseClient.auth.signOut();
+  Future<UserModel> register(
+    String email,
+    String username,
+    String password,
+    String fullName,
+  ) async {
+    final normalizedUsername = AuthIdentifier.normalize(username);
+    final existingEmail = await _resolveEmailFromUsername(normalizedUsername);
+    if (existingEmail != null) {
+      throw const UsernameAlreadyUsedException();
+    }
+
+    final response = await supabaseClient.auth.signUp(
+      email: email.trim().toLowerCase(),
+      password: password,
+      data: {
+        'full_name': fullName.trim(),
+        'username': normalizedUsername,
+      },
+      emailRedirectTo: EnvConstants.passwordRecoveryRedirect,
+    );
+
+    final user = response.user;
+    if (user == null) {
+      throw const sup.AuthException('Registrasi gagal');
+    }
+
+    return UserModel.fromJson(
+      user.toJson(),
+      token: response.session?.accessToken,
+      roleInt: 3,
+      isActive: true,
+    );
   }
 
   @override
-  Future<void> resetPassword(String email) async {
-    await supabaseClient.auth.resetPasswordForEmail(email);
+  Future<void> logout() => supabaseClient.auth.signOut();
+
+  @override
+  Future<void> resetPassword(String email) {
+    return supabaseClient.auth.resetPasswordForEmail(
+      email.trim().toLowerCase(),
+      redirectTo: EnvConstants.passwordRecoveryRedirect,
+    );
   }
 
   @override
-  Future<void> updatePassword(String newPassword) async {
-    await supabaseClient.auth.updateUser(
+  Future<void> updatePassword(String newPassword) {
+    return supabaseClient.auth.updateUser(
       sup.UserAttributes(password: newPassword),
     );
   }
@@ -114,108 +123,102 @@ class SupabaseAuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<UserModel?> getCurrentSession() async {
     final session = supabaseClient.auth.currentSession;
     final user = supabaseClient.auth.currentUser;
-
-    if (session != null && user != null) {
-      // Fetch role & avatar from profiles table
-      final profileResponse = await supabaseClient
-          .from('profiles')
-          .select('role, avatar_url')
-          .eq('id', user.id)
-          .single();
-
-      final int roleInt = profileResponse['role'] as int;
-      final String? avatarUrl = profileResponse['avatar_url'];
-
-      final userJson = user.toJson();
-      userJson['avatar_url'] = avatarUrl;
-
-      return UserModel.fromJson(
-        userJson,
-        token: session.accessToken,
-        roleInt: roleInt,
-      );
+    if (session == null || user == null) {
+      return null;
     }
-    return null;
+
+    return _buildActiveUser(
+      user: user,
+      token: session.accessToken,
+    );
+  }
+
+  Future<String?> _resolveEmailFromUsername(String username) async {
+    final result = await supabaseClient.rpc(
+      'resolve_login_email',
+      params: {'p_identifier': username},
+    );
+    return result?.toString();
+  }
+
+  Future<UserModel> _buildActiveUser({
+    required sup.User user,
+    required String? token,
+  }) async {
+    final activeResult = await supabaseClient.rpc('is_active_user');
+    final isActive = activeResult == true;
+    if (!isActive) {
+      await supabaseClient.auth.signOut();
+      throw const InactiveAccountException();
+    }
+
+    final profile = await supabaseClient
+        .from('profiles')
+        .select('role, avatar_url, full_name, is_active')
+        .eq('id', user.id)
+        .single();
+
+    final userJson = user.toJson();
+    userJson['avatar_url'] = profile['avatar_url'];
+    userJson['full_name'] = profile['full_name'];
+    userJson['is_active'] = profile['is_active'];
+
+    return UserModel.fromJson(
+      userJson,
+      token: token,
+      roleInt: profile['role'] as int,
+      isActive: profile['is_active'] as bool? ?? false,
+    );
   }
 
   @override
   Future<String> uploadAvatar(File image) async {
     final user = supabaseClient.auth.currentUser;
-    if (user == null) throw Exception('User tidak terautentikasi');
-
-    final fileName = 'profile_image.jpg';
-    final path = 'avatars/${user.id}/$fileName';
-
-    debugPrint('DEBUG: Memulai upload foto ke Supabase Storage: $path');
-    try {
-      // Upload with upsert: true
-      await supabaseClient.storage.from('avatars').upload(
-            path,
-            image,
-            fileOptions:
-                const sup.FileOptions(upsert: true, contentType: 'image/jpeg'),
-          );
-      debugPrint('DEBUG: Upload berhasil!');
-    } catch (e) {
-      debugPrint('DEBUG: Error saat upload storage: $e');
-      rethrow;
+    if (user == null) {
+      throw Exception('User tidak terautentikasi');
     }
 
-    // Get public URL
-    final String publicUrl =
-        supabaseClient.storage.from('avatars').getPublicUrl(path);
+    final path = 'avatars/${user.id}/profile_image.jpg';
+    await supabaseClient.storage.from('avatars').upload(
+          path,
+          image,
+          fileOptions: const sup.FileOptions(
+            upsert: true,
+            contentType: 'image/jpeg',
+          ),
+        );
 
-    // Add timestamp to avoid caching issues in the UI
+    final publicUrl = supabaseClient.storage.from('avatars').getPublicUrl(path);
     return '$publicUrl?t=${DateTime.now().millisecondsSinceEpoch}';
   }
 
   @override
   Future<void> updateAvatarUrl(String url) async {
     final user = supabaseClient.auth.currentUser;
-    if (user == null) throw Exception('User tidak terautentikasi');
-
-    debugPrint(
-        'DEBUG: Memperbarui avatar_url di tabel profiles untuk user: ${user.id}');
-    try {
-      await supabaseClient
-          .from('profiles')
-          .update({'avatar_url': url}).eq('id', user.id);
-      debugPrint('DEBUG: Update database berhasil!');
-    } catch (e) {
-      debugPrint('DEBUG: Error saat update database profile: $e');
-      rethrow;
+    if (user == null) {
+      throw Exception('User tidak terautentikasi');
     }
+    await supabaseClient
+        .from('profiles')
+        .update({'avatar_url': url}).eq('id', user.id);
   }
 
   @override
   Future<void> updateProfile({required String fullName}) async {
     final user = supabaseClient.auth.currentUser;
-    if (user == null) throw Exception('User tidak terautentikasi');
-
-    debugPrint(
-        'DEBUG: Memperbarui full_name di tabel profiles untuk user: ${user.id}');
-    try {
-      await supabaseClient
-          .from('profiles')
-          .update({'full_name': fullName}).eq('id', user.id);
-      debugPrint('DEBUG: Update full_name berhasil!');
-    } catch (e) {
-      debugPrint('DEBUG: Error saat update full_name: $e');
-      rethrow;
+    if (user == null) {
+      throw Exception('User tidak terautentikasi');
     }
+    await supabaseClient
+        .from('profiles')
+        .update({'full_name': fullName.trim()}).eq('id', user.id);
   }
 
   @override
   Future<void> updateEmail(String newEmail) async {
-    debugPrint('DEBUG: Memperbarui email melalui Supabase Auth: $newEmail');
-    try {
-      await supabaseClient.auth.updateUser(
-        sup.UserAttributes(email: newEmail),
-      );
-      debugPrint('DEBUG: Permintaan update email berhasil dikirim!');
-    } catch (e) {
-      debugPrint('DEBUG: Error saat update email: $e');
-      rethrow;
-    }
+    debugPrint('Requesting authenticated email change');
+    await supabaseClient.auth.updateUser(
+      sup.UserAttributes(email: newEmail.trim().toLowerCase()),
+    );
   }
 }

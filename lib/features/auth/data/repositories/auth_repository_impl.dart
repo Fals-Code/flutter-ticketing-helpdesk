@@ -1,92 +1,123 @@
 import 'dart:io';
 import 'package:dartz/dartz.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
-import '../../../../core/error/failures.dart';
-import '../../../../core/services/fcm_service.dart';
-import '../../domain/entities/user_entity.dart';
-import '../../domain/repositories/auth_repository.dart';
-import '../datasources/auth_remote_data_source.dart';
+import 'package:uts/core/error/failures.dart';
+import 'package:uts/core/services/fcm_service.dart';
+import 'package:uts/core/services/session_cleanup_service.dart';
+import 'package:uts/features/auth/data/datasources/auth_remote_data_source.dart';
+import 'package:uts/features/auth/domain/entities/user_entity.dart';
+import 'package:uts/features/auth/domain/repositories/auth_repository.dart';
 
-/// Implementasi dari AuthRepository.
-/// Menghubungkan Domain Layer dengan Data Source.
 class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final FCMService fcmService;
+  final SessionCleanupService sessionCleanupService;
 
   AuthRepositoryImpl({
     required this.remoteDataSource,
     required this.fcmService,
+    required this.sessionCleanupService,
   });
 
   @override
   Future<Either<Failure, AuthUser>> login({
-    required String email,
+    required String identifier,
     required String password,
   }) async {
     try {
-      final userModel = await remoteDataSource.login(email, password);
-
-      // Sync FCM Token on login
+      final userModel = await remoteDataSource.login(identifier, password);
       await fcmService.syncTokenToSupabase(userModel.id);
-
       return Right(userModel.toEntity());
-    } on sup.AuthException catch (e) {
-      // Security: Use generic error messages to prevent account enumeration
-      // We only distinguish "Email not confirmed" for UX, others are generic.
-      if (e.message.toLowerCase().contains('email not confirmed')) {
+    } on InactiveAccountException {
+      return const Left(ServerFailure(
+        message: 'Akun Anda sedang dinonaktifkan. Hubungi Admin.',
+        code: 403,
+      ));
+    } on sup.AuthException catch (error) {
+      if (error.message.toLowerCase().contains('email not confirmed')) {
         return const Left(ServerFailure(
-            message: 'Silakan verifikasi email Anda terlebih dahulu.',
-            code: 401));
+          message: 'Silakan verifikasi email Anda terlebih dahulu.',
+          code: 401,
+        ));
       }
       return const Left(ServerFailure(
-          message: 'Email atau password tidak valid.', code: 401));
-    } catch (e) {
-      return Left(UnknownFailure(
-          message: 'Terjadi kesalahan saat masuk. Silakan coba lagi.'));
+        message: 'Email, username, atau kata sandi tidak valid.',
+        code: 401,
+      ));
+    } catch (_) {
+      return const Left(UnknownFailure(
+        message: 'Terjadi kesalahan saat masuk. Silakan coba lagi.',
+      ));
     }
   }
 
   @override
   Future<Either<Failure, AuthUser>> register({
     required String email,
+    required String username,
     required String password,
     required String fullName,
   }) async {
     try {
-      final userModel =
-          await remoteDataSource.register(email, password, fullName);
-
-      // Sync FCM Token on registration
+      final userModel = await remoteDataSource.register(
+        email,
+        username,
+        password,
+        fullName,
+      );
       await fcmService.syncTokenToSupabase(userModel.id);
-
       return Right(userModel.toEntity());
-    } on sup.AuthException catch (e) {
-      return Left(ServerFailure(message: e.message, code: 400));
-    } catch (e) {
-      return Left(UnknownFailure(message: 'Gagal melakukan registrasi.'));
+    } on UsernameAlreadyUsedException {
+      return const Left(ServerFailure(
+        message: 'Username sudah digunakan.',
+        code: 409,
+      ));
+    } on sup.AuthException catch (error) {
+      final message = error.message.toLowerCase();
+      if (message.contains('username') || message.contains('duplicate')) {
+        return const Left(ServerFailure(
+          message: 'Username sudah digunakan.',
+          code: 409,
+        ));
+      }
+      if (message.contains('already registered')) {
+        return const Left(ServerFailure(
+          message: 'Email sudah terdaftar.',
+          code: 409,
+        ));
+      }
+      return const Left(ServerFailure(
+        message: 'Registrasi gagal. Periksa kembali data Anda.',
+        code: 400,
+      ));
+    } catch (_) {
+      return const Left(UnknownFailure(message: 'Gagal melakukan registrasi.'));
     }
   }
 
   @override
   Future<Either<Failure, Unit>> logout() async {
+    Object? cleanupError;
+    Object? logoutError;
+
     try {
-      // 1. Get current user ID to clear FCM token if possible
-      final currentUserResult = await getCurrentUser();
-      currentUserResult.fold(
-        (_) => null, // Ignore if no user
-        (user) async {
-          // Optional: Clear FCM token from DB on logout for extra security
-          // await fcmService.clearTokenFromSupabase(user.id);
-        },
-      );
-
-      // 2. Perform remote logout (Supabase)
-      await remoteDataSource.logout();
-
-      return const Right(unit);
-    } catch (e) {
-      return Left(CacheFailure(message: 'Gagal membersihkan sesi: $e'));
+      await sessionCleanupService.clearBeforeLogout();
+    } catch (error) {
+      cleanupError = error;
     }
+
+    try {
+      await remoteDataSource.logout();
+    } catch (error) {
+      logoutError = error;
+    }
+
+    if (cleanupError != null || logoutError != null) {
+      return const Left(CacheFailure(
+        message: 'Sesi lokal telah ditutup, tetapi sebagian cleanup gagal.',
+      ));
+    }
+    return const Right(unit);
   }
 
   @override
@@ -94,13 +125,13 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await remoteDataSource.resetPassword(email);
       return const Right(unit);
-    } on sup.AuthException catch (_) {
-      // Security: Always return success-like message to prevent email enumeration
-      // but we return unit (Right) so the UI shows success.
+    } on sup.AuthException {
+      // Respons sengaja generik untuk mencegah enumerasi akun.
       return const Right(unit);
-    } catch (e) {
-      return Left(
-          UnknownFailure(message: 'Gagal mengirim instruksi reset password.'));
+    } catch (_) {
+      return const Left(UnknownFailure(
+        message: 'Gagal mengirim instruksi reset password.',
+      ));
     }
   }
 
@@ -108,15 +139,18 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Either<Failure, AuthUser>> getCurrentUser() async {
     try {
       final userModel = await remoteDataSource.getCurrentSession();
-      if (userModel != null) {
-        // Sync FCM Token on session recovery
-        await fcmService.syncTokenToSupabase(userModel.id);
-
-        return Right(userModel.toEntity());
+      if (userModel == null) {
+        return const Left(CacheFailure(message: 'Sesi tidak ditemukan'));
       }
-      return const Left(CacheFailure(message: 'Sesi tidak ditemukan'));
-    } catch (e) {
-      return Left(CacheFailure(message: e.toString()));
+      await fcmService.syncTokenToSupabase(userModel.id);
+      return Right(userModel.toEntity());
+    } on InactiveAccountException {
+      return const Left(ServerFailure(
+        message: 'Akun Anda sedang dinonaktifkan. Hubungi Admin.',
+        code: 403,
+      ));
+    } catch (_) {
+      return const Left(CacheFailure(message: 'Sesi tidak dapat dipulihkan'));
     }
   }
 
@@ -125,37 +159,31 @@ class AuthRepositoryImpl implements AuthRepository {
     try {
       await remoteDataSource.updatePassword(newPassword);
       return const Right(unit);
-    } on sup.AuthException catch (e) {
-      // Security: Use generic error messages to prevent account enumeration
-      String message = 'Email atau password tidak valid.';
-
-      // Keep specific message only for unconfirmed email if your business logic requires it,
-      // otherwise keep it generic.
-      if (e.message.toLowerCase().contains('email not confirmed')) {
-        message = 'Silakan verifikasi email Anda terlebih dahulu.';
-      }
-
-      return Left(ServerFailure(message: message, code: 400));
-    } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+    } on sup.AuthException {
+      return const Left(ServerFailure(
+        message: 'Kata sandi baru tidak memenuhi kebijakan keamanan.',
+        code: 400,
+      ));
+    } catch (_) {
+      return const Left(UnknownFailure(
+        message: 'Gagal memperbarui kata sandi.',
+      ));
     }
   }
 
   @override
   Future<Either<Failure, String>> updateAvatar(File image) async {
     try {
-      // 1. Upload ke storage
-      final String publicUrl = await remoteDataSource.uploadAvatar(image);
-
-      // 2. Update database profiles
+      final publicUrl = await remoteDataSource.uploadAvatar(image);
       await remoteDataSource.updateAvatarUrl(publicUrl);
-
       return Right(publicUrl);
-    } on sup.StorageException catch (e) {
+    } on sup.StorageException catch (error) {
       return Left(ServerFailure(
-          message: 'Gagal mengunggah foto: ${e.message}', code: 500));
-    } catch (e) {
-      return Left(UnknownFailure(message: e.toString()));
+        message: 'Gagal mengunggah foto: ${error.message}',
+        code: 500,
+      ));
+    } catch (_) {
+      return const Left(UnknownFailure(message: 'Gagal memperbarui avatar.'));
     }
   }
 
@@ -165,28 +193,20 @@ class AuthRepositoryImpl implements AuthRepository {
     String? email,
   }) async {
     try {
-      // 1. Update nama di tabel profiles
       await remoteDataSource.updateProfile(fullName: fullName);
-
-      // 2. Update email via Supabase Auth jika berubah
       if (email != null && email.isNotEmpty) {
         await remoteDataSource.updateEmail(email);
       }
-
       return const Right(unit);
-    } on sup.AuthException catch (e) {
-      // Security: Use generic error messages to prevent account enumeration
-      String message = 'Email atau password tidak valid.';
-
-      // Keep specific message only for unconfirmed email if your business logic requires it,
-      // otherwise keep it generic.
-      if (e.message.toLowerCase().contains('email not confirmed')) {
-        message = 'Silakan verifikasi email Anda terlebih dahulu.';
-      }
-
-      return Left(ServerFailure(message: message, code: 400));
-    } catch (e) {
-      return Left(UnknownFailure(message: 'Gagal memperbarui profil: $e'));
+    } on sup.AuthException {
+      return const Left(ServerFailure(
+        message: 'Perubahan email tidak dapat diproses.',
+        code: 400,
+      ));
+    } catch (_) {
+      return const Left(UnknownFailure(
+        message: 'Gagal memperbarui profil.',
+      ));
     }
   }
 }

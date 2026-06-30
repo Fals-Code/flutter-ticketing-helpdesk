@@ -48,3 +48,7 @@ class FetchAdminReportsRequested extends AdminEvent {
   @override
   List<Object?> get props => [startDate, endDate];
 }
+
+class ResetAdminState extends AdminEvent {
+  const ResetAdminState();
+}

@@ -1,49 +1,46 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-
-import 'package:uts/core/constants/enums.dart';
-import 'package:uts/features/auth/domain/entities/user_entity.dart';
+import 'package:uts/core/di/injection_container.dart';
+import 'package:uts/core/router/app_router_refresh_listenable.dart';
+import 'package:uts/core/router/auth_route_guard.dart';
+import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
+import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
+import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
+import 'package:uts/features/auth/presentation/pages/change_password_page.dart';
+import 'package:uts/features/auth/presentation/pages/edit_profile_page.dart';
 import 'package:uts/features/auth/presentation/pages/login_page.dart';
 import 'package:uts/features/auth/presentation/pages/register_page.dart';
 import 'package:uts/features/auth/presentation/pages/reset_password_page.dart';
 import 'package:uts/features/auth/presentation/pages/splash_page.dart';
 import 'package:uts/features/dashboard/presentation/pages/dashboard_page.dart';
 import 'package:uts/features/ticket/presentation/pages/create_ticket_page.dart';
+import 'package:uts/features/ticket/presentation/pages/history_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
-import 'package:uts/features/ticket/presentation/pages/history_page.dart';
-import 'package:uts/features/admin/presentation/pages/admin_reports_page.dart';
-import 'package:uts/features/admin/presentation/pages/admin_settings_page.dart';
-import 'package:uts/features/admin/presentation/pages/user_management_page.dart';
-import 'package:uts/features/auth/presentation/pages/change_password_page.dart';
-import 'package:uts/features/auth/presentation/pages/edit_profile_page.dart';
-import 'package:uts/core/di/injection_container.dart';
-import 'app_router_refresh_listenable.dart';
 
-/// Named route constants untuk type-safe navigation.
-abstract class AppRoutes {
-  static const String splash = '/';
-  static const String login = '/login';
-  static const String register = '/register';
-  static const String resetPassword = '/reset-password';
-  static const String dashboard = '/dashboard';
+abstract final class AppRoutes {
+  static const String splash = AuthRouteGuard.splash;
+  static const String login = AuthRouteGuard.login;
+  static const String register = AuthRouteGuard.register;
+  static const String resetPassword = AuthRouteGuard.resetPassword;
+  static const String changePassword = AuthRouteGuard.changePassword;
+  static const String dashboard = AuthRouteGuard.dashboard;
+  static const String staffDashboard = AuthRouteGuard.staffDashboard;
+  static const String ticketManagement = AuthRouteGuard.ticketManagement;
+  static const String adminReports = AuthRouteGuard.adminReports;
+  static const String adminSettings = AuthRouteGuard.adminSettings;
+  static const String userManagement = AuthRouteGuard.userManagement;
+
   static const String tickets = '/tickets';
   static const String createTicket = '/tickets/create';
   static const String ticketDetail = '/tickets/:id';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
-  static const String history = '/history';
-  static const String staffDashboard = '/staff-dashboard';
-  static const String adminReports = '/admin-reports';
-  static const String adminSettings = '/admin-settings';
-  static const String ticketManagement = '/ticket-management';
-  static const String userManagement = '/user-management';
-  static const String changePassword = '/change-password';
   static const String editProfile = '/profile/edit';
+  static const String history = '/history';
 }
 
-/// Konfigurasi GoRouter — navigasi deklaratif.
 final GoRouter appRouter = GoRouter(
   initialLocation: AppRoutes.splash,
   debugLogDiagnostics: true,
@@ -51,82 +48,14 @@ final GoRouter appRouter = GoRouter(
   errorBuilder: (context, state) => _ErrorPage(error: state.error),
   redirect: (context, state) {
     final authState = sl<AuthBloc>().state;
-    final status = authState.status;
-    final location = state.matchedLocation;
-
-    final bool isLoggingIn = location == AppRoutes.login ||
-        location == AppRoutes.register ||
-        location == AppRoutes.resetPassword;
-
-    final bool isSplash = location == AppRoutes.splash;
-
-    // 1. Handle Initialization & Loading
-    if (status == AuthStatus.initial) {
-      return isSplash ? null : AppRoutes.splash;
-    }
-
-    if (status == AuthStatus.loading) {
-      // Stay on current page if we already have a session (e.g. background updates)
-      // or if we are on auth pages (login/register/etc)
-      if (authState.user != AuthUser.empty || isLoggingIn) return null;
-      return isSplash ? null : AppRoutes.splash;
-    }
-
-    // 2. Handle Error or unexpected states from Splash
-    if (isSplash && status == AuthStatus.error) {
-      return AppRoutes.login;
-    }
-
-    // 2. Handle Authenticated State
-    if (status == AuthStatus.authenticated) {
-      final role = authState.user.role;
-      final bool isAdmin = role == UserRole.admin;
-      final bool isStaff =
-          role == UserRole.admin || role == UserRole.technician;
-
-      // If user is already logged in and tries to go to login/register,
-      // check for 'from' parameter or go to role-based dashboard
-      if (isLoggingIn || isSplash) {
-        final from = state.uri.queryParameters['from'];
-        if (from != null && from.isNotEmpty) return from;
-
-        return isStaff ? AppRoutes.staffDashboard : AppRoutes.dashboard;
-      }
-
-      // RBAC Guard: Role 3 (Customer) Restrictions
-      if (!isStaff) {
-        final blockedForCustomer = [
-          AppRoutes.staffDashboard,
-          AppRoutes.adminReports,
-          AppRoutes.adminSettings,
-          AppRoutes.ticketManagement,
-        ];
-        if (blockedForCustomer.contains(location)) return AppRoutes.dashboard;
-      }
-
-      // RBAC Guard: Role 2 (Staff/Technician) Restrictions
-      if (isStaff && !isAdmin) {
-        final blockedForStaff = [
-          AppRoutes.adminReports,
-          AppRoutes.adminSettings,
-        ];
-        if (blockedForStaff.contains(location)) return AppRoutes.staffDashboard;
-      }
-    }
-
-    // 3. Handle Unauthenticated State
-    else if (status == AuthStatus.unauthenticated ||
-        status == AuthStatus.sessionExpired) {
-      if (!isLoggingIn && !isSplash) {
-        // Preserve current location to redirect back after login
-        return '${AppRoutes.login}?from=${state.matchedLocation}';
-      }
-    }
-
-    return null;
+    return AuthRouteGuard.redirect(
+      status: authState.status,
+      user: authState.user,
+      location: state.matchedLocation,
+      from: state.uri.queryParameters['from'],
+    );
   },
   routes: [
-    // ── Splash ──────────────────────────────────────────────────────────────
     GoRoute(
       path: AppRoutes.splash,
       name: 'splash',
@@ -135,8 +64,6 @@ final GoRouter appRouter = GoRouter(
         transitionsBuilder: _fadeTransition,
       ),
     ),
-
-    // ── Auth ─────────────────────────────────────────────────────────────────
     GoRoute(
       path: AppRoutes.login,
       name: 'login',
@@ -177,8 +104,6 @@ final GoRouter appRouter = GoRouter(
         transitionsBuilder: _slideUpTransition,
       ),
     ),
-
-    // ── Main App ─────────────────────────────────────────────────────────────
     GoRoute(
       path: AppRoutes.dashboard,
       name: 'dashboard',
@@ -214,13 +139,10 @@ final GoRouter appRouter = GoRouter(
         GoRoute(
           path: ':id',
           name: 'ticket-detail',
-          pageBuilder: (context, state) {
-            final id = state.pathParameters['id']!;
-            return CustomTransitionPage(
-              child: TicketDetailPage(ticketId: id),
-              transitionsBuilder: _slideTransition,
-            );
-          },
+          pageBuilder: (context, state) => CustomTransitionPage(
+            child: TicketDetailPage(ticketId: state.pathParameters['id']!),
+            transitionsBuilder: _slideTransition,
+          ),
         ),
       ],
     ),
@@ -232,8 +154,6 @@ final GoRouter appRouter = GoRouter(
         transitionsBuilder: _slideTransition,
       ),
     ),
-
-    // ── Admin & Staff Management ──────────────────────────────────────────────
     GoRoute(
       path: AppRoutes.adminReports,
       name: 'admin-reports',
@@ -268,21 +188,6 @@ final GoRouter appRouter = GoRouter(
     ),
   ],
 );
-
-// Stub for unimplement pages until we create them
-class UnimplementedPage extends StatelessWidget {
-  final String title;
-  const UnimplementedPage({super.key, required this.title});
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: Text(title)),
-      body: Center(child: Text('$title - Dalam Pengembangan')),
-    );
-  }
-}
-
-// ── Transition helpers ────────────────────────────────────────────────────────
 
 Widget _fadeTransition(
   BuildContext context,
@@ -323,8 +228,6 @@ Widget _slideUpTransition(
   );
 }
 
-// ── Error Page ────────────────────────────────────────────────────────────────
-
 class _ErrorPage extends StatelessWidget {
   final Exception? error;
 
@@ -339,8 +242,10 @@ class _ErrorPage extends StatelessWidget {
           children: [
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
-            const Text('Halaman tidak ditemukan',
-                style: TextStyle(fontSize: 18)),
+            const Text(
+              'Halaman tidak ditemukan',
+              style: TextStyle(fontSize: 18),
+            ),
             const SizedBox(height: 8),
             Text(error?.toString() ?? '', style: const TextStyle(fontSize: 12)),
             const SizedBox(height: 24),

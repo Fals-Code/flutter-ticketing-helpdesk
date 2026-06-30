@@ -3,74 +3,97 @@ import 'package:equatable/equatable.dart';
 
 abstract class AuthEvent extends Equatable {
   const AuthEvent();
+
   @override
   List<Object?> get props => [];
 }
 
-/// Event saat aplikasi pertama kali dijalankan untuk cek sesi.
-class AppStarted extends AuthEvent {}
-
-/// Event untuk Login.
-class LoginSubmitted extends AuthEvent {
-  final String email;
-  final String password;
-  const LoginSubmitted({required this.email, required this.password});
-  @override
-  List<Object?> get props => [email, password];
+class AppStarted extends AuthEvent {
+  const AppStarted();
 }
 
-/// Event untuk Registrasi.
+class LoginSubmitted extends AuthEvent {
+  final String identifier;
+  final String password;
+
+  const LoginSubmitted({
+    required this.identifier,
+    required this.password,
+  });
+
+  @override
+  List<Object?> get props => [identifier, password];
+}
+
 class RegisterSubmitted extends AuthEvent {
   final String email;
+  final String username;
   final String password;
   final String fullName;
+
   const RegisterSubmitted({
     required this.email,
+    required this.username,
     required this.password,
     required this.fullName,
   });
+
   @override
-  List<Object?> get props => [email, password, fullName];
+  List<Object?> get props => [email, username, password, fullName];
 }
 
-/// Event untuk Logout.
-class LogoutRequested extends AuthEvent {}
+class LogoutRequested extends AuthEvent {
+  const LogoutRequested();
+}
 
-/// Event untuk Reset Password.
 class ResetPasswordRequested extends AuthEvent {
   final String email;
+
   const ResetPasswordRequested(this.email);
+
   @override
   List<Object?> get props => [email];
 }
 
-/// Event untuk Ubah Kata Sandi (Saat Logged In).
+class PasswordRecoveryDetected extends AuthEvent {
+  const PasswordRecoveryDetected();
+}
+
 class AuthPasswordUpdateRequested extends AuthEvent {
   final String newPassword;
+
   const AuthPasswordUpdateRequested(this.newPassword);
+
   @override
   List<Object?> get props => [newPassword];
 }
 
-/// Event untuk membersihkan status pesan (setelah sukses/error).
-class ClearAuthStatus extends AuthEvent {}
+class ClearAuthStatus extends AuthEvent {
+  const ClearAuthStatus();
+}
 
-/// Event saat sesi berakhir (401 Unauthorized).
-class SessionExpiredDetected extends AuthEvent {}
+class SessionExpiredDetected extends AuthEvent {
+  const SessionExpiredDetected();
+}
 
-/// Event untuk memperbarui foto profil.
 class UpdateAvatarRequested extends AuthEvent {
   final File image;
+
   const UpdateAvatarRequested(this.image);
+
   @override
   List<Object?> get props => [image];
 }
 
-/// Event untuk memperbarui data profil (nama, email).
 class UpdateProfileRequested extends AuthEvent {
   final String fullName;
   final String? email;
-  const UpdateProfileRequested({required this.fullName, this.email});
+
+  const UpdateProfileRequested({
+    required this.fullName,
+    this.email,
+  });
+
   @override
   List<Object?> get props => [fullName, email];
 }

@@ -1,0 +1,23 @@
+name: Phase 3 Auto Format
+on:
+  push:
+    branches: [feat/phase-3-auth-rbac]
+    paths: [.github/workflows/phase-3-auto-format.yml]
+permissions:
+  contents: write
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase-3-auth-rbac
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - run: dart format .
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "style(phase-3): format auth handler split"
+          branch: feat/phase-3-auth-rbac

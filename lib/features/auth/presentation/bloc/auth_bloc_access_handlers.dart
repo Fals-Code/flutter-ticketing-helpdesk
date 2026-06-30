@@ -8,9 +8,8 @@ Future<void> _handleAppStarted(
   final result = await bloc.getCurrentUserUseCase(const NoParams());
   result.fold(
     (failure) => emit(AuthState(
-      status: failure.code == 403
-          ? AuthStatus.error
-          : AuthStatus.unauthenticated,
+      status:
+          failure.code == 403 ? AuthStatus.error : AuthStatus.unauthenticated,
       errorMessage: failure.code == 403 ? failure.message : null,
     )),
     (user) => emit(AuthState(

@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/ticket/domain/entities/local_attachment_candidate.dart';
 
 abstract class TicketListEvent extends Equatable {
   const TicketListEvent();
@@ -55,22 +56,20 @@ class FilterDateRangeChanged extends TicketListEvent {
 }
 
 class CreateTicketRequested extends TicketListEvent {
-  final String userId;
   final String title;
   final String description;
   final String category;
-  final List<String> imagePaths;
+  final List<LocalAttachmentCandidate> attachments;
 
   const CreateTicketRequested({
-    required this.userId,
     required this.title,
     required this.description,
     required this.category,
-    required this.imagePaths,
+    this.attachments = const [],
   });
 
   @override
-  List<Object?> get props => [userId, title, description, category, imagePaths];
+  List<Object?> get props => [title, description, category, attachments];
 }
 
 class StartTicketListSubscription extends TicketListEvent {

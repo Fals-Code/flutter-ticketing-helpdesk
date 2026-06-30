@@ -2,6 +2,7 @@ import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_attachment_storage_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_remote_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/typed_ticket_remote_data_source.dart';
 import 'package:uts/features/ticket/data/repositories/ticket_repository_impl.dart';
@@ -10,6 +11,7 @@ import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/safe_ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
@@ -24,6 +26,12 @@ Future<void> initTicketDependencies(GetIt sl) async {
       createTicketUseCase: sl(),
       localDataSource: sl(),
       connectivityService: sl(),
+    ),
+  );
+
+  sl.registerFactory(
+    () => TicketCreateBloc(
+      createTicketUseCase: sl(),
     ),
   );
 
@@ -72,7 +80,10 @@ Future<void> initTicketDependencies(GetIt sl) async {
 
   // Repository
   sl.registerLazySingleton<TicketRepository>(
-    () => TicketRepositoryImpl(remoteDataSource: sl()),
+    () => TicketRepositoryImpl(
+      remoteDataSource: sl(),
+      attachmentStorageDataSource: sl(),
+    ),
   );
 
   // Data Sources
@@ -91,5 +102,9 @@ Future<void> initTicketDependencies(GetIt sl) async {
 
   sl.registerLazySingleton<TicketRemoteDataSource>(
     () => TypedSupabaseTicketRemoteDataSourceImpl(sl<SupabaseClient>()),
+  );
+
+  sl.registerLazySingleton<TicketAttachmentStorageDataSource>(
+    () => SupabaseTicketAttachmentStorageDataSource(sl<SupabaseClient>()),
   );
 }

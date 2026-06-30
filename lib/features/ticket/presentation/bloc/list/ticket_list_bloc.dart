@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
@@ -69,7 +70,6 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     CreateTicketRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    // 0. Hardened Validation
     if (event.category.isEmpty) {
       emit(state.copyWith(errorMessage: 'Kategori harus dipilih'));
       return;
@@ -91,50 +91,30 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       return;
     }
 
-    // 1. Create optimistic ticket
-    final optimisticTicket = TicketEntity(
-      id: 'temp_${DateTime.now().millisecondsSinceEpoch}',
-      title: event.title,
-      description: event.description,
-      status: TicketStatus.open,
-      category: event.category,
-      createdAt: DateTime.now(),
-      userId: event.userId,
-      imageUrls: event.imagePaths,
-    );
-
-    // 2. Set loading state and optimistic update
-    final originalTickets = [...state.tickets];
-    final updatedTickets = [optimisticTicket, ...originalTickets];
-
     emit(state.copyWith(
       isLoading: true,
-      tickets: updatedTickets,
       successMessage: null,
       errorMessage: null,
     ));
 
     final result = await createTicketUseCase(CreateTicketParams(
-      userId: event.userId,
       title: event.title,
       description: event.description,
       category: event.category,
-      imagePaths: event.imagePaths,
+      attachments: event.attachments,
     ));
 
     result.fold(
       (failure) {
-        // 3. Rollback on failure
         emit(state.copyWith(
           isLoading: false,
-          tickets: originalTickets,
           errorMessage: failure.message,
         ));
       },
       (ticket) {
-        // 4. Success
         emit(state.copyWith(
           isLoading: false,
+          tickets: [ticket, ...state.tickets],
           successMessage: 'Laporan berhasil dibuat',
           errorMessage: null,
         ));

@@ -3,9 +3,11 @@ import 'package:equatable/equatable.dart';
 
 import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
+import '../entities/create_ticket_params.dart';
 import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
 import '../entities/ticket_history_entity.dart';
+import '../validation/ticket_attachment_validator.dart';
 import '../repositories/ticket_repository.dart';
 
 class GetTicketsUseCase
@@ -31,17 +33,61 @@ class GetTicketsUseCase
 class CreateTicketUseCase
     implements UseCase<Either<Failure, TicketEntity>, CreateTicketParams> {
   final TicketRepository repository;
-  CreateTicketUseCase(this.repository);
+  final TicketAttachmentValidator attachmentValidator;
+  bool _isRunning = false;
+
+  CreateTicketUseCase(
+    this.repository, {
+    this.attachmentValidator = const TicketAttachmentValidator(),
+  });
 
   @override
   Future<Either<Failure, TicketEntity>> call(CreateTicketParams params) async {
-    return await repository.createTicket(
-      userId: params.userId,
-      title: params.title,
-      description: params.description,
-      category: params.category,
-      imagePaths: params.imagePaths,
-    );
+    if (_isRunning) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.duplicateSubmit,
+        message: 'Pengiriman tiket sedang berjalan.',
+      ));
+    }
+
+    final title = params.trimmedTitle;
+    final description = params.trimmedDescription;
+    final category = params.trimmedCategory;
+
+    if (title.length < 5) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: 'Judul terlalu pendek (min. 5 karakter).',
+      ));
+    }
+    if (description.length < 20) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: 'Deskripsi terlalu pendek (min. 20 karakter).',
+      ));
+    }
+    if (category.isEmpty) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: 'Kategori harus dipilih.',
+      ));
+    }
+
+    final attachmentValidation =
+        attachmentValidator.validateAll(params.attachments);
+    if (!attachmentValidation.isValid) {
+      return Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: attachmentValidation.message ?? 'Lampiran tidak valid.',
+      ));
+    }
+
+    _isRunning = true;
+    try {
+      return await repository.createTicket(params);
+    } finally {
+      _isRunning = false;
+    }
   }
 }
 
@@ -200,25 +246,6 @@ class GetTicketsParams extends Equatable {
         startDate,
         endDate,
       ];
-}
-
-class CreateTicketParams extends Equatable {
-  final String userId;
-  final String title;
-  final String description;
-  final String category;
-  final List<String> imagePaths;
-
-  const CreateTicketParams({
-    required this.userId,
-    required this.title,
-    required this.description,
-    required this.category,
-    required this.imagePaths,
-  });
-
-  @override
-  List<Object?> get props => [userId, title, description, category, imagePaths];
 }
 
 class AddCommentParams extends Equatable {

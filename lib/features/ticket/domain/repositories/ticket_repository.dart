@@ -6,6 +6,7 @@ import '../../../auth/domain/entities/user_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
+import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
 
 class TicketStats extends Equatable {
   final int total;
@@ -59,13 +60,9 @@ abstract class TicketRepository {
   Future<Either<Failure, List<AuthUser>>> getStaffUsers();
 
   /// Membuat tiket baru.
-  Future<Either<Failure, TicketEntity>> createTicket({
-    required String userId,
-    required String title,
-    required String description,
-    required String category,
-    required List<String> imagePaths,
-  });
+  Future<Either<Failure, TicketEntity>> createTicket(
+    CreateTicketParams params,
+  );
 
   /// Mengambil detail tiket berdasarkan ID.
   Future<Either<Failure, TicketEntity>> getTicketDetail(String ticketId);

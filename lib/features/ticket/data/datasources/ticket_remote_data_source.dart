@@ -1,11 +1,12 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
-import 'package:uuid/uuid.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
+import 'ticket_attachment_storage_data_source.dart';
+import 'ticket_create_exceptions.dart';
 import 'package:uts/core/constants/enums.dart';
+import 'package:uts/core/error/failures.dart';
 
 abstract class TicketRemoteDataSource {
   Future<List<TicketModel>> getTickets(int page, int limit,
@@ -22,7 +23,14 @@ abstract class TicketRemoteDataSource {
       DateTime? startDate,
       DateTime? endDate});
   Future<List<Map<String, dynamic>>> getStaffUsers();
-  Future<TicketModel> createTicket(TicketModel ticket, List<String> imagePaths);
+  String? getAuthenticatedUserId();
+  Future<TicketModel> createTicketWithAttachments({
+    required String ticketId,
+    required String title,
+    required String description,
+    required String category,
+    required List<UploadedTicketAttachment> attachments,
+  });
   Future<TicketModel> getTicketDetail(String ticketId);
   Future<List<CommentModel>> getTicketComments(String ticketId);
   Future<CommentModel> addComment(CommentModel comment);
@@ -48,7 +56,8 @@ abstract class TicketRemoteDataSource {
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   final sup.SupabaseClient supabaseClient;
-  static const String _bucketName = 'tickets';
+  static const String _ticketSelect =
+      '*, profiles:user_id(*), technician:assigned_to(*), ticket_attachments(*)';
   final Map<String, Map<String, dynamic>> _profileCache = {};
 
   SupabaseTicketRemoteDataSourceImpl(this.supabaseClient);
@@ -124,7 +133,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
     var query = supabaseClient
         .from('tickets')
-        .select('*, profiles:user_id(*), technician:assigned_to(*)')
+        .select(_ticketSelect)
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (status != null && status != 'all') {
@@ -177,9 +186,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final from = page * limit;
     final to = from + limit - 1;
 
-    var query = supabaseClient
-        .from('tickets')
-        .select('*, profiles:user_id(*), technician:assigned_to(*)');
+    var query = supabaseClient.from('tickets').select(_ticketSelect);
 
     if (assignedToId != null) {
       query = query.eq('assigned_to', assignedToId);
@@ -234,52 +241,60 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<TicketModel> createTicket(
-      TicketModel ticket, List<String> imagePaths) async {
-    List<String> uploadedUrls = [];
+  String? getAuthenticatedUserId() => supabaseClient.auth.currentUser?.id;
 
-    // Upload images to Supabase Storage
+  @override
+  Future<TicketModel> createTicketWithAttachments({
+    required String ticketId,
+    required String title,
+    required String description,
+    required String category,
+    required List<UploadedTicketAttachment> attachments,
+  }) async {
     try {
-      for (var path in imagePaths) {
-        final file = File(path);
-        final fileExt = path.split('.').last;
-        final fileName = '${const Uuid().v4()}.$fileExt';
-        final storagePath = 'ticket_images/$fileName';
-
-        await supabaseClient.storage
-            .from(_bucketName)
-            .upload(storagePath, file);
-        final url =
-            supabaseClient.storage.from(_bucketName).getPublicUrl(storagePath);
-        uploadedUrls.add(url);
-      }
-    } catch (e) {
-      // If upload fails, we should ideally delete the ones already uploaded
-      // but for now we just throw a descriptive error to prevent DB insertion
-      throw Exception('Gagal mengunggah foto: $e');
+      await supabaseClient.rpc('create_ticket_with_attachments', params: {
+        'p_ticket_id': ticketId,
+        'p_title': title,
+        'p_description': description,
+        'p_category': category,
+        'p_attachments': attachments
+            .map((attachment) => attachment.toManifestJson())
+            .toList(growable: false),
+      });
+    } on sup.PostgrestException catch (error) {
+      throw TicketCreateException(
+        type: _mapPostgrestFailureType(error),
+        message: _safeDatabaseMessage(error),
+        code: int.tryParse(error.code ?? ''),
+      );
+    } catch (_) {
+      throw const TicketCreateException(
+        type: TicketFailureType.databaseCreate,
+        message: 'Gagal menyimpan tiket.',
+      );
     }
 
-    final ticketData = ticket.toJson();
-    // Injection of current authenticated user ID
-    ticketData['user_id'] = supabaseClient.auth.currentUser!.id;
-    ticketData['images'] = uploadedUrls;
-
-    final response = await supabaseClient
-        .from('tickets')
-        .insert(ticketData)
-        .select('*, profiles:user_id(*), technician:assigned_to(*)')
-        .single();
-
-    final newTicket = TicketModel.fromJson(response);
-
-    return newTicket;
+    try {
+      return await getTicketDetail(ticketId);
+    } catch (_) {
+      final actorId = getAuthenticatedUserId() ?? '';
+      return TicketModel(
+        id: ticketId,
+        title: title,
+        description: description,
+        status: TicketStatus.open,
+        category: category,
+        createdAt: DateTime.now(),
+        userId: actorId,
+      );
+    }
   }
 
   @override
   Future<TicketModel> getTicketDetail(String ticketId) async {
     final response = await supabaseClient
         .from('tickets')
-        .select('*, profiles:user_id(*), technician:assigned_to(*)')
+        .select(_ticketSelect)
         .eq('id', ticketId)
         .single();
 
@@ -296,7 +311,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
-        .select('*, profiles:user_id(*), technician:assigned_to(*)')
+        .select(_ticketSelect)
         .single();
 
     final updatedTicket = TicketModel.fromJson(response);
@@ -330,7 +345,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
           'updated_at': DateTime.now().toIso8601String(),
         })
         .eq('id', ticketId)
-        .select('*, profiles:user_id(*), technician:assigned_to(*)')
+        .select(_ticketSelect)
         .single();
 
     final updatedTicket = TicketModel.fromJson(response);
@@ -359,7 +374,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
             'updated_at': DateTime.now().toIso8601String(),
           })
           .eq('id', ticketId)
-          .select('*, profiles:user_id(*), technician:assigned_to(*)')
+          .select(_ticketSelect)
           .single();
 
       final updatedTicket = TicketModel.fromJson(response);
@@ -616,5 +631,29 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   @override
   Future<void> clearProfileCache() async {
     _profileCache.clear();
+  }
+
+  TicketFailureType _mapPostgrestFailureType(sup.PostgrestException error) {
+    switch (error.code) {
+      case '42501':
+        return TicketFailureType.authorization;
+      case '22023':
+      case '23514':
+        return TicketFailureType.validation;
+      default:
+        return TicketFailureType.databaseCreate;
+    }
+  }
+
+  String _safeDatabaseMessage(sup.PostgrestException error) {
+    switch (error.code) {
+      case '42501':
+        return 'Anda tidak berwenang membuat tiket.';
+      case '22023':
+      case '23514':
+        return 'Data tiket atau lampiran tidak valid.';
+      default:
+        return 'Gagal menyimpan tiket.';
+    }
   }
 }

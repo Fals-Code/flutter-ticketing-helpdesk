@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
@@ -8,16 +9,13 @@ import 'package:uts/features/ticket/domain/entities/local_attachment_candidate.d
 import 'package:uts/features/ticket/domain/validation/ticket_attachment_validator.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/shared/widgets/app_text_field.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
-    as list_event;
-import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_state.dart'
-    as list_state;
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_event.dart';
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
 import 'package:uts/core/router/app_router.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateTicketPage extends StatefulWidget {
   const CreateTicketPage({super.key});
@@ -152,6 +150,71 @@ class _CreateTicketPageState extends State<CreateTicketPage>
     }
   }
 
+  Future<void> _pickDocument() async {
+    try {
+      final result = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowMultiple: false,
+        allowedExtensions: TicketAttachmentConstraints.allowedExtensions
+            .where((extension) => extension == 'pdf')
+            .toList(growable: false),
+        withData: false,
+      );
+
+      final file = result?.files.single;
+      if (file == null) {
+        return;
+      }
+
+      final path = file.path;
+      if (path == null || path.trim().isEmpty) {
+        _showAttachmentError('Path dokumen tidak valid.');
+        return;
+      }
+
+      final localFile = File(path);
+      if (!await localFile.exists()) {
+        _showAttachmentError('Dokumen tidak ditemukan.');
+        return;
+      }
+
+      final sizeInBytes = await localFile.length();
+      final candidate = LocalAttachmentCandidate.fromPath(
+        localPath: path,
+        fileName: file.name,
+        mimeType: LocalAttachmentCandidate.inferMimeTypeFromExtension(
+          file.extension ?? '',
+        ),
+        sizeBytes: sizeInBytes,
+        source: LocalAttachmentSource.document,
+      );
+
+      final validation = _attachmentValidator.validateAll([
+        ..._attachments,
+        candidate,
+      ]);
+
+      if (!validation.isValid) {
+        _showAttachmentError(validation.message ?? 'Lampiran tidak valid.');
+        return;
+      }
+
+      setState(() => _attachments.add(candidate));
+    } catch (e) {
+      _showAttachmentError('Gagal memilih dokumen.');
+    }
+  }
+
+  void _showAttachmentError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppColors.danger,
+      ),
+    );
+  }
+
   void _removeImage(int index) => setState(() => _attachments.removeAt(index));
 
   void _showImageSourceSheet() {
@@ -177,6 +240,14 @@ class _CreateTicketPageState extends State<CreateTicketPage>
               onTap: () {
                 Navigator.pop(context);
                 _pickImage(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.description_rounded),
+              title: const Text('Dokumen PDF'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickDocument();
               },
             ),
           ],
@@ -216,30 +287,18 @@ class _CreateTicketPageState extends State<CreateTicketPage>
       return;
     }
 
-    final isLoading = context.read<TicketListBloc>().state.isLoading;
+    final isLoading = context.read<TicketCreateBloc>().state.isBusy;
     if (isLoading) return;
 
     FocusScope.of(context).unfocus();
 
-    final currentUser = Supabase.instance.client.auth.currentUser;
-    if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Sesi telah berakhir. Silakan login kembali.'),
-          backgroundColor: AppColors.danger,
-        ),
-      );
-      return;
-    }
-
-    context.read<TicketListBloc>().add(list_event.CreateTicketRequested(
-          userId: currentUser.id,
+    context.read<TicketCreateBloc>().add(SubmitTicketCreateRequested(
           title: _subjectController.text.trim(),
           description: _descController.text.trim(),
           category: _selectedCategory,
-          imagePaths: _attachments
-              .map((attachment) => attachment.localPath)
-              .toList(growable: false),
+          attachments: List<LocalAttachmentCandidate>.unmodifiable(
+            _attachments,
+          ),
         ));
   }
 
@@ -247,12 +306,12 @@ class _CreateTicketPageState extends State<CreateTicketPage>
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return BlocListener<TicketListBloc, list_state.TicketListState>(
+    return BlocListener<TicketCreateBloc, TicketCreateState>(
       listenWhen: (previous, current) =>
-          previous.successMessage != current.successMessage ||
-          previous.errorMessage != current.errorMessage,
+          previous.status != current.status ||
+          previous.message != current.message,
       listener: (context, state) {
-        if (state.successMessage != null && !_isSuccess) {
+        if (state.status == TicketCreateStatus.success && !_isSuccess) {
           setState(() {
             _isSuccess = true;
           });
@@ -261,14 +320,17 @@ class _CreateTicketPageState extends State<CreateTicketPage>
               .read<TicketStatsBloc>()
               .add(stats_event.FetchTicketStatsRequested());
         }
-        if (state.errorMessage != null && !_isSuccess) {
+        if (!state.isBusy &&
+            state.status != TicketCreateStatus.success &&
+            state.message != null &&
+            !_isSuccess) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Row(
                 children: [
                   const Icon(Icons.error_outline, color: Colors.white),
                   const SizedBox(width: 12),
-                  Expanded(child: Text(state.errorMessage!)),
+                  Expanded(child: Text(state.message!)),
                 ],
               ),
               backgroundColor: AppColors.danger,
@@ -308,7 +370,8 @@ class _CreateTicketPageState extends State<CreateTicketPage>
   }
 
   Widget _buildFormState(bool isDark) {
-    final isLoading = context.watch<TicketListBloc>().state.isLoading;
+    final createState = context.watch<TicketCreateBloc>().state;
+    final isLoading = createState.isBusy;
 
     return Stack(
       children: [
@@ -489,7 +552,7 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Text('Lampiran Foto',
+                          Text('Lampiran',
                               style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.bold,
@@ -506,7 +569,7 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                         ],
                       ),
                       const SizedBox(height: 12),
-                      _buildImagePicker(isDark),
+                      _buildAttachmentPicker(isDark),
                       const SizedBox(height: 48),
                     ],
                   ),
@@ -562,6 +625,13 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                   : Colors.white.withValues(alpha: 0.3),
             ),
           ),
+        if (isLoading)
+          Positioned(
+            left: 24,
+            right: 24,
+            bottom: MediaQuery.of(context).padding.bottom + 92,
+            child: _buildProgressCard(createState, isDark),
+          ),
       ],
     );
   }
@@ -578,73 +648,137 @@ class _CreateTicketPageState extends State<CreateTicketPage>
     );
   }
 
-  Widget _buildImagePicker(bool isDark) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      clipBehavior: Clip.none,
-      child: Row(
-        children: [
-          if (_attachments.length <
-              TicketAttachmentConstraints.maxAttachmentCount)
-            GestureDetector(
-              onTap: _showImageSourceSheet,
-              child: Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withValues(alpha: 0.05)
-                      : Colors.black.withValues(alpha: 0.03),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                      color:
-                          isDark ? AppColors.borderDark : AppColors.borderLight,
-                      width: 1,
-                      style: BorderStyle.solid),
-                ),
-                child: const Icon(Icons.add_a_photo_outlined,
-                    color: Colors.grey, size: 24),
+  Widget _buildAttachmentPicker(bool isDark) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_attachments.length <
+            TicketAttachmentConstraints.maxAttachmentCount)
+          OutlinedButton.icon(
+            onPressed: _showImageSourceSheet,
+            icon: const Icon(Icons.attach_file_rounded),
+            label: const Text('Tambah Lampiran'),
+          ),
+        if (_attachments.isNotEmpty) const SizedBox(height: 12),
+        ..._attachments.asMap().entries.map((entry) {
+          final attachment = entry.value;
+          final isImage = attachment.source == LocalAttachmentSource.camera ||
+              attachment.source == LocalAttachmentSource.gallery;
+          return Container(
+            margin: const EdgeInsets.only(bottom: 10),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
               ),
             ),
-          if (_attachments.length <
-              TicketAttachmentConstraints.maxAttachmentCount)
-            const SizedBox(width: 12),
-          ..._attachments.asMap().entries.map((entry) {
-            return AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              margin: const EdgeInsets.only(right: 12),
-              width: 72,
-              height: 72,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                image: DecorationImage(
-                    image: FileImage(File(entry.value.localPath)),
-                    fit: BoxFit.cover),
-              ),
-              child: Stack(
-                children: [
-                  Positioned(
-                    right: 4,
-                    top: 4,
-                    child: GestureDetector(
-                      onTap: () => _removeImage(entry.key),
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                            color: Colors.black.withValues(alpha: 0.6),
-                            shape: BoxShape.circle),
-                        child: const Icon(Icons.close,
-                            size: 12, color: Colors.white),
-                      ),
-                    ),
+            child: Row(
+              children: [
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(10),
+                  child: SizedBox(
+                    width: 48,
+                    height: 48,
+                    child: isImage
+                        ? Image.file(
+                            File(attachment.localPath),
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.image_not_supported_outlined,
+                            ),
+                          )
+                        : Container(
+                            color: AppColors.primary.withValues(alpha: 0.08),
+                            child: const Icon(
+                              Icons.picture_as_pdf_rounded,
+                              color: AppColors.primary,
+                            ),
+                          ),
                   ),
-                ],
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        attachment.fileName,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? Colors.white : Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${_formatBytes(attachment.sizeBytes)} - ${attachment.mimeType}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: isDark ? Colors.white54 : Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Hapus lampiran',
+                  onPressed: () => _removeImage(entry.key),
+                  icon: const Icon(Icons.close_rounded),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildProgressCard(TicketCreateState state, bool isDark) {
+    final label = switch (state.status) {
+      TicketCreateStatus.validating => 'Memvalidasi tiket...',
+      TicketCreateStatus.uploading =>
+        'Mengunggah ${state.currentFileName ?? 'lampiran'} (${state.uploadedCount}/${state.totalCount})',
+      TicketCreateStatus.creatingTicket => 'Menyimpan tiket...',
+      _ => 'Memproses...',
+    };
+
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(16),
+      color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 22,
+              height: 22,
+              child: CircularProgressIndicator(strokeWidth: 2.5),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontWeight: FontWeight.w600),
               ),
-            );
-          }),
-        ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  String _formatBytes(int bytes) {
+    if (bytes < 1024) return '$bytes B';
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(1)} KB';
+    final mb = kb / 1024;
+    return '${mb.toStringAsFixed(1)} MB';
   }
 
   Widget _buildSuccessState(bool isDark) {

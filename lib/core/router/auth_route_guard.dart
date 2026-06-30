@@ -106,9 +106,8 @@ abstract final class AuthRouteGuard {
         !_adminOnlyRoutes.contains(location);
   }
 
-  static String homeFor(UserRole role) => role == UserRole.user
-      ? dashboard
-      : staffDashboard;
+  static String homeFor(UserRole role) =>
+      role == UserRole.user ? dashboard : staffDashboard;
 
   static String? safeFrom(String? value, UserRole role) {
     if (value == null || value.isEmpty) {

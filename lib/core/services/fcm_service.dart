@@ -43,8 +43,7 @@ class FCMService {
 
     FirebaseMessaging.onMessage.listen((message) {
       final ticketId = message.data['ticketId']?.toString() ?? '';
-      final notificationId =
-          message.data['notificationId']?.toString() ?? '';
+      final notificationId = message.data['notificationId']?.toString() ?? '';
       _localNotifications.showNotification(
         id: message.hashCode,
         title: message.notification?.title ?? 'Pembaruan Tiket',

@@ -144,9 +144,7 @@ class ETicketingApp extends StatelessWidget {
       context
           .read<TicketStatsBloc>()
           .add(const stats_event.FetchTicketStatsRequested());
-      context
-          .read<AppSettingsBloc>()
-          .add(const FetchAppSettingsRequested());
+      context.read<AppSettingsBloc>().add(const FetchAppSettingsRequested());
       return;
     }
 

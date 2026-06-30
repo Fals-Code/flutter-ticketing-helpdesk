@@ -4,6 +4,5 @@ class EnvConstants {
       String.fromEnvironment('SUPABASE_ANON_KEY');
 
   /// Custom URI handled by Android and iOS for Supabase password recovery.
-  static const String passwordRecoveryRedirect =
-      'ticketq://reset-password';
+  static const String passwordRecoveryRedirect = 'ticketq://reset-password';
 }

@@ -5,7 +5,8 @@ void main() {
   group('AuthIdentifier', () {
     test('normalizes email and username', () {
       expect(AuthIdentifier.normalize('  Ahmad_01  '), 'ahmad_01');
-      expect(AuthIdentifier.normalize(' USER@Example.COM '), 'user@example.com');
+      expect(
+          AuthIdentifier.normalize(' USER@Example.COM '), 'user@example.com');
     });
 
     test('accepts valid email or username', () {

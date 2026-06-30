@@ -138,8 +138,7 @@ class _LoginPageState extends State<LoginPage> {
                               textInputAction: TextInputAction.next,
                               prefixIcon: Icons.person_outline,
                               validator: AuthIdentifier.validateLogin,
-                              onSubmitted: (_) =>
-                                  _passwordFocus.requestFocus(),
+                              onSubmitted: (_) => _passwordFocus.requestFocus(),
                             ),
                             const SizedBox(height: AppDimensions.space20),
                             AppTextField(
@@ -175,8 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                                 return AppButton.primary(
                                   label: 'Masuk',
                                   onPressed: _submit,
-                                  isLoading:
-                                      state.status == AuthStatus.loading,
+                                  isLoading: state.status == AuthStatus.loading,
                                   size: AppButtonSize.large,
                                 );
                               },

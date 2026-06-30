@@ -182,8 +182,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       )),
       (_) => emit(state.copyWith(
         status: AuthStatus.success,
-        successMessage:
-            'Jika email terdaftar, instruksi reset telah dikirim.',
+        successMessage: 'Jika email terdaftar, instruksi reset telah dikirim.',
         clearError: true,
       )),
     );

@@ -214,7 +214,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                       const SizedBox(height: 24),
 
                                       // IMAGES
-                                      if (ticket.imageUrls.isNotEmpty) ...[
+                                      if (ticket.legacyCompatibleImageUrls
+                                          .isNotEmpty) ...[
                                         _buildImages(context, ticket, isDark),
                                         const SizedBox(height: 24),
                                       ],
@@ -543,12 +544,16 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             crossAxisSpacing: 8,
             childAspectRatio: 1,
           ),
-          itemCount: ticket.imageUrls.length,
+          itemCount: ticket.legacyCompatibleImageUrls.length,
           itemBuilder: (context, index) {
             return GestureDetector(
-              onTap: () => _showImageGallery(context, ticket.imageUrls, index),
+              onTap: () => _showImageGallery(
+                context,
+                ticket.legacyCompatibleImageUrls,
+                index,
+              ),
               child: Hero(
-                tag: ticket.imageUrls[index],
+                tag: ticket.legacyCompatibleImageUrls[index],
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
@@ -557,7 +562,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             ? AppColors.borderDark
                             : AppColors.borderLight),
                     image: DecorationImage(
-                        image: NetworkImage(ticket.imageUrls[index]),
+                        image: NetworkImage(
+                            ticket.legacyCompatibleImageUrls[index]),
                         fit: BoxFit.cover),
                   ),
                 ),

@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/router/app_router.dart';
+import 'package:uts/core/router/auth_route_guard.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
 import 'package:uts/shared/widgets/empty_state_widget.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
@@ -151,7 +152,7 @@ class _TicketListPageState extends State<TicketListPage>
         final isAdmin = user.role == UserRole.admin;
         final isTechnician = user.role == UserRole.technician;
         final isStaff = isAdmin || isTechnician;
-        final canCreateTicket = user.role == UserRole.user;
+        final canCreateTicket = AuthRouteGuard.canCreateTicket(user.role);
 
         String title = isAdmin
             ? 'Semua Laporan'

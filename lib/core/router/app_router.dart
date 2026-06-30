@@ -33,7 +33,7 @@ abstract final class AppRoutes {
   static const String userManagement = AuthRouteGuard.userManagement;
 
   static const String tickets = '/tickets';
-  static const String createTicket = '/tickets/create';
+  static const String createTicket = AuthRouteGuard.createTicket;
   static const String ticketDetail = '/tickets/:id';
   static const String notifications = '/notifications';
   static const String profile = '/profile';

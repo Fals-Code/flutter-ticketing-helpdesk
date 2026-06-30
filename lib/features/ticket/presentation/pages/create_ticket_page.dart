@@ -4,6 +4,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:uts/core/constants/app_colors.dart';
+import 'package:uts/features/ticket/domain/entities/local_attachment_candidate.dart';
+import 'package:uts/features/ticket/domain/validation/ticket_attachment_validator.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/shared/widgets/app_text_field.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
@@ -33,9 +35,11 @@ class _CreateTicketPageState extends State<CreateTicketPage>
 
   final _subjectFocus = FocusNode();
   final _descFocus = FocusNode();
+  final TicketAttachmentValidator _attachmentValidator =
+      const TicketAttachmentValidator();
 
   String _selectedCategory = '';
-  final List<String> _imagePaths = [];
+  final List<LocalAttachmentCandidate> _attachments = [];
   final ImagePicker _picker = ImagePicker();
 
   bool _isSuccess = false;
@@ -101,11 +105,6 @@ class _CreateTicketPageState extends State<CreateTicketPage>
   void _updateProgress() => setState(() {});
 
   Future<void> _pickImage(ImageSource source) async {
-    if (_imagePaths.length >= 5) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maksimal 5 foto lampiran.')));
-      return;
-    }
     try {
       final XFile? image = await _picker.pickImage(
           source: source, imageQuality: 80, maxWidth: 1920);
@@ -113,13 +112,25 @@ class _CreateTicketPageState extends State<CreateTicketPage>
       if (image != null) {
         final file = File(image.path);
         final sizeInBytes = await file.length();
-        final sizeInMb = sizeInBytes / (1024 * 1024);
+        final candidate = LocalAttachmentCandidate.fromPath(
+          localPath: image.path,
+          fileName: image.name,
+          sizeBytes: sizeInBytes,
+          source: source == ImageSource.camera
+              ? LocalAttachmentSource.camera
+              : LocalAttachmentSource.gallery,
+        );
 
-        if (sizeInMb > 5) {
+        final validation = _attachmentValidator.validateAll([
+          ..._attachments,
+          candidate,
+        ]);
+
+        if (!validation.isValid) {
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Ukuran file terlalu besar. Maksimal 5MB.'),
+              SnackBar(
+                content: Text(validation.message ?? 'Lampiran tidak valid.'),
                 backgroundColor: AppColors.danger,
               ),
             );
@@ -127,7 +138,7 @@ class _CreateTicketPageState extends State<CreateTicketPage>
           return;
         }
 
-        setState(() => _imagePaths.add(image.path));
+        setState(() => _attachments.add(candidate));
       }
     } catch (e) {
       if (mounted) {
@@ -141,7 +152,7 @@ class _CreateTicketPageState extends State<CreateTicketPage>
     }
   }
 
-  void _removeImage(int index) => setState(() => _imagePaths.removeAt(index));
+  void _removeImage(int index) => setState(() => _attachments.removeAt(index));
 
   void _showImageSourceSheet() {
     showModalBottomSheet(
@@ -192,6 +203,19 @@ class _CreateTicketPageState extends State<CreateTicketPage>
       return;
     }
 
+    final attachmentValidation = _attachmentValidator.validateAll(_attachments);
+    if (!attachmentValidation.isValid) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            attachmentValidation.message ?? 'Lampiran tidak valid.',
+          ),
+          backgroundColor: AppColors.danger,
+        ),
+      );
+      return;
+    }
+
     final isLoading = context.read<TicketListBloc>().state.isLoading;
     if (isLoading) return;
 
@@ -213,7 +237,9 @@ class _CreateTicketPageState extends State<CreateTicketPage>
           title: _subjectController.text.trim(),
           description: _descController.text.trim(),
           category: _selectedCategory,
-          imagePaths: _imagePaths,
+          imagePaths: _attachments
+              .map((attachment) => attachment.localPath)
+              .toList(growable: false),
         ));
   }
 
@@ -470,7 +496,8 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                                   color: isDark
                                       ? Colors.white70
                                       : Colors.black87)),
-                          Text('${_imagePaths.length}/5',
+                          Text(
+                              '${_attachments.length}/${TicketAttachmentConstraints.maxAttachmentCount}',
                               style: TextStyle(
                                   fontSize: 12,
                                   color: isDark
@@ -557,7 +584,8 @@ class _CreateTicketPageState extends State<CreateTicketPage>
       clipBehavior: Clip.none,
       child: Row(
         children: [
-          if (_imagePaths.length < 5)
+          if (_attachments.length <
+              TicketAttachmentConstraints.maxAttachmentCount)
             GestureDetector(
               onTap: _showImageSourceSheet,
               child: Container(
@@ -578,8 +606,10 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                     color: Colors.grey, size: 24),
               ),
             ),
-          if (_imagePaths.length < 5) const SizedBox(width: 12),
-          ..._imagePaths.asMap().entries.map((entry) {
+          if (_attachments.length <
+              TicketAttachmentConstraints.maxAttachmentCount)
+            const SizedBox(width: 12),
+          ..._attachments.asMap().entries.map((entry) {
             return AnimatedContainer(
               duration: const Duration(milliseconds: 200),
               margin: const EdgeInsets.only(right: 12),
@@ -588,7 +618,8 @@ class _CreateTicketPageState extends State<CreateTicketPage>
               decoration: BoxDecoration(
                 borderRadius: BorderRadius.circular(12),
                 image: DecorationImage(
-                    image: FileImage(File(entry.value)), fit: BoxFit.cover),
+                    image: FileImage(File(entry.value.localPath)),
+                    fit: BoxFit.cover),
               ),
               child: Stack(
                 children: [

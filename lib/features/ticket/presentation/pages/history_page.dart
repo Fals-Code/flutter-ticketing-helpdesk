@@ -385,8 +385,8 @@ class _HistoryPageState extends State<HistoryPage> {
     return map.entries.map((e) => _HistoryGroup(e.key, e.value)).toList();
   }
 
-  Color _getStatusColor(String status) {
-    switch (status.toLowerCase()) {
+  Color _getStatusColor(String? status) {
+    switch (status?.toLowerCase()) {
       case 'open':
         return AppColors.primary;
       case 'in_progress':
@@ -401,7 +401,15 @@ class _HistoryPageState extends State<HistoryPage> {
   }
 
   String _getDescription(item) {
+    if (item.description != null &&
+        item.description.toString().trim().isNotEmpty) {
+      return item.description.toString().trim();
+    }
+    if (item.oldStatus == null && item.newStatus == null) {
+      return 'Aktivitas tiket telah dicatat.';
+    }
     if (item.oldStatus == null) return 'Membuat tiket baru.';
+    if (item.newStatus == null) return 'Memperbarui riwayat tiket.';
     return 'Mengubah status tiket dari ${item.oldStatus!.toUpperCase()} menjadi ${item.newStatus.toUpperCase()}.';
   }
 }

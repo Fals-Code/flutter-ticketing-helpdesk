@@ -150,6 +150,41 @@ class AddCommentUseCase
   }
 }
 
+class DeleteTicketUseCase
+    implements UseCase<Either<Failure, String>, DeleteTicketParams> {
+  final TicketRepository repository;
+  bool _isRunning = false;
+
+  DeleteTicketUseCase(this.repository);
+
+  @override
+  Future<Either<Failure, String>> call(DeleteTicketParams params) async {
+    if (_isRunning) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.duplicateSubmit,
+        message: 'Penghapusan tiket sedang berjalan.',
+      ));
+    }
+
+    if (params.trimmedReason.length < 3) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: 'Alasan penghapusan minimal 3 karakter.',
+      ));
+    }
+
+    _isRunning = true;
+    try {
+      return await repository.deleteTicket(
+        ticketId: params.ticketId,
+        reason: params.trimmedReason,
+      );
+    } finally {
+      _isRunning = false;
+    }
+  }
+}
+
 class GetTicketStatsUseCase
     implements UseCase<Either<Failure, TicketStats>, GetTicketStatsParams> {
   final TicketRepository repository;
@@ -272,6 +307,21 @@ class AddCommentParams extends Equatable {
 
   @override
   List<Object?> get props => [ticketId, message];
+}
+
+class DeleteTicketParams extends Equatable {
+  final String ticketId;
+  final String reason;
+
+  const DeleteTicketParams({
+    required this.ticketId,
+    required this.reason,
+  });
+
+  String get trimmedReason => reason.trim();
+
+  @override
+  List<Object?> get props => [ticketId, reason];
 }
 
 class SubmitRatingParams extends Equatable {

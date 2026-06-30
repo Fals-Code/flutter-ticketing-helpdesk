@@ -119,6 +119,7 @@ TicketDetailBloc _buildBloc(_FakeDetailRepository repository) {
     getTicketDetailUseCase: GetTicketDetailUseCase(repository),
     getTicketCommentsUseCase: GetTicketCommentsUseCase(repository),
     addCommentUseCase: AddCommentUseCase(repository),
+    deleteTicketUseCase: DeleteTicketUseCase(repository),
     updateTicketStatusUseCase: UpdateTicketStatusUseCase(repository),
     assignTicketUseCase: AssignTicketUseCase(repository),
     getTicketHistoryUseCase: GetTicketHistoryUseCase(repository),
@@ -223,6 +224,9 @@ class _FakeTicketLocalDataSource implements TicketLocalDataSource {
 
   @override
   Future<void> clearCache() async {}
+
+  @override
+  Future<void> removeCachedTicketDetail(String ticketId) async {}
 
   @override
   Future<TicketModel?> getCachedTicketDetail(String ticketId) async => null;

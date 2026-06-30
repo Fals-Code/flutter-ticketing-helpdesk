@@ -86,6 +86,12 @@ abstract class TicketRepository {
     required String message,
   });
 
+  /// Menghapus tiket secara policy-safe lewat backend.
+  Future<Either<Failure, String>> deleteTicket({
+    required String ticketId,
+    required String reason,
+  });
+
   /// Mengambil riwayat status perjalanan tiket (FR-011).
   Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(
       String ticketId);

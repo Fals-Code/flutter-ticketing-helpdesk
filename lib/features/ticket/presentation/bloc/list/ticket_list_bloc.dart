@@ -55,6 +55,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     on<FilterDateRangeChanged>(_onFilterDateRangeChanged);
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
+    on<TicketDeletedLocally>(_onTicketDeletedLocally);
     on<ResetTicketListState>(_onResetState);
     on<_RealtimeTicketsUpdated>(_onRealtimeTicketsUpdated);
     on<_RealtimeTicketsFailed>(_onRealtimeTicketsFailed);
@@ -481,6 +482,24 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     await previous?.cancel();
     await localDataSource.clearCache();
     emit(TicketListState.initial());
+  }
+
+  void _onTicketDeletedLocally(
+    TicketDeletedLocally event,
+    Emitter<TicketListState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        tickets: state.tickets
+            .where((ticket) => ticket.id != event.ticketId)
+            .toList(growable: false),
+        allTickets: state.allTickets
+            .where((ticket) => ticket.id != event.ticketId)
+            .toList(growable: false),
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
   }
 
   List<TicketEntity> _applyRealtimeWindow({

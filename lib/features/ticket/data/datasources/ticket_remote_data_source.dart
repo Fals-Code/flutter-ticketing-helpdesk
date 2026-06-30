@@ -30,6 +30,10 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId);
   Future<List<CommentModel>> getTicketComments(String ticketId);
   Future<CommentModel> addComment(CommentModel comment);
+  Future<void> deleteTicket({
+    required String ticketId,
+    required String reason,
+  });
   Future<TicketModel> updateTicketStatus(String ticketId, TicketStatus status);
   Future<TicketModel> assignTicket(String ticketId, String technicianId);
   Future<TicketModel> submitRating(
@@ -126,6 +130,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     var builder = supabaseClient
         .from('tickets')
         .select(_ticketSelect)
+        .isFilter('deleted_at', null)
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
     if (ticketQuery.status != null) {
@@ -173,7 +178,10 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final from = ticketQuery.offset;
     final to = from + ticketQuery.limit - 1;
 
-    var query = supabaseClient.from('tickets').select(_ticketSelect);
+    var query = supabaseClient
+        .from('tickets')
+        .select(_ticketSelect)
+        .isFilter('deleted_at', null);
 
     if (assignedToId != null) {
       query = query.eq('assigned_to', assignedToId);
@@ -279,10 +287,22 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     final response = await supabaseClient
         .from('tickets')
         .select(_ticketSelect)
+        .isFilter('deleted_at', null)
         .eq('id', ticketId)
         .single();
 
     return TicketModel.fromJson(response);
+  }
+
+  @override
+  Future<void> deleteTicket({
+    required String ticketId,
+    required String reason,
+  }) async {
+    await supabaseClient.rpc('delete_ticket_with_attachments', params: {
+      'p_ticket_id': ticketId,
+      'p_reason': reason,
+    });
   }
 
   @override
@@ -439,10 +459,15 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }
 
     return query.asyncMap((data) async {
-      if (data.isEmpty) return [];
+      final activeRows = data
+          .where((row) => row['deleted_at'] == null)
+          .map((row) => Map<String, dynamic>.from(row))
+          .toList(growable: false);
+
+      if (activeRows.isEmpty) return [];
 
       // Hydration: Fetch profile information for the tickets in the stream
-      final userIds = data
+      final userIds = activeRows
           .map((e) => e['user_id'] as String)
           .where((id) => id.isNotEmpty)
           .toSet()
@@ -465,7 +490,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
             _profileCache[profile['id']] = profile;
           }
 
-          return data
+          return activeRows
               .map((json) {
                 final profile = profileMap[json['user_id']];
                 if (profile != null) {
@@ -489,7 +514,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       }
 
       // Fallback if hydration fails or no user IDs
-      return data
+      return activeRows
           .map((json) {
             try {
               return TicketModel.fromJson(json);
@@ -509,6 +534,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .stream(primaryKey: ['id'])
         .eq('id', ticketId)
         .map((rows) => rows
+            .where((row) => row['deleted_at'] == null)
             .map((row) => Map<String, dynamic>.from(row))
             .toList(growable: false))
         .asyncMap<TicketModel?>((rows) async {
@@ -704,6 +730,7 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
 
   List<TicketModel> _mapTicketRows(dynamic response) {
     return (response as List)
+        .where((json) => (json as Map<String, dynamic>)['deleted_at'] == null)
         .map((json) {
           try {
             return TicketModel.fromJson(json);

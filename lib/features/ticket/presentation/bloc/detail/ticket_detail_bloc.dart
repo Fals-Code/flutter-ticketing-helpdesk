@@ -20,6 +20,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final GetTicketDetailUseCase getTicketDetailUseCase;
   final GetTicketCommentsUseCase getTicketCommentsUseCase;
   final AddCommentUseCase addCommentUseCase;
+  final DeleteTicketUseCase deleteTicketUseCase;
   final UpdateTicketStatusUseCase updateTicketStatusUseCase;
   final AssignTicketUseCase assignTicketUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
@@ -40,6 +41,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     required this.getTicketDetailUseCase,
     required this.getTicketCommentsUseCase,
     required this.addCommentUseCase,
+    required this.deleteTicketUseCase,
     required this.updateTicketStatusUseCase,
     required this.assignTicketUseCase,
     required this.getTicketHistoryUseCase,
@@ -56,6 +58,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
     on<AssignTicketRequested>(_onAssignTicket);
     on<AddCommentRequested>(_onAddComment);
+    on<DeleteTicketRequested>(_onDeleteTicket);
     on<SubmitRatingRequested>(_onSubmitRating);
     on<FetchTicketActivitiesRequested>(_onFetchActivities);
     on<StartTicketCommentsSubscription>(_onStartCommentSubscription);
@@ -252,6 +255,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         isCommentSubmitting: true,
         clearErrorMessage: true,
         clearSuccessMessage: true,
+        clearDeletedTicketId: true,
       ),
     );
 
@@ -271,6 +275,57 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
           successMessage: 'Tanggapan berhasil dikirim',
         ),
       ),
+    );
+  }
+
+  Future<void> _onDeleteTicket(
+    DeleteTicketRequested event,
+    Emitter<TicketDetailState> emit,
+  ) async {
+    if (state.isDeleting) {
+      emit(state.copyWith(
+        errorMessage: 'Penghapusan tiket sedang berjalan.',
+      ));
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        isDeleting: true,
+        clearErrorMessage: true,
+        clearSuccessMessage: true,
+        clearDeletedTicketId: true,
+      ),
+    );
+
+    final result = await deleteTicketUseCase(
+      DeleteTicketParams(
+        ticketId: event.ticketId,
+        reason: event.reason,
+      ),
+    );
+
+    await result.fold(
+      (failure) async {
+        emit(
+          state.copyWith(
+            isDeleting: false,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (ticketId) async {
+        await _cancelTicketSubscriptions();
+        await localDataSource.removeCachedTicketDetail(ticketId);
+        emit(
+          state.copyWith(
+            isDeleting: false,
+            deletedTicketId: ticketId,
+            successMessage: 'Tiket berhasil dihapus.',
+            clearErrorMessage: true,
+          ),
+        );
+      },
     );
   }
 
@@ -353,6 +408,11 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     ResetTicketDetailState event,
     Emitter<TicketDetailState> emit,
   ) async {
+    await _cancelTicketSubscriptions();
+    emit(const TicketDetailState());
+  }
+
+  Future<void> _cancelTicketSubscriptions() async {
     _detailGeneration++;
     _commentGeneration++;
 
@@ -363,7 +423,6 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
 
     await detailSubscription?.cancel();
     await commentSubscription?.cancel();
-    emit(const TicketDetailState());
   }
 
   TicketDetailStatus _statusFromFailure(Failure failure) {
@@ -422,18 +481,10 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
 
   @override
   Future<void> close() async {
-    _detailGeneration++;
-    _commentGeneration++;
-
-    final detailSubscription = _detailSubscription;
-    final commentSubscription = _commentSubscription;
+    await _cancelTicketSubscriptions();
     final connectivitySubscription = _connectivitySubscription;
-    _detailSubscription = null;
-    _commentSubscription = null;
     _connectivitySubscription = null;
 
-    await detailSubscription?.cancel();
-    await commentSubscription?.cancel();
     await connectivitySubscription?.cancel();
     await super.close();
   }

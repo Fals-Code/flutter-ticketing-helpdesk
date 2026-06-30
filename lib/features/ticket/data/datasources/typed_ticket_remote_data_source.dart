@@ -49,16 +49,17 @@ class TypedSupabaseTicketRemoteDataSourceImpl
     Stream<List<Map<String, dynamic>>> source,
   ) {
     return source.asyncMap<List<TicketModel>>((rows) async {
-      if (rows.isEmpty) {
-        return const <TicketModel>[];
-      }
-
-      final mutableRows = rows
+      final activeRows = rows
+          .where((row) => row['deleted_at'] == null)
           .map((row) => Map<String, dynamic>.from(row))
           .toList(growable: false);
 
+      if (activeRows.isEmpty) {
+        return const <TicketModel>[];
+      }
+
       final profileIds = <String>{};
-      for (final row in mutableRows) {
+      for (final row in activeRows) {
         final reporterId = row['user_id'];
         final technicianId = row['assigned_to'];
 
@@ -89,7 +90,7 @@ class TypedSupabaseTicketRemoteDataSourceImpl
         }
       }
 
-      return mutableRows
+      return activeRows
           .map((row) {
             final reporterId = row['user_id'];
             final technicianId = row['assigned_to'];

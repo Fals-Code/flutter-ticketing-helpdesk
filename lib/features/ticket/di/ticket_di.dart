@@ -15,6 +15,7 @@ import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.
 import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_bloc.dart';
 
 Future<void> initTicketDependencies(GetIt sl) async {
   // BLoCs
@@ -40,6 +41,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
       getTicketDetailUseCase: sl(),
       getTicketCommentsUseCase: sl(),
       addCommentUseCase: sl(),
+      deleteTicketUseCase: sl(),
       updateTicketStatusUseCase: sl(),
       assignTicketUseCase: sl(),
       getTicketHistoryUseCase: sl(),
@@ -48,6 +50,13 @@ Future<void> initTicketDependencies(GetIt sl) async {
       submitRatingUseCase: sl(),
       localDataSource: sl(),
       connectivityService: sl(),
+    ),
+  );
+
+  sl.registerFactory(
+    () => TicketTrackingBloc(
+      getTicketDetailUseCase: sl(),
+      getTicketHistoryUseCase: sl(),
     ),
   );
 
@@ -66,6 +75,7 @@ Future<void> initTicketDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => GetTicketDetailUseCase(sl()));
   sl.registerLazySingleton(() => GetTicketCommentsUseCase(sl()));
   sl.registerLazySingleton(() => AddCommentUseCase(sl()));
+  sl.registerLazySingleton(() => DeleteTicketUseCase(sl()));
   sl.registerLazySingleton(() => GetTicketStatsUseCase(sl()));
   sl.registerLazySingleton(() => GetTicketHistoryUseCase(sl()));
   sl.registerLazySingleton(() => GetAllTicketHistoryUseCase(sl()));

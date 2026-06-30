@@ -78,6 +78,19 @@ class AddCommentRequested extends TicketDetailEvent {
   List<Object?> get props => [ticketId, message];
 }
 
+class DeleteTicketRequested extends TicketDetailEvent {
+  final String ticketId;
+  final String reason;
+
+  const DeleteTicketRequested({
+    required this.ticketId,
+    required this.reason,
+  });
+
+  @override
+  List<Object?> get props => [ticketId, reason];
+}
+
 class FetchTicketActivitiesRequested extends TicketDetailEvent {
   final String ticketId;
 

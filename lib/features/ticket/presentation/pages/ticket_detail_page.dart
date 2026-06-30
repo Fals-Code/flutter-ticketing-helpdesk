@@ -5,11 +5,15 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 import 'package:uts/core/constants/app_colors.dart';
+import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_event.dart'
     as detail_event;
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_state.dart'
     as detail_state;
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+    as list_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
@@ -23,6 +27,7 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/shared/widgets/ticket_timeline_widget.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/features/ticket/presentation/widgets/rating_dialog.dart';
+import 'package:uts/features/ticket/presentation/widgets/ticket_delete_confirmation_dialog.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -83,6 +88,43 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       ticket.status == TicketStatus.resolved ||
       ticket.status == TicketStatus.closed;
 
+  bool _canRequestDelete({
+    required TicketEntity ticket,
+    required UserRole role,
+    required String currentUserId,
+  }) {
+    if (role == UserRole.admin) {
+      return true;
+    }
+
+    return role == UserRole.user &&
+        ticket.userId == currentUserId &&
+        ticket.status == TicketStatus.open &&
+        ticket.assignedTo == null;
+  }
+
+  Future<void> _showDeleteDialog() async {
+    final reason = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => TicketDeleteConfirmationDialog(
+        onConfirm: (input) async {
+          Navigator.of(dialogContext).pop(input.trim());
+        },
+      ),
+    );
+
+    if (!mounted || reason == null || reason.trim().isEmpty) {
+      return;
+    }
+
+    context.read<TicketDetailBloc>().add(
+          detail_event.DeleteTicketRequested(
+            ticketId: widget.ticketId,
+            reason: reason,
+          ),
+        );
+  }
+
   void _showToast(String message, {bool isError = false}) {
     if (!mounted) return;
     final overlay = Overlay.of(context);
@@ -102,6 +144,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         if (state.successMessage == 'Tanggapan berhasil dikirim') {
           _commentController.clear();
         }
+        if (state.deletedTicketId != null) {
+          context
+              .read<TicketListBloc>()
+              .add(list_event.TicketDeletedLocally(state.deletedTicketId!));
+          if (Navigator.of(context).canPop()) {
+            context.pop();
+          } else {
+            context.go(AppRoutes.tickets);
+          }
+          return;
+        }
         if (state.errorMessage != null) {
           _showToast(state.errorMessage!, isError: true);
         }
@@ -113,10 +166,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
       builder: (context, state) {
         final ticket = state.ticket;
         final authState = context.read<AuthBloc>().state;
+        final currentUserId = authState.user.id;
         final currentUserRole = authState.user.role;
         final isUser = currentUserRole == UserRole.user;
         final isStaff = currentUserRole == UserRole.admin ||
             currentUserRole == UserRole.technician;
+        final canDeleteTicket = ticket != null &&
+            _canRequestDelete(
+              ticket: ticket,
+              role: currentUserRole,
+              currentUserId: currentUserId,
+            );
 
         return Scaffold(
           backgroundColor:
@@ -193,6 +253,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                                     text: ticket.id));
                                                 _showToast('ID tiket disalin');
                                               }
+                                              if (val == 'tracking') {
+                                                context.push(
+                                                  AppRoutes.ticketTracking
+                                                      .replaceAll(
+                                                          ':id', ticket.id),
+                                                );
+                                              }
+                                              if (val == 'delete' &&
+                                                  !state.isDeleting) {
+                                                _showDeleteDialog();
+                                              }
                                             },
                                             itemBuilder: (context) => [
                                               const PopupMenuItem(
@@ -203,6 +274,43 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                                     SizedBox(width: 12),
                                                     Text('Salin ID')
                                                   ])),
+                                              const PopupMenuItem(
+                                                  value: 'tracking',
+                                                  child: Row(children: [
+                                                    Icon(Icons.timeline_rounded,
+                                                        size: 18),
+                                                    SizedBox(width: 12),
+                                                    Text('Tracking Tiket')
+                                                  ])),
+                                              if (canDeleteTicket)
+                                                PopupMenuItem(
+                                                  value: 'delete',
+                                                  enabled: !state.isDeleting,
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(
+                                                        Icons
+                                                            .delete_outline_rounded,
+                                                        size: 18,
+                                                        color: state.isDeleting
+                                                            ? Colors.grey
+                                                            : Colors.red,
+                                                      ),
+                                                      const SizedBox(width: 12),
+                                                      Text(
+                                                        state.isDeleting
+                                                            ? 'Menghapus...'
+                                                            : 'Hapus Tiket',
+                                                        style: TextStyle(
+                                                          color:
+                                                              state.isDeleting
+                                                                  ? Colors.grey
+                                                                  : Colors.red,
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
                                             ],
                                           ),
                                         ],
@@ -244,8 +352,30 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                                   context, state, isDark),
 
                                               // TIMELINE
-                                              _buildSectionLabel(
-                                                  'RIWAYAT', isDark),
+                                              Row(
+                                                children: [
+                                                  _buildSectionLabel(
+                                                      'RIWAYAT', isDark),
+                                                  const Spacer(),
+                                                  TextButton.icon(
+                                                    onPressed: () =>
+                                                        context.push(
+                                                      AppRoutes.ticketTracking
+                                                          .replaceAll(
+                                                        ':id',
+                                                        ticket.id,
+                                                      ),
+                                                    ),
+                                                    icon: const Icon(
+                                                      Icons.timeline_rounded,
+                                                      size: 16,
+                                                    ),
+                                                    label: const Text(
+                                                      'Tracking',
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                               const SizedBox(height: 14),
                                               TicketTimelineWidget(
                                                   activities: state.history,

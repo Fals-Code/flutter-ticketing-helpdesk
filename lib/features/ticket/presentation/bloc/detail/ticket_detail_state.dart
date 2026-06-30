@@ -22,6 +22,8 @@ class TicketDetailState extends Equatable {
   final String? successMessage;
   final bool isRatingSubmitting;
   final bool isCommentSubmitting;
+  final bool isDeleting;
+  final String? deletedTicketId;
   final bool isOffline;
 
   const TicketDetailState({
@@ -33,6 +35,8 @@ class TicketDetailState extends Equatable {
     this.successMessage,
     this.isRatingSubmitting = false,
     this.isCommentSubmitting = false,
+    this.isDeleting = false,
+    this.deletedTicketId,
     this.isOffline = false,
   });
 
@@ -54,6 +58,9 @@ class TicketDetailState extends Equatable {
     bool clearSuccessMessage = false,
     bool? isRatingSubmitting,
     bool? isCommentSubmitting,
+    bool? isDeleting,
+    String? deletedTicketId,
+    bool clearDeletedTicketId = false,
     bool? isOffline,
     bool clearTicket = false,
   }) {
@@ -68,6 +75,10 @@ class TicketDetailState extends Equatable {
           clearSuccessMessage ? null : (successMessage ?? this.successMessage),
       isRatingSubmitting: isRatingSubmitting ?? this.isRatingSubmitting,
       isCommentSubmitting: isCommentSubmitting ?? this.isCommentSubmitting,
+      isDeleting: isDeleting ?? this.isDeleting,
+      deletedTicketId: clearDeletedTicketId
+          ? null
+          : (deletedTicketId ?? this.deletedTicketId),
       isOffline: isOffline ?? this.isOffline,
     );
   }
@@ -82,6 +93,8 @@ class TicketDetailState extends Equatable {
         successMessage,
         isRatingSubmitting,
         isCommentSubmitting,
+        isDeleting,
+        deletedTicketId,
         isOffline,
       ];
 }

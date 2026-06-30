@@ -87,4 +87,13 @@ class StartTicketListSubscription extends TicketListEvent {
   List<Object?> get props => [userId, assignedToId, isStaff];
 }
 
+class TicketDeletedLocally extends TicketListEvent {
+  final String ticketId;
+
+  const TicketDeletedLocally(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
+}
+
 class ResetTicketListState extends TicketListEvent {}

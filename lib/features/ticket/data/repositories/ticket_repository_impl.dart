@@ -285,6 +285,26 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
+  Future<Either<Failure, String>> deleteTicket({
+    required String ticketId,
+    required String reason,
+  }) async {
+    try {
+      await remoteDataSource.deleteTicket(
+        ticketId: ticketId,
+        reason: reason,
+      );
+      return Right(ticketId);
+    } on sup.AuthException catch (e) {
+      return Left(ServerFailure(message: e.message, code: 401));
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
+    } catch (e) {
+      return Left(UnknownFailure(message: e.toString()));
+    }
+  }
+
+  @override
   Future<Either<Failure, TicketEntity>> updateTicketStatus({
     required String ticketId,
     required TicketStatus status,
@@ -419,11 +439,19 @@ class TicketRepositoryImpl implements TicketRepository {
       );
     }
 
-    if (error.code == 'PGRST116') {
+    if (error.code == 'PGRST116' || error.code == 'P0002') {
       return const TicketOperationFailure(
         type: TicketFailureType.notFound,
         message: 'Tiket tidak ditemukan.',
         code: 404,
+      );
+    }
+
+    if (error.code == 'P0001') {
+      return const TicketOperationFailure(
+        type: TicketFailureType.compensation,
+        message: 'Penghapusan tiket gagal menyelesaikan cleanup lampiran.',
+        code: 409,
       );
     }
 

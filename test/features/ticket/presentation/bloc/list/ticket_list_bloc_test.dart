@@ -148,6 +148,26 @@ void main() {
         expect(bloc.state.tickets.single.id, 'search');
       },
     );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'removes deleted ticket from local list state',
+      build: () => _buildBloc(_FakeTicketRepository()),
+      seed: () => TicketListState.initial().copyWith(
+        tickets: [_ticket('1'), _ticket('2')],
+        allTickets: [_ticket('1'), _ticket('3')],
+      ),
+      act: (bloc) => bloc.add(const TicketDeletedLocally('1')),
+      expect: () => [
+        isA<TicketListState>().having(
+            (state) => state.tickets.map((ticket) => ticket.id).toList(),
+            'user ids', [
+          '2'
+        ]).having(
+            (state) => state.allTickets.map((ticket) => ticket.id).toList(),
+            'staff ids',
+            ['3']),
+      ],
+    );
   });
 }
 
@@ -230,6 +250,9 @@ class _FakeTicketLocalDataSource implements TicketLocalDataSource {
 
   @override
   Future<void> clearCache() async {}
+
+  @override
+  Future<void> removeCachedTicketDetail(String ticketId) async {}
 
   @override
   Future<TicketModel?> getCachedTicketDetail(String ticketId) async => null;

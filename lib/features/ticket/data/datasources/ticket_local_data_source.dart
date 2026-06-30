@@ -16,6 +16,9 @@ abstract class TicketLocalDataSource {
   /// Get cached ticket detail by ID.
   Future<TicketModel?> getCachedTicketDetail(String ticketId);
 
+  /// Remove a single cached ticket detail entry.
+  Future<void> removeCachedTicketDetail(String ticketId);
+
   /// Clear all cached ticket data.
   Future<void> clearCache();
 }
@@ -64,6 +67,11 @@ class SharedPrefsTicketLocalDataSource implements TicketLocalDataSource {
         sharedPreferences.getString('$_detailCachePrefix$ticketId');
     if (jsonString == null) return null;
     return TicketModel.fromJson(jsonDecode(jsonString));
+  }
+
+  @override
+  Future<void> removeCachedTicketDetail(String ticketId) async {
+    await sharedPreferences.remove('$_detailCachePrefix$ticketId');
   }
 
   @override

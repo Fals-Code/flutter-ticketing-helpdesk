@@ -7,10 +7,8 @@ abstract class AuthEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-/// Event saat aplikasi pertama kali dijalankan untuk cek sesi.
 class AppStarted extends AuthEvent {}
 
-/// Event untuk Login.
 class LoginSubmitted extends AuthEvent {
   final String email;
   final String password;
@@ -19,7 +17,6 @@ class LoginSubmitted extends AuthEvent {
   List<Object?> get props => [email, password];
 }
 
-/// Event untuk Registrasi.
 class RegisterSubmitted extends AuthEvent {
   final String email;
   final String password;
@@ -33,10 +30,8 @@ class RegisterSubmitted extends AuthEvent {
   List<Object?> get props => [email, password, fullName];
 }
 
-/// Event untuk Logout.
 class LogoutRequested extends AuthEvent {}
 
-/// Event untuk Reset Password.
 class ResetPasswordRequested extends AuthEvent {
   final String email;
   const ResetPasswordRequested(this.email);
@@ -44,7 +39,6 @@ class ResetPasswordRequested extends AuthEvent {
   List<Object?> get props => [email];
 }
 
-/// Event untuk Ubah Kata Sandi (Saat Logged In).
 class AuthPasswordUpdateRequested extends AuthEvent {
   final String newPassword;
   const AuthPasswordUpdateRequested(this.newPassword);
@@ -52,13 +46,10 @@ class AuthPasswordUpdateRequested extends AuthEvent {
   List<Object?> get props => [newPassword];
 }
 
-/// Event untuk membersihkan status pesan (setelah sukses/error).
 class ClearAuthStatus extends AuthEvent {}
 
-/// Event saat sesi berakhir (401 Unauthorized).
 class SessionExpiredDetected extends AuthEvent {}
 
-/// Event untuk memperbarui foto profil.
 class UpdateAvatarRequested extends AuthEvent {
   final File image;
   const UpdateAvatarRequested(this.image);
@@ -66,7 +57,6 @@ class UpdateAvatarRequested extends AuthEvent {
   List<Object?> get props => [image];
 }
 
-/// Event untuk memperbarui data profil (nama, email).
 class UpdateProfileRequested extends AuthEvent {
   final String fullName;
   final String? email;

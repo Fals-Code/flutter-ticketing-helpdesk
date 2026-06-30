@@ -1,15 +1,22 @@
 import 'dart:async';
+
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uts/core/services/connectivity_service.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
-import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/core/constants/enums.dart';
+import 'package:uts/features/ticket/domain/services/ticket_collection_utils.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
+import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
+import 'package:uts/features/ticket/domain/value_objects/ticket_query.dart';
+
 import 'ticket_list_event.dart';
 import 'ticket_list_state.dart';
-import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
-import 'package:uts/features/ticket/data/models/ticket_model.dart';
-import 'package:uts/core/services/connectivity_service.dart';
+
+enum _TicketListMode {
+  user,
+  staff,
+}
 
 class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final GetTicketsUseCase getTicketsUseCase;
@@ -17,9 +24,19 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   final WatchTicketsUseCase watchTicketsUseCase;
   final CreateTicketUseCase createTicketUseCase;
   final TicketLocalDataSource localDataSource;
-  final ConnectivityService connectivityService;
-  StreamSubscription? _ticketSubscription;
-  StreamSubscription? _connectivitySubscription;
+  final ConnectivityService? connectivityService;
+  final Stream<ConnectionStatus>? connectivityOverride;
+
+  StreamSubscription<List<TicketEntity>>? _ticketSubscription;
+  StreamSubscription<ConnectionStatus>? _connectivitySubscription;
+
+  _TicketListMode? _activeMode;
+  int _userGeneration = 0;
+  int _staffGeneration = 0;
+  int _subscriptionGeneration = 0;
+  List<TicketEntity> _latestRealtimeSnapshot = const [];
+  String? _subscriptionAssignedToId;
+  bool _subscriptionIsStaff = false;
 
   TicketListBloc({
     required this.getTicketsUseCase,
@@ -27,8 +44,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     required this.watchTicketsUseCase,
     required this.createTicketUseCase,
     required this.localDataSource,
-    required this.connectivityService,
-  }) : super(const TicketListState()) {
+    this.connectivityService,
+    this.connectivityOverride,
+  }) : super(TicketListState.initial()) {
     on<FetchTicketsRequested>(_onFetchTickets);
     on<FetchAllTicketsRequested>(_onFetchAllTickets);
     on<SearchTicketsRequested>(_onSearchQueryChanged);
@@ -38,172 +56,102 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
     on<ResetTicketListState>(_onResetState);
+    on<_RealtimeTicketsUpdated>(_onRealtimeTicketsUpdated);
+    on<_RealtimeTicketsFailed>(_onRealtimeTicketsFailed);
 
-    _connectivitySubscription =
-        connectivityService.connectionStream.listen((status) {
-      if (status == ConnectionStatus.online) {
-        add(const FetchTicketsRequested(page: 0));
-        add(const FetchAllTicketsRequested(page: 0));
+    _connectivitySubscription = (connectivityOverride ??
+            connectivityService?.connectionStream ??
+            const Stream<ConnectionStatus>.empty())
+        .listen((status) {
+      if (status == ConnectionStatus.online && !isClosed) {
+        _refreshActiveList();
       }
     });
-  }
-
-  Future<void> _onSearchQueryChanged(
-    SearchTicketsRequested event,
-    Emitter<TicketListState> emit,
-  ) async {
-    emit(state.copyWith(searchQuery: event.query));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
-  }
-
-  Future<void> _onFilterStatusChanged(
-    FilterStatusChanged event,
-    Emitter<TicketListState> emit,
-  ) async {
-    emit(state.copyWith(statusFilter: event.filter));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
-  }
-
-  Future<void> _onCreateTicket(
-    CreateTicketRequested event,
-    Emitter<TicketListState> emit,
-  ) async {
-    if (event.category.isEmpty) {
-      emit(state.copyWith(errorMessage: 'Kategori harus dipilih'));
-      return;
-    }
-
-    if (event.title.trim().length < 5) {
-      emit(state.copyWith(
-        isLoading: false,
-        errorMessage: 'Judul terlalu pendek (min. 5 karakter)',
-      ));
-      return;
-    }
-
-    if (event.description.trim().length < 20) {
-      emit(state.copyWith(
-        isLoading: false,
-        errorMessage: 'Deskripsi terlalu pendek (min. 20 karakter)',
-      ));
-      return;
-    }
-
-    emit(state.copyWith(
-      isLoading: true,
-      successMessage: null,
-      errorMessage: null,
-    ));
-
-    final result = await createTicketUseCase(CreateTicketParams(
-      title: event.title,
-      description: event.description,
-      category: event.category,
-      attachments: event.attachments,
-    ));
-
-    result.fold(
-      (failure) {
-        emit(state.copyWith(
-          isLoading: false,
-          errorMessage: failure.message,
-        ));
-      },
-      (ticket) {
-        emit(state.copyWith(
-          isLoading: false,
-          tickets: [ticket, ...state.tickets],
-          successMessage: 'Laporan berhasil dibuat',
-          errorMessage: null,
-        ));
-      },
-    );
-  }
-
-  void _onStartSubscription(
-    StartTicketListSubscription event,
-    Emitter<TicketListState> emit,
-  ) {
-    _ticketSubscription?.cancel();
-    _ticketSubscription = watchTicketsUseCase(
-      userId: event.userId,
-      assignedToId: event.assignedToId,
-    ).listen(
-      (tickets) {
-        final filteredTickets = _applyFilters(tickets);
-        if (event.isStaff) {
-          emit(state.copyWith(allTickets: filteredTickets));
-        } else {
-          emit(state.copyWith(tickets: filteredTickets));
-        }
-      },
-    );
   }
 
   Future<void> _onFetchTickets(
     FetchTicketsRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    final bool isInitial = event.page == 0;
+    _activeMode = _TicketListMode.user;
+    final isInitial = event.page == 0;
+    final isLoadMore = !isInitial;
 
-    if (isInitial) {
-      emit(state.copyWith(
-          isLoading: true,
-          tickets: [],
-          currentPage: 0,
-          isLastPage: false,
-          errorMessage: null));
-    } else {
-      emit(state.copyWith(isLoading: true, errorMessage: null));
+    if (isLoadMore && (state.isLoadingMore || !state.hasMore)) {
+      return;
     }
 
-    final result = await getTicketsUseCase(
-      GetTicketsParams(
-        page: event.page,
-        limit: event.limit,
-        searchQuery: state.searchQuery,
-        category: state.categoryFilter,
-        startDate: state.startDate,
-        endDate: state.endDate,
-        status: state.statusFilter == TicketStatusFilter.all
-            ? null
-            : _mapStatusFilter(state.statusFilter),
+    if (isInitial) {
+      _userGeneration++;
+    } else if (_userGeneration == 0) {
+      _userGeneration = 1;
+    }
+    final requestGeneration = _userGeneration;
+
+    final query = state.query.copyWith(
+      page: event.page,
+      limit: event.limit,
+      offset: event.page * event.limit,
+    );
+
+    emit(
+      state.copyWith(
+        query: isInitial ? query : state.query,
+        isInitialLoading: isInitial && state.tickets.isEmpty,
+        isRefreshing: isInitial && state.tickets.isNotEmpty,
+        isLoadingMore: isLoadMore,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+        clearSuccessMessage: true,
       ),
     );
 
-    result.fold(
-      (failure) async {
-        if (isInitial) {
-          try {
-            final cached = await localDataSource.getCachedTickets();
-            emit(state.copyWith(
-              isLoading: false,
-              tickets: cached.map((m) => m.toEntity()).toList(),
-              isOffline: true,
-              currentPage: 0,
-            ));
-            return;
-          } catch (_) {}
-        }
-        emit(state.copyWith(isLoading: false, errorMessage: failure.message));
-      },
-      (newTickets) {
-        if (isInitial) {
-          localDataSource.cacheTickets(
-              newTickets.map((t) => TicketModel.fromEntity(t)).toList());
-        }
+    final result = await getTicketsUseCase(GetTicketsParams(query: query));
+    if (requestGeneration != _userGeneration || isClosed) {
+      return;
+    }
 
-        final allTickets =
-            isInitial ? newTickets : [...state.tickets, ...newTickets];
-        emit(state.copyWith(
-          isLoading: false,
-          tickets: allTickets,
-          isLastPage: newTickets.length < event.limit,
-          isOffline: false,
-          currentPage: event.page, // Update page only on success
-        ));
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            isInitialLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            errorMessage: isLoadMore ? state.errorMessage : failure.message,
+            loadMoreErrorMessage: isLoadMore ? failure.message : null,
+          ),
+        );
+      },
+      (pageResult) {
+        final merged = isInitial
+            ? sortTicketsDeterministically(pageResult.items)
+            : mergeTicketPage(
+                existing: state.tickets,
+                incoming: pageResult.items,
+              );
+
+        final items = _applyRealtimeWindow(
+          currentItems: merged,
+          query: query,
+          hasMore: pageResult.hasMore,
+          assignedToId: null,
+        );
+
+        emit(
+          state.copyWith(
+            query: query,
+            tickets: items,
+            isInitialLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            hasMore: pageResult.hasMore,
+            currentPage: query.page,
+            isOffline: false,
+            clearErrorMessage: true,
+            clearLoadMoreErrorMessage: true,
+          ),
+        );
       },
     );
   }
@@ -212,130 +160,404 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     FetchAllTicketsRequested event,
     Emitter<TicketListState> emit,
   ) async {
-    final bool isInitial = event.page == 0;
-
+    _activeMode = _TicketListMode.staff;
+    final isInitial = event.page == 0;
+    final isLoadMore = !isInitial;
     final assignedToId = event.assignedToId ?? state.assignedToId;
 
-    if (isInitial) {
-      emit(state.copyWith(
-          isLoading: true,
-          allTickets: [],
-          allTicketsPage: 0,
-          isLastPageAll: false,
-          errorMessage: null,
-          assignedToId: assignedToId));
-    } else {
-      emit(state.copyWith(
-          isLoading: true, errorMessage: null, assignedToId: assignedToId));
+    if (isLoadMore && (state.isLoadingMore || !state.hasMoreAll)) {
+      return;
     }
 
-    final result = await getAllTicketsUseCase(
-      GetTicketsParams(
-        page: event.page,
-        limit: event.limit,
-        status: state.statusFilter == TicketStatusFilter.all
-            ? null
-            : _mapStatusFilter(state.statusFilter),
-        searchQuery: state.searchQuery,
-        category: state.categoryFilter,
-        startDate: state.startDate,
-        endDate: state.endDate,
+    if (isInitial) {
+      _staffGeneration++;
+    } else if (_staffGeneration == 0) {
+      _staffGeneration = 1;
+    }
+    final requestGeneration = _staffGeneration;
+
+    final query = state.query.copyWith(
+      page: event.page,
+      limit: event.limit,
+      offset: event.page * event.limit,
+    );
+
+    if (isInitial &&
+        _subscriptionIsStaff &&
+        (_subscriptionAssignedToId != assignedToId)) {
+      add(StartTicketListSubscription(
         assignedToId: assignedToId,
+        isStaff: true,
+      ));
+    }
+
+    emit(
+      state.copyWith(
+        query: isInitial ? query : state.query,
+        assignedToId: assignedToId,
+        isInitialLoading: isInitial && state.allTickets.isEmpty,
+        isRefreshing: isInitial && state.allTickets.isNotEmpty,
+        isLoadingMore: isLoadMore,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+        clearSuccessMessage: true,
       ),
     );
 
+    final result = await getAllTicketsUseCase(
+      GetTicketsParams(
+        query: query,
+        assignedToId: assignedToId,
+      ),
+    );
+    if (requestGeneration != _staffGeneration || isClosed) {
+      return;
+    }
+
     result.fold(
-      (failure) =>
-          emit(state.copyWith(isLoading: false, errorMessage: failure.message)),
-      (newTickets) {
-        final currentTickets =
-            isInitial ? newTickets : [...state.allTickets, ...newTickets];
-        emit(state.copyWith(
-          isLoading: false,
-          allTickets: currentTickets,
-          isLastPageAll: newTickets.length < event.limit,
-          allTicketsPage: event.page, // Update page only on success
-        ));
+      (failure) {
+        emit(
+          state.copyWith(
+            isInitialLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            errorMessage: isLoadMore ? state.errorMessage : failure.message,
+            loadMoreErrorMessage: isLoadMore ? failure.message : null,
+          ),
+        );
+      },
+      (pageResult) {
+        final merged = isInitial
+            ? sortTicketsDeterministically(pageResult.items)
+            : mergeTicketPage(
+                existing: state.allTickets,
+                incoming: pageResult.items,
+              );
+
+        final items = _applyRealtimeWindow(
+          currentItems: merged,
+          query: query,
+          hasMore: pageResult.hasMore,
+          assignedToId: assignedToId,
+        );
+
+        emit(
+          state.copyWith(
+            query: query,
+            assignedToId: assignedToId,
+            allTickets: items,
+            isInitialLoading: false,
+            isRefreshing: false,
+            isLoadingMore: false,
+            hasMoreAll: pageResult.hasMore,
+            allTicketsPage: query.page,
+            isOffline: false,
+            clearErrorMessage: true,
+            clearLoadMoreErrorMessage: true,
+          ),
+        );
       },
     );
+  }
+
+  Future<void> _onSearchQueryChanged(
+    SearchTicketsRequested event,
+    Emitter<TicketListState> emit,
+  ) async {
+    final updatedQuery = state.query.copyWith(
+      search: event.query,
+      page: 0,
+      offset: 0,
+      clearSearch: event.query.trim().isEmpty,
+    );
+
+    emit(
+      state.copyWith(
+        query: updatedQuery,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
+    _refreshActiveList();
+  }
+
+  Future<void> _onFilterStatusChanged(
+    FilterStatusChanged event,
+    Emitter<TicketListState> emit,
+  ) async {
+    final updatedQuery = applyStatusFilterToQuery(state.query, event.filter);
+    emit(
+      state.copyWith(
+        query: updatedQuery,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
+    _refreshActiveList();
   }
 
   Future<void> _onFilterCategoryChanged(
     FilterCategoryChanged event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(categoryFilter: event.category));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
+    final updatedQuery = state.query.copyWith(
+      category: event.category,
+      clearCategory: event.category == null || event.category!.trim().isEmpty,
+      page: 0,
+      offset: 0,
+    );
+
+    emit(
+      state.copyWith(
+        query: updatedQuery,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
+    _refreshActiveList();
   }
 
   Future<void> _onFilterDateRangeChanged(
     FilterDateRangeChanged event,
     Emitter<TicketListState> emit,
   ) async {
-    emit(state.copyWith(startDate: event.startDate, endDate: event.endDate));
-    add(const FetchTicketsRequested(page: 0));
-    add(const FetchAllTicketsRequested(page: 0));
+    final updatedQuery = state.query.copyWith(
+      startDate: event.startDate,
+      endDate: event.endDate,
+      clearStartDate: event.startDate == null,
+      clearEndDate: event.endDate == null,
+      page: 0,
+      offset: 0,
+    );
+
+    emit(
+      state.copyWith(
+        query: updatedQuery,
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
+    _refreshActiveList();
+  }
+
+  Future<void> _onStartSubscription(
+    StartTicketListSubscription event,
+    Emitter<TicketListState> emit,
+  ) async {
+    _subscriptionGeneration++;
+    final generation = _subscriptionGeneration;
+    _subscriptionAssignedToId = event.assignedToId;
+    _subscriptionIsStaff = event.isStaff;
+
+    final previous = _ticketSubscription;
+    _ticketSubscription = null;
+    await previous?.cancel();
+
+    if (isClosed || generation != _subscriptionGeneration) {
+      return;
+    }
+
+    _ticketSubscription = watchTicketsUseCase(
+      userId: event.userId,
+      assignedToId: event.assignedToId,
+    ).listen(
+      (tickets) {
+        if (!isClosed && generation == _subscriptionGeneration) {
+          add(_RealtimeTicketsUpdated(
+            tickets: tickets,
+            isStaff: event.isStaff,
+            assignedToId: event.assignedToId,
+          ));
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!isClosed && generation == _subscriptionGeneration) {
+          add(_RealtimeTicketsFailed(error.toString()));
+        }
+      },
+    );
+  }
+
+  void _onRealtimeTicketsUpdated(
+    _RealtimeTicketsUpdated event,
+    Emitter<TicketListState> emit,
+  ) {
+    _latestRealtimeSnapshot = event.tickets;
+    final query = state.query;
+
+    if (event.isStaff) {
+      emit(
+        state.copyWith(
+          allTickets: applyRealtimeSnapshot(
+            currentItems: state.allTickets,
+            snapshotItems: event.tickets,
+            query: query,
+            hasMore: state.hasMoreAll,
+            assignedToId: event.assignedToId,
+          ),
+        ),
+      );
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        tickets: applyRealtimeSnapshot(
+          currentItems: state.tickets,
+          snapshotItems: event.tickets,
+          query: query,
+          hasMore: state.hasMore,
+        ),
+      ),
+    );
+  }
+
+  void _onRealtimeTicketsFailed(
+    _RealtimeTicketsFailed event,
+    Emitter<TicketListState> emit,
+  ) {
+    emit(
+      state.copyWith(
+        errorMessage: 'Realtime tiket terputus: ${event.message}',
+      ),
+    );
+  }
+
+  Future<void> _onCreateTicket(
+    CreateTicketRequested event,
+    Emitter<TicketListState> emit,
+  ) async {
+    emit(
+      state.copyWith(
+        isInitialLoading: true,
+        clearErrorMessage: true,
+        clearSuccessMessage: true,
+      ),
+    );
+
+    final result = await createTicketUseCase(
+      CreateTicketParams(
+        title: event.title,
+        description: event.description,
+        category: event.category,
+        attachments: event.attachments,
+      ),
+    );
+
+    result.fold(
+      (failure) {
+        emit(
+          state.copyWith(
+            isInitialLoading: false,
+            errorMessage: failure.message,
+          ),
+        );
+      },
+      (_) {
+        emit(
+          state.copyWith(
+            isInitialLoading: false,
+            successMessage: 'Laporan berhasil dibuat',
+            clearErrorMessage: true,
+          ),
+        );
+        _refreshActiveList();
+      },
+    );
   }
 
   Future<void> _onResetState(
-      ResetTicketListState event, Emitter<TicketListState> emit) async {
-    _ticketSubscription?.cancel();
+    ResetTicketListState event,
+    Emitter<TicketListState> emit,
+  ) async {
+    _subscriptionGeneration++;
+    _latestRealtimeSnapshot = const [];
+    _subscriptionAssignedToId = null;
+    _subscriptionIsStaff = false;
+    _activeMode = null;
+
+    final previous = _ticketSubscription;
+    _ticketSubscription = null;
+    await previous?.cancel();
     await localDataSource.clearCache();
-    emit(const TicketListState());
+    emit(TicketListState.initial());
+  }
+
+  List<TicketEntity> _applyRealtimeWindow({
+    required List<TicketEntity> currentItems,
+    required TicketQuery query,
+    required bool hasMore,
+    String? assignedToId,
+  }) {
+    if (_latestRealtimeSnapshot.isEmpty) {
+      return currentItems;
+    }
+
+    return applyRealtimeSnapshot(
+      currentItems: currentItems,
+      snapshotItems: _latestRealtimeSnapshot,
+      query: query,
+      hasMore: hasMore,
+      assignedToId: assignedToId,
+    );
+  }
+
+  void _refreshActiveList() {
+    if (isClosed) {
+      return;
+    }
+
+    final limit = state.query.limit;
+    switch (_activeMode) {
+      case _TicketListMode.staff:
+        add(FetchAllTicketsRequested(
+          page: 0,
+          limit: limit,
+          assignedToId: state.assignedToId,
+        ));
+        break;
+      case _TicketListMode.user:
+        add(FetchTicketsRequested(page: 0, limit: limit));
+        break;
+      case null:
+        break;
+    }
   }
 
   @override
-  Future<void> close() {
-    _ticketSubscription?.cancel();
-    _connectivitySubscription?.cancel();
-    return super.close();
-  }
+  Future<void> close() async {
+    _subscriptionGeneration++;
+    final ticketSubscription = _ticketSubscription;
+    final connectivitySubscription = _connectivitySubscription;
+    _ticketSubscription = null;
+    _connectivitySubscription = null;
 
-  List<TicketEntity> _applyFilters(List<TicketEntity> tickets) {
-    return tickets.where((ticket) {
-      if (state.statusFilter != TicketStatusFilter.all) {
-        final mappedStatus = _mapStatusFilter(state.statusFilter);
-        final ticketStatusName = ticket.status.name.toLowerCase();
-        if (mappedStatus.contains(',')) {
-          final allowed = mappedStatus.split(',');
-          if (!allowed.contains(ticketStatusName)) return false;
-        } else {
-          if (ticketStatusName != mappedStatus) return false;
-        }
-      }
-      final query = state.searchQuery.toLowerCase();
-      if (query.isNotEmpty) {
-        if (!ticket.title.toLowerCase().contains(query) &&
-            !ticket.description.toLowerCase().contains(query)) {
-          return false;
-        }
-      }
-      if (state.assignedToId != null) {
-        if (ticket.assignedTo != state.assignedToId) {
-          return false;
-        }
-      }
-      return true;
-    }).toList();
+    await ticketSubscription?.cancel();
+    await connectivitySubscription?.cancel();
+    await super.close();
   }
+}
 
-  String _mapStatusFilter(TicketStatusFilter filter) {
-    switch (filter) {
-      case TicketStatusFilter.open:
-        return 'open';
-      case TicketStatusFilter.pending:
-        return 'pending';
-      case TicketStatusFilter.inProgress:
-        return 'in_progress';
-      case TicketStatusFilter.resolved:
-        return 'resolved';
-      case TicketStatusFilter.closed:
-        return 'closed';
-      case TicketStatusFilter.reopened:
-        return 'reopened';
-      case TicketStatusFilter.all:
-        return 'all';
-    }
-  }
+class _RealtimeTicketsUpdated extends TicketListEvent {
+  final List<TicketEntity> tickets;
+  final bool isStaff;
+  final String? assignedToId;
+
+  const _RealtimeTicketsUpdated({
+    required this.tickets,
+    required this.isStaff,
+    this.assignedToId,
+  });
+
+  @override
+  List<Object?> get props => [tickets, isStaff, assignedToId];
+}
+
+class _RealtimeTicketsFailed extends TicketListEvent {
+  final String message;
+
+  const _RealtimeTicketsFailed(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

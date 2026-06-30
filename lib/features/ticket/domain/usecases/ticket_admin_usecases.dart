@@ -6,26 +6,23 @@ import '../entities/ticket_entity.dart';
 import 'ticket_usecases.dart';
 import 'package:uts/core/constants/enums.dart';
 import '../repositories/ticket_repository.dart';
+import '../value_objects/paginated_result.dart';
 
 /// UseCase untuk mengambil semua tiket di sistem (untuk Admin/Staff).
 class GetAllTicketsUseCase
-    implements UseCase<Either<Failure, List<TicketEntity>>, GetTicketsParams> {
+    implements
+        UseCase<Either<Failure, PaginatedResult<TicketEntity>>,
+            GetTicketsParams> {
   final TicketRepository repository;
 
   GetAllTicketsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> call(
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> call(
       GetTicketsParams params) async {
     return await repository.getAllTickets(
-      page: params.page,
-      limit: params.limit,
-      status: params.status,
-      searchQuery: params.searchQuery,
-      category: params.category,
+      query: params.toQuery(),
       assignedToId: params.assignedToId,
-      startDate: params.startDate,
-      endDate: params.endDate,
     );
   }
 }

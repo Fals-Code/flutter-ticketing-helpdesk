@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -40,6 +42,7 @@ class _TicketListPageState extends State<TicketListPage>
   static const _pageSize = 10;
   final ScrollController _scrollController = ScrollController();
   final TextEditingController _searchController = TextEditingController();
+  Timer? _searchDebounce;
 
   bool _isFabExpanded = true;
 
@@ -104,7 +107,9 @@ class _TicketListPageState extends State<TicketListPage>
       final listBloc = context.read<TicketListBloc>();
       final state = listBloc.state;
 
-      if (state.isLoading) return;
+      if (state.isInitialLoading || state.isRefreshing || state.isLoadingMore) {
+        return;
+      }
 
       if (!isStaff) {
         if (!state.isLastPage) {
@@ -135,6 +140,7 @@ class _TicketListPageState extends State<TicketListPage>
 
   @override
   void dispose() {
+    _searchDebounce?.cancel();
     _scrollController.dispose();
     _searchController.dispose();
     super.dispose();
@@ -306,12 +312,22 @@ class _TicketListPageState extends State<TicketListPage>
                   controller: _searchController,
                   isDark: isDark,
                   onChanged: (val) {
-                    context
-                        .read<TicketListBloc>()
-                        .add(list_event.SearchTicketsRequested(val));
+                    _searchDebounce?.cancel();
+                    _searchDebounce = Timer(
+                      const Duration(milliseconds: 350),
+                      () {
+                        if (!mounted) {
+                          return;
+                        }
+                        context
+                            .read<TicketListBloc>()
+                            .add(list_event.SearchTicketsRequested(val));
+                      },
+                    );
                     setState(() {});
                   },
                   onClear: () {
+                    _searchDebounce?.cancel();
                     _searchController.clear();
                     context
                         .read<TicketListBloc>()
@@ -591,7 +607,7 @@ class _TicketListPageState extends State<TicketListPage>
 
   Widget _buildTicketList(BuildContext context, List<TicketEntity> tickets,
       TicketListState state, bool isDark, bool isStaff, bool isAdmin) {
-    if (state.isLoading && tickets.isEmpty) {
+    if (state.isInitialLoading && tickets.isEmpty) {
       return ListView.builder(
         padding: const EdgeInsets.all(16),
         itemCount: 5,
@@ -612,6 +628,7 @@ class _TicketListPageState extends State<TicketListPage>
         return EmptyStateWidget.emptySearch(
           actionLabel: 'Hapus Pencarian',
           onAction: () {
+            _searchDebounce?.cancel();
             _searchController.clear();
             context
                 .read<TicketListBloc>()
@@ -621,7 +638,9 @@ class _TicketListPageState extends State<TicketListPage>
       }
 
       if (state.statusFilter != TicketStatusFilter.all ||
-          state.startDate != null) {
+          state.categoryFilter != null ||
+          state.startDate != null ||
+          state.endDate != null) {
         return EmptyStateWidget.emptySearch(
           title: 'Filter Kosong',
           subtitle: 'Tidak ada tiket yang sesuai dengan filter yang dipilih.',
@@ -649,9 +668,51 @@ class _TicketListPageState extends State<TicketListPage>
 
     return ListView.builder(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 100),
-      itemCount: tickets.length + (state.isLoading ? 1 : 0),
+      itemCount: tickets.length +
+          ((state.isLoadingMore || state.loadMoreErrorMessage != null) ? 1 : 0),
       itemBuilder: (context, index) {
         if (index == tickets.length) {
+          if (state.loadMoreErrorMessage != null) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Column(
+                children: [
+                  Text(
+                    state.loadMoreErrorMessage!,
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDark ? Colors.white70 : Colors.black54,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextButton(
+                    onPressed: () {
+                      if (isStaff) {
+                        context.read<TicketListBloc>().add(
+                              list_event.FetchAllTicketsRequested(
+                                page: state.allTicketsPage + 1,
+                                limit: _pageSize,
+                                assignedToId: state.assignedToId,
+                              ),
+                            );
+                        return;
+                      }
+
+                      context.read<TicketListBloc>().add(
+                            list_event.FetchTicketsRequested(
+                              page: state.currentPage + 1,
+                              limit: _pageSize,
+                            ),
+                          );
+                    },
+                    child: const Text('Coba lagi'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           return const Padding(
             padding: EdgeInsets.symmetric(vertical: 24),
             child: Center(child: CircularProgressIndicator()),

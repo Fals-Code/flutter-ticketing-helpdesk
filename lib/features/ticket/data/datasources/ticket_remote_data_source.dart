@@ -1,5 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
+import 'package:uts/features/ticket/domain/value_objects/paginated_result.dart';
+import 'package:uts/features/ticket/domain/value_objects/ticket_query.dart';
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
@@ -9,19 +11,13 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/error/failures.dart';
 
 abstract class TicketRemoteDataSource {
-  Future<List<TicketModel>> getTickets(int page, int limit,
-      {String? searchQuery,
-      String? category,
-      String? status,
-      DateTime? startDate,
-      DateTime? endDate});
-  Future<List<TicketModel>> getAllTickets(int page, int limit,
-      {String? status,
-      String? searchQuery,
-      String? category,
-      String? assignedToId,
-      DateTime? startDate,
-      DateTime? endDate});
+  Future<PaginatedResult<TicketModel>> getTickets(
+    TicketQuery query,
+  );
+  Future<PaginatedResult<TicketModel>> getAllTickets(
+    TicketQuery query, {
+    String? assignedToId,
+  });
   Future<List<Map<String, dynamic>>> getStaffUsers();
   String? getAuthenticatedUserId();
   Future<TicketModel> createTicketWithAttachments({
@@ -50,6 +46,7 @@ abstract class TicketRemoteDataSource {
   });
   Stream<List<TicketModel>> watchTickets(
       {String? userId, String? assignedToId});
+  Stream<TicketModel?> watchTicketDetail(String ticketId);
   Stream<List<CommentModel>> watchTicketComments(String ticketId);
   Future<void> clearProfileCache();
 }
@@ -121,70 +118,60 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<List<TicketModel>> getTickets(int page, int limit,
-      {String? searchQuery,
-      String? category,
-      String? status,
-      DateTime? startDate,
-      DateTime? endDate}) async {
-    // Pastikan tidak ada parameter priority
-    final from = page * limit;
-    final to = from + limit - 1;
-
-    var query = supabaseClient
+  Future<PaginatedResult<TicketModel>> getTickets(
+    TicketQuery ticketQuery,
+  ) async {
+    final from = ticketQuery.offset;
+    final to = from + ticketQuery.limit - 1;
+    var builder = supabaseClient
         .from('tickets')
         .select(_ticketSelect)
         .eq('user_id', supabaseClient.auth.currentUser!.id);
 
-    if (status != null && status != 'all') {
-      if (status.contains(',')) {
-        query = query.inFilter('status',
-            status.split(',').map((s) => s.trim().toLowerCase()).toList());
-      } else {
-        query = query.eq('status', status.toLowerCase());
-      }
+    if (ticketQuery.status != null) {
+      builder = builder.eq('status', ticketQuery.status!.dbValue);
     }
-    if (category != null) {
-      query = query.eq('category', category);
+    if (ticketQuery.category != null) {
+      builder = builder.eq('category', ticketQuery.category!);
     }
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      query = query
-          .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+    if (ticketQuery.search != null && ticketQuery.search!.isNotEmpty) {
+      final escapedSearch = _sanitizeSearchTerm(ticketQuery.search!);
+      builder = builder.or(
+        'title.ilike.%$escapedSearch%,description.ilike.%$escapedSearch%',
+      );
     }
-    if (startDate != null) {
-      query = query.gte('created_at', startDate.toIso8601String());
+    if (ticketQuery.startDate != null) {
+      builder =
+          builder.gte('created_at', ticketQuery.startDate!.toIso8601String());
     }
-    if (endDate != null) {
-      query = query.lte('created_at', endDate.toIso8601String());
+    if (ticketQuery.endDate != null) {
+      builder =
+          builder.lte('created_at', ticketQuery.endDate!.toIso8601String());
     }
 
-    final response =
-        await query.order('created_at', ascending: false).range(from, to);
+    final response = await builder
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .range(from, to);
 
-    return (response as List)
-        .map((json) {
-          try {
-            return TicketModel.fromJson(json);
-          } catch (e) {
-            debugPrint('Error parsing ticket: $e');
-            return null;
-          }
-        })
-        .whereType<TicketModel>()
-        .toList();
+    final items = _mapTicketRows(response);
+    return PaginatedResult<TicketModel>(
+      items: items,
+      hasMore: items.length == ticketQuery.limit,
+      nextPage: items.length == ticketQuery.limit ? ticketQuery.page + 1 : null,
+      nextOffset: items.length == ticketQuery.limit
+          ? ticketQuery.offset + ticketQuery.limit
+          : null,
+    );
   }
 
   @override
-  Future<List<TicketModel>> getAllTickets(int page, int limit,
-      {String? status,
-      String? searchQuery,
-      String? category,
-      String? assignedToId,
-      DateTime? startDate,
-      DateTime? endDate}) async {
-    // Pastikan tidak ada parameter priority
-    final from = page * limit;
-    final to = from + limit - 1;
+  Future<PaginatedResult<TicketModel>> getAllTickets(
+    TicketQuery ticketQuery, {
+    String? assignedToId,
+  }) async {
+    final from = ticketQuery.offset;
+    final to = from + ticketQuery.limit - 1;
 
     var query = supabaseClient.from('tickets').select(_ticketSelect);
 
@@ -192,42 +179,39 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       query = query.eq('assigned_to', assignedToId);
     }
 
-    if (status != null && status != 'all') {
-      if (status.contains(',')) {
-        query = query.inFilter('status',
-            status.split(',').map((s) => s.trim().toLowerCase()).toList());
-      } else {
-        query = query.eq('status', status.toLowerCase());
-      }
+    if (ticketQuery.status != null) {
+      query = query.eq('status', ticketQuery.status!.dbValue);
     }
-    if (category != null) {
-      query = query.eq('category', category);
+    if (ticketQuery.category != null) {
+      query = query.eq('category', ticketQuery.category!);
     }
-    if (searchQuery != null && searchQuery.isNotEmpty) {
-      query = query
-          .or('title.ilike.%$searchQuery%,description.ilike.%$searchQuery%');
+    if (ticketQuery.search != null && ticketQuery.search!.isNotEmpty) {
+      final escapedSearch = _sanitizeSearchTerm(ticketQuery.search!);
+      query = query.or(
+        'title.ilike.%$escapedSearch%,description.ilike.%$escapedSearch%',
+      );
     }
-    if (startDate != null) {
-      query = query.gte('created_at', startDate.toIso8601String());
+    if (ticketQuery.startDate != null) {
+      query = query.gte('created_at', ticketQuery.startDate!.toIso8601String());
     }
-    if (endDate != null) {
-      query = query.lte('created_at', endDate.toIso8601String());
+    if (ticketQuery.endDate != null) {
+      query = query.lte('created_at', ticketQuery.endDate!.toIso8601String());
     }
 
-    final response =
-        await query.order('created_at', ascending: false).range(from, to);
+    final response = await query
+        .order('created_at', ascending: false)
+        .order('id', ascending: false)
+        .range(from, to);
 
-    return (response as List)
-        .map((json) {
-          try {
-            return TicketModel.fromJson(json);
-          } catch (e) {
-            debugPrint('Error parsing ticket: $e');
-            return null;
-          }
-        })
-        .whereType<TicketModel>()
-        .toList();
+    final items = _mapTicketRows(response);
+    return PaginatedResult<TicketModel>(
+      items: items,
+      hasMore: items.length == ticketQuery.limit,
+      nextPage: items.length == ticketQuery.limit ? ticketQuery.page + 1 : null,
+      nextOffset: items.length == ticketQuery.limit
+          ? ticketQuery.offset + ticketQuery.limit
+          : null,
+    );
   }
 
   @override
@@ -518,6 +502,67 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     });
   }
 
+  @override
+  Stream<TicketModel?> watchTicketDetail(String ticketId) {
+    return supabaseClient
+        .from('tickets')
+        .stream(primaryKey: ['id'])
+        .eq('id', ticketId)
+        .map((rows) => rows
+            .map((row) => Map<String, dynamic>.from(row))
+            .toList(growable: false))
+        .asyncMap<TicketModel?>((rows) async {
+          if (rows.isEmpty) {
+            return null;
+          }
+
+          final row = rows.first;
+          final reporterId = row['user_id'];
+          final technicianId = row['assigned_to'];
+          final profileIds = <String>{};
+
+          if (reporterId is String && reporterId.isNotEmpty) {
+            profileIds.add(reporterId);
+          }
+          if (technicianId is String && technicianId.isNotEmpty) {
+            profileIds.add(technicianId);
+          }
+
+          if (profileIds.isNotEmpty) {
+            try {
+              final response = await supabaseClient
+                  .from('profiles')
+                  .select('id, full_name, role')
+                  .inFilter('id', profileIds.toList(growable: false));
+
+              for (final profile in List<Map<String, dynamic>>.from(response)) {
+                final id = profile['id'];
+                if (id is String && id.isNotEmpty) {
+                  _profileCache[id] = profile;
+                }
+              }
+            } catch (error) {
+              debugPrint('Error hydrating ticket detail stream: $error');
+            }
+          }
+
+          if (reporterId is String && _profileCache.containsKey(reporterId)) {
+            row['profiles'] = _profileCache[reporterId];
+          }
+          if (technicianId is String &&
+              _profileCache.containsKey(technicianId)) {
+            row['technician'] = _profileCache[technicianId];
+          }
+
+          try {
+            return TicketModel.fromJson(row);
+          } catch (error) {
+            debugPrint('Realtime ticket detail mapping error: $error');
+            return null;
+          }
+        });
+  }
+
   Future<void> _notifyUser({
     required String userId,
     required String title,
@@ -655,5 +700,30 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       default:
         return 'Gagal menyimpan tiket.';
     }
+  }
+
+  List<TicketModel> _mapTicketRows(dynamic response) {
+    return (response as List)
+        .map((json) {
+          try {
+            return TicketModel.fromJson(json);
+          } catch (error) {
+            debugPrint('Error parsing ticket: $error');
+            return null;
+          }
+        })
+        .whereType<TicketModel>()
+        .toList(growable: false);
+  }
+
+  String _sanitizeSearchTerm(String input) {
+    return input
+        .trim()
+        .replaceAll('\\', '')
+        .replaceAll(',', ' ')
+        .replaceAll('(', ' ')
+        .replaceAll(')', ' ')
+        .replaceAll('%', r'\%')
+        .replaceAll('_', r'\_');
   }
 }

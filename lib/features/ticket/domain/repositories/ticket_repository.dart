@@ -7,6 +7,8 @@ import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
+import '../value_objects/paginated_result.dart';
+import '../value_objects/ticket_query.dart';
 
 class TicketStats extends Equatable {
   final int total;
@@ -34,26 +36,14 @@ class TicketStats extends Equatable {
 
 abstract class TicketRepository {
   /// Mengambil daftar tiket milik user saat ini (Paginated).
-  Future<Either<Failure, List<TicketEntity>>> getTickets({
-    required int page,
-    required int limit,
-    String? status,
-    String? searchQuery,
-    String? category,
-    DateTime? startDate,
-    DateTime? endDate,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getTickets({
+    required TicketQuery query,
   });
 
   /// Mengambil semua tiket (untuk Admin/Staff).
-  Future<Either<Failure, List<TicketEntity>>> getAllTickets({
-    required int page,
-    required int limit,
-    String? status,
-    String? searchQuery,
-    String? category,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getAllTickets({
+    required TicketQuery query,
     String? assignedToId,
-    DateTime? startDate,
-    DateTime? endDate,
   });
 
   /// Mengambil daftar staff (Technician/Admin) untuk penugasan.
@@ -119,6 +109,9 @@ abstract class TicketRepository {
   /// Aliran data tiket secara realtime.
   Stream<List<TicketEntity>> watchTickets(
       {String? userId, String? assignedToId});
+
+  /// Aliran detail tiket secara realtime untuk satu ticket ID.
+  Stream<TicketEntity?> watchTicketDetail(String ticketId);
 
   /// Aliran data komentar secara realtime.
   Stream<List<CommentEntity>> watchTicketComments(String ticketId);

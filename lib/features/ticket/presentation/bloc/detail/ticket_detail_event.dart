@@ -1,6 +1,7 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 
 abstract class TicketDetailEvent extends Equatable {
   const TicketDetailEvent();
@@ -16,6 +17,26 @@ class FetchTicketDetailRequested extends TicketDetailEvent {
 
   @override
   List<Object?> get props => [ticketId];
+}
+
+class StartTicketDetailSubscription extends TicketDetailEvent {
+  final String ticketId;
+
+  const StartTicketDetailSubscription(this.ticketId);
+
+  @override
+  List<Object?> get props => [ticketId];
+}
+
+class TicketDetailStreamUpdated extends TicketDetailEvent {
+  final TicketEntity? ticket;
+
+  const TicketDetailStreamUpdated({
+    required this.ticket,
+  });
+
+  @override
+  List<Object?> get props => [ticket];
 }
 
 class UpdateTicketStatusRequested extends TicketDetailEvent {

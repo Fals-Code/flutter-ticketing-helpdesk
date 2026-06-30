@@ -7,10 +7,13 @@ import '../../domain/entities/ticket_entity.dart';
 import '../../domain/entities/comment_entity.dart';
 import '../../domain/entities/ticket_history_entity.dart';
 import '../../domain/repositories/ticket_repository.dart';
+import '../../domain/services/comment_collection_utils.dart';
 import '../datasources/ticket_attachment_storage_data_source.dart';
 import '../datasources/ticket_create_exceptions.dart';
 import '../datasources/ticket_remote_data_source.dart';
 import '../models/comment_model.dart';
+import '../../domain/value_objects/paginated_result.dart';
+import '../../domain/value_objects/ticket_query.dart';
 
 import '../../../auth/domain/entities/user_entity.dart';
 import '../../../auth/data/models/profile_model.dart';
@@ -28,56 +31,52 @@ class TicketRepositoryImpl implements TicketRepository {
   });
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> getTickets({
-    required int page,
-    required int limit,
-    String? searchQuery,
-    String? category,
-    String? status,
-    DateTime? startDate,
-    DateTime? endDate,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getTickets({
+    required TicketQuery query,
   }) async {
     try {
-      final tickets = await remoteDataSource.getTickets(
-        page,
-        limit,
-        searchQuery: searchQuery,
-        category: category,
-        status: status,
-        startDate: startDate,
-        endDate: endDate,
+      final result = await remoteDataSource.getTickets(
+        query,
       );
-      return Right(tickets.map((t) => t.toEntity()).toList());
+      return Right(PaginatedResult<TicketEntity>(
+        items: result.items
+            .map((ticket) => ticket.toEntity())
+            .toList(growable: false),
+        hasMore: result.hasMore,
+        nextPage: result.nextPage,
+        nextOffset: result.nextOffset,
+        total: result.total,
+      ));
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 401));
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
   }
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> getAllTickets({
-    required int page,
-    required int limit,
-    String? status,
-    String? searchQuery,
-    String? category,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getAllTickets({
+    required TicketQuery query,
     String? assignedToId,
-    DateTime? startDate,
-    DateTime? endDate,
   }) async {
     try {
-      final tickets = await remoteDataSource.getAllTickets(
-        page,
-        limit,
-        status: status,
-        searchQuery: searchQuery,
-        category: category,
+      final result = await remoteDataSource.getAllTickets(
+        query,
         assignedToId: assignedToId,
-        startDate: startDate,
-        endDate: endDate,
       );
-      return Right(tickets.map((t) => t.toEntity()).toList());
+      return Right(PaginatedResult<TicketEntity>(
+        items: result.items
+            .map((ticket) => ticket.toEntity())
+            .toList(growable: false),
+        hasMore: result.hasMore,
+        nextPage: result.nextPage,
+        nextOffset: result.nextOffset,
+        total: result.total,
+      ));
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -234,6 +233,8 @@ class TicketRepositoryImpl implements TicketRepository {
       return Right(ticket.toEntity());
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 401));
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -244,7 +245,13 @@ class TicketRepositoryImpl implements TicketRepository {
       String ticketId) async {
     try {
       final comments = await remoteDataSource.getTicketComments(ticketId);
-      return Right(comments.map((c) => c.toEntity()).toList());
+      return Right(
+        deduplicateAndSortComments(
+          comments.map((comment) => comment.toEntity()),
+        ),
+      );
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -268,6 +275,10 @@ class TicketRepositoryImpl implements TicketRepository {
 
       final createdComment = await remoteDataSource.addComment(commentModel);
       return Right(createdComment.toEntity());
+    } on sup.AuthException catch (e) {
+      return Left(ServerFailure(message: e.message, code: 401));
+    } on sup.PostgrestException catch (e) {
+      return Left(_mapPostgrestFailure(e));
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
@@ -334,14 +345,24 @@ class TicketRepositoryImpl implements TicketRepository {
     return remoteDataSource
         .watchTickets(userId: userId, assignedToId: assignedToId)
         .map(
-          (models) => models.map((m) => m.toEntity()).toList(),
+          (models) =>
+              models.map((model) => model.toEntity()).toList(growable: false),
+        );
+  }
+
+  @override
+  Stream<TicketEntity?> watchTicketDetail(String ticketId) {
+    return remoteDataSource.watchTicketDetail(ticketId).map(
+          (model) => model?.toEntity(),
         );
   }
 
   @override
   Stream<List<CommentEntity>> watchTicketComments(String ticketId) {
     return remoteDataSource.watchTicketComments(ticketId).map(
-          (models) => models.map((c) => c.toEntity()).toList(),
+          (models) => deduplicateAndSortComments(
+            models.map((comment) => comment.toEntity()),
+          ),
         );
   }
 
@@ -387,5 +408,37 @@ class TicketRepositoryImpl implements TicketRepository {
     } catch (e) {
       return Left(UnknownFailure(message: e.toString()));
     }
+  }
+
+  Failure _mapPostgrestFailure(sup.PostgrestException error) {
+    if (error.code == '42501') {
+      return const TicketOperationFailure(
+        type: TicketFailureType.authorization,
+        message: 'Anda tidak berwenang mengakses data tiket.',
+        code: 403,
+      );
+    }
+
+    if (error.code == 'PGRST116') {
+      return const TicketOperationFailure(
+        type: TicketFailureType.notFound,
+        message: 'Tiket tidak ditemukan.',
+        code: 404,
+      );
+    }
+
+    if (error.code == '23514' || error.code == '22023') {
+      return const TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: 'Data tiket tidak valid.',
+        code: 422,
+      );
+    }
+
+    return ServerFailure(
+      message: error.message.isEmpty
+          ? 'Terjadi kesalahan pada server. Coba lagi nanti.'
+          : error.message,
+    );
   }
 }

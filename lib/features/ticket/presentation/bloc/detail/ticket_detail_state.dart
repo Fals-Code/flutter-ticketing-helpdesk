@@ -1,60 +1,87 @@
 import 'package:equatable/equatable.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 
+enum TicketDetailStatus {
+  initial,
+  loading,
+  loaded,
+  refreshing,
+  notFound,
+  unauthorized,
+  failure,
+}
+
 class TicketDetailState extends Equatable {
-  final bool isLoading;
+  final TicketDetailStatus status;
   final TicketEntity? ticket;
   final List<CommentEntity> comments;
   final List<TicketHistoryEntity> history;
   final String? errorMessage;
   final String? successMessage;
   final bool isRatingSubmitting;
+  final bool isCommentSubmitting;
   final bool isOffline;
 
   const TicketDetailState({
-    this.isLoading = false,
+    this.status = TicketDetailStatus.initial,
     this.ticket,
     this.comments = const [],
     this.history = const [],
     this.errorMessage,
     this.successMessage,
     this.isRatingSubmitting = false,
+    this.isCommentSubmitting = false,
     this.isOffline = false,
   });
 
+  bool get isLoading =>
+      status == TicketDetailStatus.loading ||
+      status == TicketDetailStatus.refreshing;
+
+  bool get isNotFound => status == TicketDetailStatus.notFound;
+  bool get isUnauthorized => status == TicketDetailStatus.unauthorized;
+
   TicketDetailState copyWith({
-    bool? isLoading,
+    TicketDetailStatus? status,
     TicketEntity? ticket,
     List<CommentEntity>? comments,
     List<TicketHistoryEntity>? history,
     String? errorMessage,
     String? successMessage,
+    bool clearErrorMessage = false,
+    bool clearSuccessMessage = false,
     bool? isRatingSubmitting,
+    bool? isCommentSubmitting,
     bool? isOffline,
+    bool clearTicket = false,
   }) {
     return TicketDetailState(
-      isLoading: isLoading ?? this.isLoading,
-      ticket: ticket ?? this.ticket,
+      status: status ?? this.status,
+      ticket: clearTicket ? null : (ticket ?? this.ticket),
       comments: comments ?? this.comments,
       history: history ?? this.history,
-      errorMessage: errorMessage,
-      successMessage: successMessage,
+      errorMessage:
+          clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      successMessage:
+          clearSuccessMessage ? null : (successMessage ?? this.successMessage),
       isRatingSubmitting: isRatingSubmitting ?? this.isRatingSubmitting,
+      isCommentSubmitting: isCommentSubmitting ?? this.isCommentSubmitting,
       isOffline: isOffline ?? this.isOffline,
     );
   }
 
   @override
   List<Object?> get props => [
-        isLoading,
+        status,
         ticket,
         comments,
         history,
         errorMessage,
         successMessage,
         isRatingSubmitting,
+        isCommentSubmitting,
         isOffline,
       ];
 }

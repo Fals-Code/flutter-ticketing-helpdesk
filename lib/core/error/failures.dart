@@ -43,6 +43,7 @@ enum TicketFailureType {
   validation,
   authentication,
   authorization,
+  notFound,
   fileUnreadable,
   upload,
   databaseCreate,

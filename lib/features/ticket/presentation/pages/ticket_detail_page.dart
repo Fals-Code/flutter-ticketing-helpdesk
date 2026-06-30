@@ -15,6 +15,7 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.d
     as stats_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart'
     as stats_state;
+import 'package:uts/features/ticket/domain/entities/ticket_attachment_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
@@ -51,6 +52,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
     _ticketDetailBloc
         .add(detail_event.FetchTicketDetailRequested(widget.ticketId));
+    _ticketDetailBloc
+        .add(detail_event.StartTicketDetailSubscription(widget.ticketId));
     _ticketDetailBloc
         .add(detail_event.StartTicketCommentsSubscription(widget.ticketId));
     _ticketDetailBloc
@@ -118,151 +121,171 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         return Scaffold(
           backgroundColor:
               isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-          body: state.isLoading && ticket == null
+          body: state.status == detail_state.TicketDetailStatus.loading &&
+                  ticket == null
               ? _buildSkeleton(isDark)
-              : ticket == null
-                  ? _buildNotFound(context, isDark)
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: CustomScrollView(
-                            controller: _scrollController,
-                            physics: const BouncingScrollPhysics(),
-                            slivers: [
-                              // APP BAR
-                              SliverAppBar(
-                                title: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '#${ticket.id.substring(0, 8).toUpperCase()}',
-                                      style: GoogleFonts.firaCode(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: ticket.status.color
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
+              : state.isUnauthorized
+                  ? _buildUnauthorized(context, isDark)
+                  : state.isNotFound
+                      ? _buildNotFound(context, isDark)
+                      : ticket == null
+                          ? _buildErrorState(
+                              context, isDark, state.errorMessage)
+                          : Column(
+                              children: [
+                                Expanded(
+                                  child: CustomScrollView(
+                                    controller: _scrollController,
+                                    physics: const BouncingScrollPhysics(),
+                                    slivers: [
+                                      // APP BAR
+                                      SliverAppBar(
+                                        title: Row(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              '#${ticket.id.substring(0, 8).toUpperCase()}',
+                                              style: GoogleFonts.firaCode(
+                                                  fontSize: 15,
+                                                  fontWeight: FontWeight.w600),
+                                            ),
+                                            const SizedBox(width: 10),
+                                            Container(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                      horizontal: 8,
+                                                      vertical: 3),
+                                              decoration: BoxDecoration(
+                                                color: ticket.status.color
+                                                    .withValues(alpha: 0.15),
+                                                borderRadius:
+                                                    BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                ticket.status.label,
+                                                style: TextStyle(
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.bold,
+                                                    color: ticket.status.color),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                        backgroundColor: isDark
+                                            ? AppColors.backgroundDark
+                                            : AppColors.backgroundLight,
+                                        surfaceTintColor: Colors.transparent,
+                                        leading: IconButton(
+                                          icon: const Icon(
+                                              Icons.arrow_back_ios_new_rounded,
+                                              size: 20),
+                                          onPressed: () => context.pop(),
+                                        ),
+                                        actions: [
+                                          if (state.isOffline)
+                                            _OfflineBadge(isDark: isDark),
+                                          PopupMenuButton<String>(
+                                            icon: const Icon(
+                                                Icons.more_vert_rounded),
+                                            onSelected: (val) {
+                                              if (val == 'copy') {
+                                                Clipboard.setData(ClipboardData(
+                                                    text: ticket.id));
+                                                _showToast('ID tiket disalin');
+                                              }
+                                            },
+                                            itemBuilder: (context) => [
+                                              const PopupMenuItem(
+                                                  value: 'copy',
+                                                  child: Row(children: [
+                                                    Icon(Icons.copy_rounded,
+                                                        size: 18),
+                                                    SizedBox(width: 12),
+                                                    Text('Salin ID')
+                                                  ])),
+                                            ],
+                                          ),
+                                        ],
+                                        pinned: true,
+                                        floating: false,
                                       ),
-                                      child: Text(
-                                        ticket.status.label,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: ticket.status.color),
+
+                                      // CONTENT
+                                      SliverToBoxAdapter(
+                                        child: Padding(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 20),
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              // HEADER
+                                              _buildHeader(
+                                                  ticket, state, isDark),
+                                              const SizedBox(height: 24),
+
+                                              // DESCRIPTION
+                                              _buildDescription(ticket, isDark),
+                                              const SizedBox(height: 24),
+
+                                              // IMAGES
+                                              if (ticket
+                                                      .attachments.isNotEmpty ||
+                                                  ticket
+                                                      .legacyCompatibleImageUrls
+                                                      .isNotEmpty) ...[
+                                                _buildAttachments(
+                                                    context, ticket, isDark),
+                                                const SizedBox(height: 24),
+                                              ],
+
+                                              // STAFF ACTIONS
+                                              _buildStaffActions(
+                                                  context, state, isDark),
+
+                                              // TIMELINE
+                                              _buildSectionLabel(
+                                                  'RIWAYAT', isDark),
+                                              const SizedBox(height: 14),
+                                              TicketTimelineWidget(
+                                                  activities: state.history,
+                                                  isDark: isDark),
+                                              const SizedBox(height: 24),
+
+                                              // RATING
+                                              if (isUser &&
+                                                  _isChatDisabled(ticket))
+                                                _buildUserRatingSection(context,
+                                                    state, ticket, isDark),
+                                              if (isStaff &&
+                                                  _isChatDisabled(ticket))
+                                                _buildStaffRatingView(
+                                                    ticket, isDark),
+
+                                              // CHAT
+                                              if (!_isChatDisabled(ticket)) ...[
+                                                _buildSectionLabel(
+                                                    'DISKUSI LANGSUNG', isDark,
+                                                    showLiveDot: true),
+                                                const SizedBox(height: 14),
+                                                _buildCommentsList(context,
+                                                    state.comments, isDark),
+                                              ],
+
+                                              const SizedBox(height: 100),
+                                            ],
+                                          ),
+                                        ),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                backgroundColor: isDark
-                                    ? AppColors.backgroundDark
-                                    : AppColors.backgroundLight,
-                                surfaceTintColor: Colors.transparent,
-                                leading: IconButton(
-                                  icon: const Icon(
-                                      Icons.arrow_back_ios_new_rounded,
-                                      size: 20),
-                                  onPressed: () => context.pop(),
-                                ),
-                                actions: [
-                                  if (state.isOffline)
-                                    _OfflineBadge(isDark: isDark),
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(Icons.more_vert_rounded),
-                                    onSelected: (val) {
-                                      if (val == 'copy') {
-                                        Clipboard.setData(
-                                            ClipboardData(text: ticket.id));
-                                        _showToast('ID tiket disalin');
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                          value: 'copy',
-                                          child: Row(children: [
-                                            Icon(Icons.copy_rounded, size: 18),
-                                            SizedBox(width: 12),
-                                            Text('Salin ID')
-                                          ])),
                                     ],
                                   ),
-                                ],
-                                pinned: true,
-                                floating: false,
-                              ),
-
-                              // CONTENT
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // HEADER
-                                      _buildHeader(ticket, state, isDark),
-                                      const SizedBox(height: 24),
-
-                                      // DESCRIPTION
-                                      _buildDescription(ticket, isDark),
-                                      const SizedBox(height: 24),
-
-                                      // IMAGES
-                                      if (ticket.legacyCompatibleImageUrls
-                                          .isNotEmpty) ...[
-                                        _buildImages(context, ticket, isDark),
-                                        const SizedBox(height: 24),
-                                      ],
-
-                                      // STAFF ACTIONS
-                                      _buildStaffActions(
-                                          context, state, isDark),
-
-                                      // TIMELINE
-                                      _buildSectionLabel('RIWAYAT', isDark),
-                                      const SizedBox(height: 14),
-                                      TicketTimelineWidget(
-                                          activities: state.history,
-                                          isDark: isDark),
-                                      const SizedBox(height: 24),
-
-                                      // RATING
-                                      if (isUser && _isChatDisabled(ticket))
-                                        _buildUserRatingSection(
-                                            context, state, ticket, isDark),
-                                      if (isStaff && _isChatDisabled(ticket))
-                                        _buildStaffRatingView(ticket, isDark),
-
-                                      // CHAT
-                                      if (!_isChatDisabled(ticket)) ...[
-                                        _buildSectionLabel(
-                                            'DISKUSI LANGSUNG', isDark,
-                                            showLiveDot: true),
-                                        const SizedBox(height: 14),
-                                        _buildCommentsList(
-                                            context, state.comments, isDark),
-                                      ],
-
-                                      const SizedBox(height: 100),
-                                    ],
-                                  ),
                                 ),
-                              ),
-                            ],
-                          ),
-                        ),
 
-                        // BOTTOM BAR
-                        if (!_isChatDisabled(ticket))
-                          _buildCommentInput(context, state, isDark),
-                      ],
-                    ),
+                                // BOTTOM BAR
+                                if (!_isChatDisabled(ticket))
+                                  _buildCommentInput(context, state, isDark),
+                              ],
+                            ),
         );
       },
     );
@@ -529,48 +552,124 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   // ── IMAGES ─────────────────────────────────────────────────────────────────
 
-  Widget _buildImages(BuildContext context, TicketEntity ticket, bool isDark) {
+  Widget _buildAttachments(
+      BuildContext context, TicketEntity ticket, bool isDark) {
+    final imageAttachments = ticket.attachments
+        .where((attachment) =>
+            attachment.kind == TicketAttachmentKind.image &&
+            attachment.accessUrl != null &&
+            attachment.accessUrl!.isNotEmpty)
+        .toList(growable: false);
+    final documentAttachments = ticket.attachments
+        .where((attachment) =>
+            attachment.kind != TicketAttachmentKind.image ||
+            attachment.accessUrl == null ||
+            attachment.accessUrl!.isEmpty)
+        .toList(growable: false);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         _buildSectionLabel('LAMPIRAN', isDark),
         const SizedBox(height: 12),
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 3,
-            mainAxisSpacing: 8,
-            crossAxisSpacing: 8,
-            childAspectRatio: 1,
-          ),
-          itemCount: ticket.legacyCompatibleImageUrls.length,
-          itemBuilder: (context, index) {
-            return GestureDetector(
-              onTap: () => _showImageGallery(
-                context,
-                ticket.legacyCompatibleImageUrls,
-                index,
-              ),
-              child: Hero(
-                tag: ticket.legacyCompatibleImageUrls[index],
-                child: Container(
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight),
-                    image: DecorationImage(
-                        image: NetworkImage(
-                            ticket.legacyCompatibleImageUrls[index]),
-                        fit: BoxFit.cover),
+        if (imageAttachments.isNotEmpty ||
+            ticket.legacyCompatibleImageUrls.isNotEmpty) ...[
+          GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              childAspectRatio: 1,
+            ),
+            itemCount: imageAttachments.isNotEmpty
+                ? imageAttachments.length
+                : ticket.legacyCompatibleImageUrls.length,
+            itemBuilder: (context, index) {
+              final imageUrl = imageAttachments.isNotEmpty
+                  ? imageAttachments[index].accessUrl!
+                  : ticket.legacyCompatibleImageUrls[index];
+              return GestureDetector(
+                onTap: () => _showImageGallery(
+                  context,
+                  imageAttachments.isNotEmpty
+                      ? imageAttachments
+                          .map((attachment) => attachment.accessUrl!)
+                          .toList(growable: false)
+                      : ticket.legacyCompatibleImageUrls,
+                  index,
+                ),
+                child: Hero(
+                  tag: imageUrl,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight),
+                      image: DecorationImage(
+                        image: NetworkImage(imageUrl),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
                   ),
                 ),
+              );
+            },
+          ),
+        ],
+        if (documentAttachments.isNotEmpty) ...[
+          const SizedBox(height: 12),
+          ...documentAttachments.map(
+            (attachment) => Container(
+              margin: const EdgeInsets.only(bottom: 10),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark ? AppColors.borderDark : AppColors.borderLight,
+                ),
               ),
-            );
-          },
-        ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.insert_drive_file_outlined,
+                    color: isDark ? Colors.white70 : Colors.black54,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          attachment.fileName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : Colors.black87,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          '${attachment.mimeType} • ${_formatFileSize(attachment.sizeBytes)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -1409,12 +1508,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
               const SizedBox(width: 10),
               _SendButton(
-                enabled: _charCount > 0 && !state.isOffline,
+                enabled: _charCount > 0 &&
+                    !state.isOffline &&
+                    !state.isCommentSubmitting,
                 onPressed: () {
                   if (_commentController.text.trim().isEmpty) return;
                   if (state.isOffline) {
                     _showToast('Tidak dapat mengirim pesan saat offline',
                         isError: true);
+                    return;
+                  }
+                  if (state.isCommentSubmitting) {
                     return;
                   }
                   context.read<TicketDetailBloc>().add(
@@ -1478,6 +1582,78 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         ),
       ),
     );
+  }
+
+  Widget _buildUnauthorized(BuildContext context, bool isDark) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.lock_outline_rounded,
+                size: 64, color: isDark ? Colors.white12 : Colors.black12),
+            const SizedBox(height: 24),
+            const Text('Akses Ditolak',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text(
+              'Anda tidak memiliki akses ke tiket ini.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight),
+            ),
+            const SizedBox(height: 32),
+            AppButton.primary(label: 'Kembali', onPressed: () => context.pop()),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, bool isDark, String? message) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.error_outline_rounded,
+                size: 64, color: isDark ? Colors.white12 : Colors.black12),
+            const SizedBox(height: 24),
+            const Text('Gagal Memuat Tiket',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            Text(
+              message ?? 'Terjadi kesalahan saat memuat tiket.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                  color: isDark
+                      ? AppColors.textSecondaryDark
+                      : AppColors.textSecondaryLight),
+            ),
+            const SizedBox(height: 32),
+            AppButton.primary(
+              label: 'Coba Lagi',
+              onPressed: () => context.read<TicketDetailBloc>().add(
+                  detail_event.FetchTicketDetailRequested(widget.ticketId)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _formatFileSize(int bytes) {
+    if (bytes < 1024) {
+      return '$bytes B';
+    }
+    if (bytes < 1024 * 1024) {
+      return '${(bytes / 1024).toStringAsFixed(1)} KB';
+    }
+    return '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
   }
 
   Widget _buildSkeleton(bool isDark) {

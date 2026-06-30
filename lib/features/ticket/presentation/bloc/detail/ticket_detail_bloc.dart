@@ -1,13 +1,17 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uts/core/error/failures.dart';
 import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
+import 'package:uts/features/ticket/domain/services/comment_collection_utils.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
+import 'package:uts/features/ticket/domain/usecases/watch_ticket_detail_usecase.dart';
 
 import 'ticket_detail_event.dart';
 import 'ticket_detail_state.dart';
@@ -19,13 +23,18 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final UpdateTicketStatusUseCase updateTicketStatusUseCase;
   final AssignTicketUseCase assignTicketUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
+  final WatchTicketDetailUseCase watchTicketDetailUseCase;
   final WatchTicketCommentsUseCase watchTicketCommentsUseCase;
   final SubmitRatingUseCase submitRatingUseCase;
   final TicketLocalDataSource localDataSource;
-  final ConnectivityService connectivityService;
+  final ConnectivityService? connectivityService;
+  final Stream<ConnectionStatus>? connectivityOverride;
 
+  StreamSubscription<TicketEntity?>? _detailSubscription;
   StreamSubscription<List<CommentEntity>>? _commentSubscription;
   StreamSubscription<ConnectionStatus>? _connectivitySubscription;
+  int _detailGeneration = 0;
+  int _commentGeneration = 0;
 
   TicketDetailBloc({
     required this.getTicketDetailUseCase,
@@ -34,12 +43,16 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     required this.updateTicketStatusUseCase,
     required this.assignTicketUseCase,
     required this.getTicketHistoryUseCase,
+    required this.watchTicketDetailUseCase,
     required this.watchTicketCommentsUseCase,
     required this.submitRatingUseCase,
     required this.localDataSource,
-    required this.connectivityService,
+    this.connectivityService,
+    this.connectivityOverride,
   }) : super(const TicketDetailState()) {
     on<FetchTicketDetailRequested>(_onFetchDetail);
+    on<StartTicketDetailSubscription>(_onStartDetailSubscription);
+    on<TicketDetailStreamUpdated>(_onTicketDetailStreamUpdated);
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
     on<AssignTicketRequested>(_onAssignTicket);
     on<AddCommentRequested>(_onAddComment);
@@ -49,8 +62,10 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<CommentStreamUpdated>(_onCommentStreamUpdated);
     on<ResetTicketDetailState>(_onResetState);
 
-    _connectivitySubscription =
-        connectivityService.connectionStream.listen((status) {
+    _connectivitySubscription = (connectivityOverride ??
+            connectivityService?.connectionStream ??
+            const Stream<ConnectionStatus>.empty())
+        .listen((status) {
       if (!isClosed &&
           status == ConnectionStatus.online &&
           state.ticket != null) {
@@ -63,7 +78,15 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     FetchTicketDetailRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true, comments: [], errorMessage: null));
+    emit(
+      state.copyWith(
+        status: state.ticket == null
+            ? TicketDetailStatus.loading
+            : TicketDetailStatus.refreshing,
+        clearErrorMessage: true,
+        clearSuccessMessage: true,
+      ),
+    );
 
     final result = await getTicketDetailUseCase(event.ticketId);
 
@@ -74,31 +97,90 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         if (cachedTicket != null) {
           emit(
             state.copyWith(
-              isLoading: false,
+              status: TicketDetailStatus.loaded,
               ticket: cachedTicket.toEntity(),
               isOffline: true,
               successMessage: 'Menampilkan data dari cache (Offline)',
             ),
           );
-        } else {
-          emit(
-            state.copyWith(
-              isLoading: false,
-              errorMessage: failure.message,
-            ),
-          );
+          return;
         }
-      },
-      (ticket) async {
-        await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
+
         emit(
           state.copyWith(
-            isLoading: false,
-            ticket: ticket,
-            isOffline: false,
+            status: _statusFromFailure(failure),
+            errorMessage: failure.message,
+            clearTicket: true,
           ),
         );
       },
+      (ticket) async {
+        final commentsResult = await getTicketCommentsUseCase(event.ticketId);
+        final comments = commentsResult.getOrElse(() => state.comments);
+        await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
+        emit(
+          state.copyWith(
+            status: TicketDetailStatus.loaded,
+            ticket: ticket,
+            comments: deduplicateAndSortComments(comments),
+            isOffline: false,
+            clearErrorMessage: true,
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _onStartDetailSubscription(
+    StartTicketDetailSubscription event,
+    Emitter<TicketDetailState> emit,
+  ) async {
+    _detailGeneration++;
+    final generation = _detailGeneration;
+
+    final previous = _detailSubscription;
+    _detailSubscription = null;
+    await previous?.cancel();
+
+    if (isClosed || generation != _detailGeneration) {
+      return;
+    }
+
+    _detailSubscription = watchTicketDetailUseCase(event.ticketId).listen(
+      (ticket) {
+        if (!isClosed && generation == _detailGeneration) {
+          add(TicketDetailStreamUpdated(ticket: ticket));
+        }
+      },
+    );
+  }
+
+  void _onTicketDetailStreamUpdated(
+    TicketDetailStreamUpdated event,
+    Emitter<TicketDetailState> emit,
+  ) {
+    if (event.ticket == null) {
+      emit(
+        state.copyWith(
+          status: TicketDetailStatus.notFound,
+          errorMessage: 'Tiket tidak ditemukan.',
+          clearTicket: true,
+        ),
+      );
+      return;
+    }
+
+    final mergedTicket = _mergeTicketDetail(
+      previous: state.ticket,
+      incoming: event.ticket!,
+    );
+
+    emit(
+      state.copyWith(
+        status: TicketDetailStatus.loaded,
+        ticket: mergedTicket,
+        clearErrorMessage: true,
+      ),
     );
   }
 
@@ -106,18 +188,21 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     UpdateTicketStatusRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true));
+    emit(state.copyWith(status: TicketDetailStatus.refreshing));
     final result = await updateTicketStatusUseCase(
       UpdateStatusParams(ticketId: event.ticketId, status: event.status),
     );
     result.fold(
       (failure) => emit(
-        state.copyWith(isLoading: false, errorMessage: failure.message),
+        state.copyWith(
+          status: _statusFromFailure(failure),
+          errorMessage: failure.message,
+        ),
       ),
       (ticket) => emit(
         state.copyWith(
-          isLoading: false,
-          ticket: ticket,
+          status: TicketDetailStatus.loaded,
+          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
           successMessage: 'Status tiket diperbarui',
         ),
       ),
@@ -128,7 +213,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     AssignTicketRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
-    emit(state.copyWith(isLoading: true));
+    emit(state.copyWith(status: TicketDetailStatus.refreshing));
     final result = await assignTicketUseCase(
       AssignTicketParams(
         ticketId: event.ticketId,
@@ -137,12 +222,15 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     );
     result.fold(
       (failure) => emit(
-        state.copyWith(isLoading: false, errorMessage: failure.message),
+        state.copyWith(
+          status: _statusFromFailure(failure),
+          errorMessage: failure.message,
+        ),
       ),
       (ticket) => emit(
         state.copyWith(
-          isLoading: false,
-          ticket: ticket,
+          status: TicketDetailStatus.loaded,
+          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
           successMessage: 'Tiket berhasil didelegasikan',
         ),
       ),
@@ -153,13 +241,35 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     AddCommentRequested event,
     Emitter<TicketDetailState> emit,
   ) async {
+    if (state.isCommentSubmitting) {
+      emit(
+          state.copyWith(errorMessage: 'Pengiriman komentar sedang berjalan.'));
+      return;
+    }
+
+    emit(
+      state.copyWith(
+        isCommentSubmitting: true,
+        clearErrorMessage: true,
+        clearSuccessMessage: true,
+      ),
+    );
+
     final result = await addCommentUseCase(
       AddCommentParams(ticketId: event.ticketId, message: event.message),
     );
     result.fold(
-      (failure) => emit(state.copyWith(errorMessage: failure.message)),
+      (failure) => emit(
+        state.copyWith(
+          isCommentSubmitting: false,
+          errorMessage: failure.message,
+        ),
+      ),
       (_) => emit(
-        state.copyWith(successMessage: 'Tanggapan berhasil dikirim'),
+        state.copyWith(
+          isCommentSubmitting: false,
+          successMessage: 'Tanggapan berhasil dikirim',
+        ),
       ),
     );
   }
@@ -186,7 +296,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
       (ticket) => emit(
         state.copyWith(
           isRatingSubmitting: false,
-          ticket: ticket,
+          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
           successMessage: 'Terima kasih atas penilaian Anda!',
         ),
       ),
@@ -208,17 +318,20 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     StartTicketCommentsSubscription event,
     Emitter<TicketDetailState> emit,
   ) async {
-    final previousSubscription = _commentSubscription;
-    _commentSubscription = null;
-    await previousSubscription?.cancel();
+    _commentGeneration++;
+    final generation = _commentGeneration;
 
-    if (isClosed) {
+    final previous = _commentSubscription;
+    _commentSubscription = null;
+    await previous?.cancel();
+
+    if (isClosed || generation != _commentGeneration) {
       return;
     }
 
     _commentSubscription = watchTicketCommentsUseCase(event.ticketId).listen(
       (comments) {
-        if (!isClosed) {
+        if (!isClosed && generation == _commentGeneration) {
           add(CommentStreamUpdated(comments));
         }
       },
@@ -229,26 +342,97 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     CommentStreamUpdated event,
     Emitter<TicketDetailState> emit,
   ) {
-    emit(state.copyWith(comments: event.comments));
+    emit(
+      state.copyWith(
+        comments: deduplicateAndSortComments(event.comments),
+      ),
+    );
   }
 
   Future<void> _onResetState(
     ResetTicketDetailState event,
     Emitter<TicketDetailState> emit,
   ) async {
-    final previousSubscription = _commentSubscription;
+    _detailGeneration++;
+    _commentGeneration++;
+
+    final detailSubscription = _detailSubscription;
+    final commentSubscription = _commentSubscription;
+    _detailSubscription = null;
     _commentSubscription = null;
-    await previousSubscription?.cancel();
+
+    await detailSubscription?.cancel();
+    await commentSubscription?.cancel();
     emit(const TicketDetailState());
+  }
+
+  TicketDetailStatus _statusFromFailure(Failure failure) {
+    if (failure is TicketOperationFailure) {
+      return switch (failure.type) {
+        TicketFailureType.authorization ||
+        TicketFailureType.authentication =>
+          TicketDetailStatus.unauthorized,
+        TicketFailureType.notFound => TicketDetailStatus.notFound,
+        _ => TicketDetailStatus.failure,
+      };
+    }
+
+    if (failure.code == 401 || failure.code == 403) {
+      return TicketDetailStatus.unauthorized;
+    }
+
+    if (failure.code == 404) {
+      return TicketDetailStatus.notFound;
+    }
+
+    return TicketDetailStatus.failure;
+  }
+
+  TicketEntity _mergeTicketDetail({
+    required TicketEntity? previous,
+    required TicketEntity incoming,
+  }) {
+    if (previous == null) {
+      return incoming;
+    }
+
+    return TicketEntity(
+      id: incoming.id,
+      title: incoming.title,
+      description: incoming.description,
+      status: incoming.status,
+      category: incoming.category,
+      priority: incoming.priority ?? previous.priority,
+      createdAt: incoming.createdAt,
+      updatedAt: incoming.updatedAt,
+      userId: incoming.userId,
+      userName: incoming.userName ?? previous.userName,
+      assignedTo: incoming.assignedTo,
+      assignedToName: incoming.assignedToName ?? previous.assignedToName,
+      attachments: incoming.attachments.isNotEmpty
+          ? incoming.attachments
+          : previous.attachments,
+      imageUrls: incoming.imageUrls.isNotEmpty
+          ? incoming.imageUrls
+          : previous.imageUrls,
+      rating: incoming.rating ?? previous.rating,
+      ratingFeedback: incoming.ratingFeedback ?? previous.ratingFeedback,
+    );
   }
 
   @override
   Future<void> close() async {
+    _detailGeneration++;
+    _commentGeneration++;
+
+    final detailSubscription = _detailSubscription;
     final commentSubscription = _commentSubscription;
     final connectivitySubscription = _connectivitySubscription;
+    _detailSubscription = null;
     _commentSubscription = null;
     _connectivitySubscription = null;
 
+    await detailSubscription?.cancel();
     await commentSubscription?.cancel();
     await connectivitySubscription?.cancel();
     await super.close();

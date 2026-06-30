@@ -8,25 +8,22 @@ import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
 import '../entities/ticket_history_entity.dart';
 import '../validation/ticket_attachment_validator.dart';
+import '../validation/ticket_comment_validator.dart';
 import '../repositories/ticket_repository.dart';
+import '../value_objects/paginated_result.dart';
+import '../value_objects/ticket_query.dart';
 
 class GetTicketsUseCase
-    implements UseCase<Either<Failure, List<TicketEntity>>, GetTicketsParams> {
+    implements
+        UseCase<Either<Failure, PaginatedResult<TicketEntity>>,
+            GetTicketsParams> {
   final TicketRepository repository;
   GetTicketsUseCase(this.repository);
 
   @override
-  Future<Either<Failure, List<TicketEntity>>> call(
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> call(
       GetTicketsParams params) async {
-    return await repository.getTickets(
-      page: params.page,
-      limit: params.limit,
-      searchQuery: params.searchQuery,
-      category: params.category,
-      status: params.status,
-      startDate: params.startDate,
-      endDate: params.endDate,
-    );
+    return await repository.getTickets(query: params.toQuery());
   }
 }
 
@@ -116,14 +113,40 @@ class GetTicketCommentsUseCase
 class AddCommentUseCase
     implements UseCase<Either<Failure, CommentEntity>, AddCommentParams> {
   final TicketRepository repository;
-  AddCommentUseCase(this.repository);
+  final TicketCommentValidator validator;
+  bool _isRunning = false;
+
+  AddCommentUseCase(
+    this.repository, {
+    this.validator = const TicketCommentValidator(),
+  });
 
   @override
   Future<Either<Failure, CommentEntity>> call(AddCommentParams params) async {
-    return await repository.addComment(
-      ticketId: params.ticketId,
-      message: params.message,
-    );
+    if (_isRunning) {
+      return const Left(TicketOperationFailure(
+        type: TicketFailureType.duplicateSubmit,
+        message: 'Pengiriman komentar sedang berjalan.',
+      ));
+    }
+
+    final validation = validator.validate(params.message);
+    if (!validation.isValid) {
+      return Left(TicketOperationFailure(
+        type: TicketFailureType.validation,
+        message: validation.message ?? 'Pesan tidak valid.',
+      ));
+    }
+
+    _isRunning = true;
+    try {
+      return await repository.addComment(
+        ticketId: params.ticketId,
+        message: validation.trimmedMessage,
+      );
+    } finally {
+      _isRunning = false;
+    }
   }
 }
 
@@ -214,37 +237,30 @@ class WatchTicketsUseCase {
 }
 
 class GetTicketsParams extends Equatable {
-  final int page;
-  final int limit;
-  final String? status;
-  final String? searchQuery;
-  final String? category;
-  final DateTime? startDate;
-  final DateTime? endDate;
+  final TicketQuery? query;
+  final String? assignedToId;
 
   const GetTicketsParams({
-    required this.page,
-    this.limit = 10,
-    this.status,
-    this.searchQuery,
-    this.category,
+    this.query,
     this.assignedToId,
-    this.startDate,
-    this.endDate,
   });
 
-  final String? assignedToId;
+  TicketQuery get resolvedQuery => query ?? TicketQuery();
+
+  int get page => resolvedQuery.page;
+  int get limit => resolvedQuery.limit;
+  String? get status => resolvedQuery.status?.dbValue;
+  String? get searchQuery => resolvedQuery.search;
+  String? get category => resolvedQuery.category;
+  DateTime? get startDate => resolvedQuery.startDate;
+  DateTime? get endDate => resolvedQuery.endDate;
+
+  TicketQuery toQuery() => resolvedQuery;
 
   @override
   List<Object?> get props => [
-        page,
-        limit,
-        status,
-        searchQuery,
-        category,
+        resolvedQuery,
         assignedToId,
-        startDate,
-        endDate,
       ];
 }
 

@@ -3,15 +3,24 @@ import '../../../domain/entities/app_settings_entity.dart';
 
 abstract class AppSettingsEvent extends Equatable {
   const AppSettingsEvent();
+
   @override
   List<Object?> get props => [];
 }
 
-class FetchAppSettingsRequested extends AppSettingsEvent {}
+class FetchAppSettingsRequested extends AppSettingsEvent {
+  const FetchAppSettingsRequested();
+}
 
 class UpdateAppSettingsRequested extends AppSettingsEvent {
   final AppSettings settings;
+
   const UpdateAppSettingsRequested(this.settings);
+
   @override
   List<Object?> get props => [settings];
+}
+
+class ResetAppSettingsState extends AppSettingsEvent {
+  const ResetAppSettingsState();
 }

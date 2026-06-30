@@ -1,0 +1,37 @@
+name: Phase 3 Diagnostics
+on:
+  push:
+    branches: [feat/phase-3-auth-rbac]
+    paths: [.github/workflows/phase-3-diagnostics.yml]
+permissions:
+  contents: write
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/phase-3-auth-rbac
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+      - run: flutter pub get
+      - name: Capture analyzer and test output
+        run: |
+          mkdir -p docs/phases
+          set +e
+          flutter analyze > /tmp/analyze.txt 2>&1
+          ANALYZE_EXIT=$?
+          flutter test > /tmp/test.txt 2>&1
+          TEST_EXIT=$?
+          {
+            echo "ANALYZE_EXIT=$ANALYZE_EXIT"
+            cat /tmp/analyze.txt
+            echo
+            echo "TEST_EXIT=$TEST_EXIT"
+            cat /tmp/test.txt
+          } > docs/phases/PHASE_3_DIAGNOSTICS.txt
+      - uses: stefanzweifel/git-auto-commit-action@v5
+        with:
+          commit_message: "ci(phase-3): capture diagnostics"
+          branch: feat/phase-3-auth-rbac

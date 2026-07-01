@@ -1,4 +1,5 @@
 import 'package:dartz/dartz.dart';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import 'package:uuid/uuid.dart';
 import '../../../../core/error/failures.dart';
@@ -182,6 +183,9 @@ class TicketRepositoryImpl implements TicketRepository {
       }
       return Left(ServerFailure(message: e.message, code: 401));
     } on TicketCreateException catch (e) {
+      if (kDebugMode && e.debugMessage != null) {
+        debugPrint('Ticket create repository failure ${e.debugMessage}');
+      }
       if (uploadedAttachments.isNotEmpty &&
           e.type != TicketFailureType.compensation) {
         final failedCleanup = await _cleanupUploaded(uploadedAttachments);
@@ -201,7 +205,11 @@ class TicketRepositoryImpl implements TicketRepository {
         code: e.code,
         failedStoragePaths: e.failedStoragePaths,
       ));
-    } catch (e) {
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('Ticket create unexpected failure ${e.runtimeType}');
+        debugPrintStack(stackTrace: stackTrace);
+      }
       final failedCleanup = await _cleanupUploaded(uploadedAttachments);
       if (failedCleanup.isNotEmpty) {
         return Left(TicketOperationFailure(

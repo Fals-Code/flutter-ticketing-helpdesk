@@ -268,26 +268,44 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     required String category,
     required List<UploadedTicketAttachment> attachments,
   }) async {
+    final rpcParams = {
+      'p_ticket_id': ticketId,
+      'p_title': title,
+      'p_description': description,
+      'p_category': category,
+      'p_attachments': attachments
+          .map((attachment) => attachment.toManifestJson())
+          .toList(growable: false),
+    };
     try {
-      await supabaseClient.rpc('create_ticket_with_attachments', params: {
-        'p_ticket_id': ticketId,
-        'p_title': title,
-        'p_description': description,
-        'p_category': category,
-        'p_attachments': attachments
-            .map((attachment) => attachment.toManifestJson())
-            .toList(growable: false),
-      });
-    } on sup.PostgrestException catch (error) {
-      throw TicketCreateException(
-        type: _mapPostgrestFailureType(error),
-        message: _safeDatabaseMessage(error),
-        code: int.tryParse(error.code ?? ''),
+      _debugCreateTicketRpcStart(
+        ticketId: ticketId,
+        title: title,
+        description: description,
+        category: category,
+        attachmentCount: attachments.length,
+        params: rpcParams,
       );
-    } catch (_) {
-      throw const TicketCreateException(
+      await supabaseClient.rpc('create_ticket_with_attachments',
+          params: rpcParams);
+    } on sup.PostgrestException catch (error, stackTrace) {
+      final debugMessage =
+          TicketCreateFailureMapper.debugSummaryFromPostgrest(error);
+      _debugCreateTicketFailure(debugMessage, stackTrace);
+      throw TicketCreateException(
+        type: TicketCreateFailureMapper.typeFromPostgrest(error),
+        message: TicketCreateFailureMapper.safeMessageFromPostgrest(error),
+        code: TicketCreateFailureMapper.numericCode(error),
+        debugMessage: debugMessage,
+      );
+    } on Object catch (error, stackTrace) {
+      final debugMessage =
+          'type=${error.runtimeType} message=${_sanitizeDebugValue(error)}';
+      _debugCreateTicketFailure(debugMessage, stackTrace);
+      throw TicketCreateException(
         type: TicketFailureType.databaseCreate,
-        message: 'Gagal menyimpan tiket.',
+        message: 'Tiket belum dapat disimpan. Coba lagi beberapa saat.',
+        debugMessage: debugMessage,
       );
     }
 
@@ -733,30 +751,6 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     _profileCache.clear();
   }
 
-  TicketFailureType _mapPostgrestFailureType(sup.PostgrestException error) {
-    switch (error.code) {
-      case '42501':
-        return TicketFailureType.authorization;
-      case '22023':
-      case '23514':
-        return TicketFailureType.validation;
-      default:
-        return TicketFailureType.databaseCreate;
-    }
-  }
-
-  String _safeDatabaseMessage(sup.PostgrestException error) {
-    switch (error.code) {
-      case '42501':
-        return 'Anda tidak berwenang membuat tiket.';
-      case '22023':
-      case '23514':
-        return 'Data tiket atau lampiran tidak valid.';
-      default:
-        return 'Gagal menyimpan tiket.';
-    }
-  }
-
   List<TicketModel> _mapTicketRows(dynamic response) {
     return (response as List)
         .where((json) => (json as Map<String, dynamic>)['deleted_at'] == null)
@@ -781,5 +775,54 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .replaceAll(')', ' ')
         .replaceAll('%', r'\%')
         .replaceAll('_', r'\_');
+  }
+
+  void _debugCreateTicketRpcStart({
+    required String ticketId,
+    required String title,
+    required String description,
+    required String category,
+    required int attachmentCount,
+    required Map<String, dynamic> params,
+  }) {
+    if (!kDebugMode) return;
+    final payloadTypes = params.map(
+      (key, value) => MapEntry(key, value.runtimeType.toString()),
+    );
+    debugPrint(
+      'Ticket create RPC start '
+      'rpc=create_ticket_with_attachments '
+      'ticket=${_shortDebugId(ticketId)} '
+      'titleLength=${title.trim().length} '
+      'descriptionLength=${description.trim().length} '
+      'category=$category '
+      'attachmentCount=$attachmentCount '
+      'payloadKeys=${params.keys.join(',')} '
+      'payloadTypes=$payloadTypes',
+    );
+  }
+
+  void _debugCreateTicketFailure(
+    String debugMessage,
+    StackTrace stackTrace,
+  ) {
+    if (!kDebugMode) return;
+    debugPrint('Ticket create RPC failure $debugMessage');
+    debugPrintStack(stackTrace: stackTrace);
+  }
+
+  String _shortDebugId(String value) {
+    if (value.length <= 8) {
+      return value;
+    }
+    return value.substring(0, 8);
+  }
+
+  String _sanitizeDebugValue(Object? value) {
+    final text = value?.toString().trim();
+    if (text == null || text.isEmpty) {
+      return '-';
+    }
+    return text.replaceAll(RegExp(r'\s+'), ' ');
   }
 }

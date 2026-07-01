@@ -21,16 +21,14 @@ class TicketCreateBloc extends Bloc<TicketCreateEvent, TicketCreateState> {
     SubmitTicketCreateRequested event,
     Emitter<TicketCreateState> emit,
   ) async {
-    _operationGeneration++;
-    final generation = _operationGeneration;
-
     if (state.isBusy) {
-      emit(state.copyWith(
-        status: TicketCreateStatus.validationFailure,
-        message: 'Pengiriman tiket sedang berjalan.',
-      ));
+      // Keep the in-flight operation generation intact so its success/failure
+      // can still update the UI after a fast duplicate tap.
       return;
     }
+
+    _operationGeneration++;
+    final generation = _operationGeneration;
 
     emit(state.copyWith(
       status: TicketCreateStatus.validating,

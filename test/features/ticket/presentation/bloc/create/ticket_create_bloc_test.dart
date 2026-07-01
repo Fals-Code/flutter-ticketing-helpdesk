@@ -195,6 +195,73 @@ void main() {
         expect(bloc.state, const TicketCreateState());
       },
     );
+
+    blocTest<TicketCreateBloc, TicketCreateState>(
+      'duplicate submit keeps first create operation alive',
+      build: () => TicketCreateBloc(
+        createTicketUseCase: CreateTicketUseCase(
+          _FakeCreateRepository(
+            completion: Completer<Either<Failure, TicketEntity>>(),
+          ),
+        ),
+      ),
+      act: (bloc) async {
+        final repository =
+            bloc.createTicketUseCase.repository as _FakeCreateRepository;
+        bloc.add(const SubmitTicketCreateRequested(
+          title: 'Printer error',
+          description: 'Printer lantai 2 tidak dapat mencetak dokumen.',
+          category: 'hardware',
+          attachments: [],
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        bloc.add(const SubmitTicketCreateRequested(
+          title: 'Printer error',
+          description: 'Printer lantai 2 tidak dapat mencetak dokumen.',
+          category: 'hardware',
+          attachments: [],
+        ));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(repository.createCallCount, 1);
+        repository.completion!.complete(
+          Right(TicketEntity(
+            id: 'ticket-1',
+            title: 'Printer error',
+            description: 'Printer lantai 2 tidak dapat mencetak dokumen.',
+            status: TicketStatus.open,
+            category: 'hardware',
+            createdAt: DateTime.parse('2026-06-30T00:00:00.000Z'),
+            userId: 'user-1',
+          )),
+        );
+      },
+      expect: () => [
+        isA<TicketCreateState>().having(
+          (state) => state.status,
+          'status',
+          TicketCreateStatus.validating,
+        ),
+        isA<TicketCreateState>().having(
+          (state) => state.status,
+          'status',
+          TicketCreateStatus.uploading,
+        ),
+        isA<TicketCreateState>().having(
+          (state) => state.status,
+          'status',
+          TicketCreateStatus.creatingTicket,
+        ),
+        isA<TicketCreateState>()
+            .having(
+                (state) => state.status, 'status', TicketCreateStatus.success)
+            .having((state) => state.ticket?.id, 'ticket id', 'ticket-1'),
+      ],
+      verify: (bloc) {
+        final repository =
+            bloc.createTicketUseCase.repository as _FakeCreateRepository;
+        expect(repository.createCallCount, 1);
+      },
+    );
   });
 }
 
@@ -212,6 +279,7 @@ LocalAttachmentCandidate _attachment() {
 class _FakeCreateRepository implements TicketRepository {
   final Failure? failure;
   final Completer<Either<Failure, TicketEntity>>? completion;
+  int createCallCount = 0;
 
   _FakeCreateRepository({this.failure, this.completion});
 
@@ -219,6 +287,7 @@ class _FakeCreateRepository implements TicketRepository {
   Future<Either<Failure, TicketEntity>> createTicket(
     CreateTicketParams params,
   ) async {
+    createCallCount++;
     params.onProgress?.call(CreateTicketProgress(
       stage: CreateTicketProgressStage.uploading,
       currentFileName:

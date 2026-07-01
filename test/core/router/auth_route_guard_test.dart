@@ -63,6 +63,39 @@ void main() {
         isNull,
       );
     });
+
+    test('User can open create ticket route', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.authenticated,
+          user: userWithRole(UserRole.user),
+          location: AuthRouteGuard.createTicket,
+        ),
+        isNull,
+      );
+    });
+
+    test('Helpdesk can open create ticket route', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.authenticated,
+          user: userWithRole(UserRole.technician),
+          location: AuthRouteGuard.createTicket,
+        ),
+        isNull,
+      );
+    });
+
+    test('Admin can open create ticket route', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.authenticated,
+          user: userWithRole(UserRole.admin),
+          location: AuthRouteGuard.createTicket,
+        ),
+        isNull,
+      );
+    });
   });
 
   group('AuthRouteGuard deep links', () {
@@ -107,6 +140,17 @@ void main() {
           location: AuthRouteGuard.login,
         ),
         AuthRouteGuard.changePassword,
+      );
+    });
+
+    test('unauthenticated user cannot open create ticket route', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.unauthenticated,
+          user: AuthUser.empty,
+          location: AuthRouteGuard.createTicket,
+        ),
+        '/login?from=%2Ftickets%2Fcreate',
       );
     });
   });

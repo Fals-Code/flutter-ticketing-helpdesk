@@ -30,9 +30,9 @@ Future<void> initNotificationDependencies(GetIt sl) async {
   sl.registerLazySingleton(() => FCMService(sl(), sl()));
   sl.registerLazySingleton(
     () => SessionCleanupService(
-      preferences: sl(),
       fcmService: sl(),
       localNotificationService: sl(),
+      ticketLocalDataSource: sl(),
     ),
   );
 

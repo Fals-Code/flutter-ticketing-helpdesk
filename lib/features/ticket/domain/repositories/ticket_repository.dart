@@ -5,7 +5,11 @@ import '../../../../core/constants/enums.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/delete_ticket_result.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
+import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
+import '../value_objects/paginated_result.dart';
+import '../value_objects/ticket_query.dart';
 
 class TicketStats extends Equatable {
   final int total;
@@ -33,39 +37,23 @@ class TicketStats extends Equatable {
 
 abstract class TicketRepository {
   /// Mengambil daftar tiket milik user saat ini (Paginated).
-  Future<Either<Failure, List<TicketEntity>>> getTickets({
-    required int page,
-    required int limit,
-    String? status,
-    String? searchQuery,
-    String? category,
-    DateTime? startDate,
-    DateTime? endDate,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getTickets({
+    required TicketQuery query,
   });
 
   /// Mengambil semua tiket (untuk Admin/Staff).
-  Future<Either<Failure, List<TicketEntity>>> getAllTickets({
-    required int page,
-    required int limit,
-    String? status,
-    String? searchQuery,
-    String? category,
+  Future<Either<Failure, PaginatedResult<TicketEntity>>> getAllTickets({
+    required TicketQuery query,
     String? assignedToId,
-    DateTime? startDate,
-    DateTime? endDate,
   });
 
   /// Mengambil daftar staff (Technician/Admin) untuk penugasan.
   Future<Either<Failure, List<AuthUser>>> getStaffUsers();
 
   /// Membuat tiket baru.
-  Future<Either<Failure, TicketEntity>> createTicket({
-    required String userId,
-    required String title,
-    required String description,
-    required String category,
-    required List<String> imagePaths,
-  });
+  Future<Either<Failure, TicketEntity>> createTicket(
+    CreateTicketParams params,
+  );
 
   /// Mengambil detail tiket berdasarkan ID.
   Future<Either<Failure, TicketEntity>> getTicketDetail(String ticketId);
@@ -99,6 +87,12 @@ abstract class TicketRepository {
     required String message,
   });
 
+  /// Menghapus tiket secara policy-safe lewat backend.
+  Future<Either<Failure, DeleteTicketResult>> deleteTicket({
+    required String ticketId,
+    required String reason,
+  });
+
   /// Mengambil riwayat status perjalanan tiket (FR-011).
   Future<Either<Failure, List<TicketHistoryEntity>>> getTicketHistory(
       String ticketId);
@@ -122,6 +116,9 @@ abstract class TicketRepository {
   /// Aliran data tiket secara realtime.
   Stream<List<TicketEntity>> watchTickets(
       {String? userId, String? assignedToId});
+
+  /// Aliran detail tiket secara realtime untuk satu ticket ID.
+  Stream<TicketEntity?> watchTicketDetail(String ticketId);
 
   /// Aliran data komentar secara realtime.
   Stream<List<CommentEntity>> watchTicketComments(String ticketId);

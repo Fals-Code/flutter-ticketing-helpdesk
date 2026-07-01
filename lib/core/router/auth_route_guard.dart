@@ -14,6 +14,7 @@ abstract final class AuthRouteGuard {
   static const String dashboard = '/dashboard';
   static const String staffDashboard = '/staff-dashboard';
   static const String ticketManagement = '/ticket-management';
+  static const String createTicket = '/tickets/create';
   static const String adminReports = '/admin-reports';
   static const String adminSettings = '/admin-settings';
   static const String userManagement = '/user-management';
@@ -108,6 +109,8 @@ abstract final class AuthRouteGuard {
 
   static String homeFor(UserRole role) =>
       role == UserRole.user ? dashboard : staffDashboard;
+
+  static bool canCreateTicket(UserRole role) => canAccess(role, createTicket);
 
   static String? safeFrom(String? value, UserRole role) {
     if (value == null || value.isEmpty) {

@@ -23,6 +23,8 @@ import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/detail/ticket_detail_event.dart';
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
     as list_event;
@@ -96,6 +98,7 @@ class ETicketingApp extends StatelessWidget {
           create: (_) => sl<AuthBloc>()..add(const AppStarted()),
         ),
         BlocProvider<TicketListBloc>(create: (_) => sl<TicketListBloc>()),
+        BlocProvider<TicketCreateBloc>(create: (_) => sl<TicketCreateBloc>()),
         BlocProvider<TicketDetailBloc>(create: (_) => sl<TicketDetailBloc>()),
         BlocProvider<TicketStatsBloc>(create: (_) => sl<TicketStatsBloc>()),
         BlocProvider<NotificationBloc>(create: (_) => sl<NotificationBloc>()),
@@ -137,9 +140,16 @@ class ETicketingApp extends StatelessWidget {
 
   void _handleAuthenticationState(BuildContext context, AuthState state) {
     if (state.status == AuthStatus.authenticated) {
-      context
-          .read<TicketListBloc>()
-          .add(const list_event.StartTicketListSubscription());
+      final user = state.user;
+      final isTechnician = user.role == UserRole.technician;
+      final isStaff = user.role == UserRole.admin || isTechnician;
+      context.read<TicketListBloc>().add(
+            list_event.StartTicketListSubscription(
+              userId: isStaff ? null : user.id,
+              assignedToId: isTechnician ? user.id : null,
+              isStaff: isStaff,
+            ),
+          );
       context.read<NotificationBloc>().add(StartNotificationSubscription());
       context
           .read<TicketStatsBloc>()
@@ -155,6 +165,7 @@ class ETicketingApp extends StatelessWidget {
     if (!shouldReset) return;
 
     context.read<TicketListBloc>().add(list_event.ResetTicketListState());
+    context.read<TicketCreateBloc>().add(const TicketCreateResetRequested());
     context.read<TicketDetailBloc>().add(ResetTicketDetailState());
     context.read<TicketStatsBloc>().add(stats_event.ResetTicketStatsState());
     context.read<NotificationBloc>().add(ResetNotificationState());

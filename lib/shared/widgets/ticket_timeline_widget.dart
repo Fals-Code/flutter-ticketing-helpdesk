@@ -169,8 +169,8 @@ class TicketTimelineWidget extends StatelessWidget {
     return DateFormat('dd MMM yyyy').format(dt);
   }
 
-  Color _getActivityColor(String status) {
-    switch (status.toLowerCase()) {
+  Color _getActivityColor(String? status) {
+    switch (status?.toLowerCase()) {
       case 'open':
         return AppColors.statusOpen;
       case 'in_progress':
@@ -184,9 +184,10 @@ class TicketTimelineWidget extends StatelessWidget {
     }
   }
 
-  String _getActivityTitle(String? oldStatus, String newStatus) {
+  String _getActivityTitle(String? oldStatus, String? newStatus) {
+    if (oldStatus == null && newStatus == null) return 'Aktivitas Tiket';
     if (oldStatus == null) return 'Tiket Dibuat';
-    switch (newStatus.toLowerCase()) {
+    switch (newStatus?.toLowerCase()) {
       case 'in_progress':
         return 'Mulai Dikerjakan';
       case 'resolved':
@@ -199,11 +200,21 @@ class TicketTimelineWidget extends StatelessWidget {
   }
 
   String _getActivityDescription(TicketHistoryEntity activity) {
+    if (activity.description != null &&
+        activity.description!.trim().isNotEmpty) {
+      return activity.description!;
+    }
+    if (activity.oldStatus == null && activity.newStatus == null) {
+      return 'Aktivitas tiket berhasil dicatat.';
+    }
     if (activity.oldStatus == null) {
       return 'Tiket berhasil dibuat dengan status Terbuka.';
     }
+    if (activity.newStatus == null) {
+      return 'Riwayat tiket berhasil diperbarui.';
+    }
     final oldLabel = _statusLabel(activity.oldStatus!);
-    final newLabel = _statusLabel(activity.newStatus);
+    final newLabel = _statusLabel(activity.newStatus!);
     return 'Status berubah dari $oldLabel menjadi $newLabel.';
   }
 

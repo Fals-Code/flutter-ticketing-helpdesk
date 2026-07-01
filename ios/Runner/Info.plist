@@ -71,9 +71,9 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Aplikasi membutuhkan akses kamera untuk mengambil foto profil.</string>
+	<string>Aplikasi membutuhkan akses kamera untuk mengambil foto lampiran tiket.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Aplikasi membutuhkan akses galeri untuk memilih foto profil.</string>
+	<string>Aplikasi membutuhkan akses galeri untuk memilih foto lampiran tiket.</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Aplikasi membutuhkan akses mikrofon jika Anda merekam video.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>

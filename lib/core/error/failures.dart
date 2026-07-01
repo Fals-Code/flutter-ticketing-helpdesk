@@ -38,3 +38,39 @@ class UnknownFailure extends Failure {
     super.code,
   });
 }
+
+enum TicketFailureType {
+  validation,
+  authentication,
+  authorization,
+  notFound,
+  fileUnreadable,
+  upload,
+  databaseCreate,
+  attachmentMetadata,
+  compensation,
+  network,
+  duplicateSubmit,
+  sessionChanged,
+  unknown,
+}
+
+class TicketOperationFailure extends Failure {
+  final TicketFailureType type;
+  final List<String> failedStoragePaths;
+
+  const TicketOperationFailure({
+    required this.type,
+    required super.message,
+    super.code,
+    this.failedStoragePaths = const [],
+  });
+
+  @override
+  List<Object?> get props => [
+        type,
+        message,
+        code,
+        failedStoragePaths,
+      ];
+}

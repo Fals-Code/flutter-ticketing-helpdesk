@@ -18,6 +18,10 @@ import 'package:uts/features/ticket/presentation/pages/create_ticket_page.dart';
 import 'package:uts/features/ticket/presentation/pages/history_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_detail_page.dart';
 import 'package:uts/features/ticket/presentation/pages/ticket_list_page.dart';
+import 'package:uts/features/ticket/presentation/pages/ticket_tracking_page.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_event.dart';
 
 abstract final class AppRoutes {
   static const String splash = AuthRouteGuard.splash;
@@ -33,8 +37,9 @@ abstract final class AppRoutes {
   static const String userManagement = AuthRouteGuard.userManagement;
 
   static const String tickets = '/tickets';
-  static const String createTicket = '/tickets/create';
+  static const String createTicket = AuthRouteGuard.createTicket;
   static const String ticketDetail = '/tickets/:id';
+  static const String ticketTracking = '/tickets/:id/tracking';
   static const String notifications = '/notifications';
   static const String profile = '/profile';
   static const String editProfile = '/profile/edit';
@@ -143,6 +148,24 @@ final GoRouter appRouter = GoRouter(
             child: TicketDetailPage(ticketId: state.pathParameters['id']!),
             transitionsBuilder: _slideTransition,
           ),
+          routes: [
+            GoRoute(
+              path: 'tracking',
+              name: 'ticket-tracking',
+              pageBuilder: (context, state) => CustomTransitionPage(
+                child: BlocProvider(
+                  create: (_) => sl<TicketTrackingBloc>()
+                    ..add(LoadTicketTrackingRequested(
+                      state.pathParameters['id']!,
+                    )),
+                  child: TicketTrackingPage(
+                    ticketId: state.pathParameters['id']!,
+                  ),
+                ),
+                transitionsBuilder: _slideTransition,
+              ),
+            ),
+          ],
         ),
       ],
     ),

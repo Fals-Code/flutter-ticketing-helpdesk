@@ -13,17 +13,24 @@ class CommentModel extends CommentEntity {
   });
 
   factory CommentModel.fromJson(Map<String, dynamic> json) {
+    final profile = switch (json['profiles']) {
+      Map mapValue => Map<String, dynamic>.from(mapValue),
+      List<dynamic> listValue
+          when listValue.isNotEmpty && listValue.first is Map =>
+        Map<String, dynamic>.from(listValue.first as Map),
+      _ => null,
+    };
+
     return CommentModel(
-      id: json['id'] ?? '',
-      ticketId: json['ticket_id'] ?? '',
-      userId: json['user_id'] ?? '',
-      userName: json['profiles']?['full_name'] ?? 'Unknown',
-      userRole: (json['profiles']?['role'] is int)
-          ? UserRole.fromInt(json['profiles']['role']).name
-          : json['profiles']?['role']?.toString() ?? 'user',
-      message: json['message'] ?? '',
-      createdAt: DateTime.parse(
-          json['created_at'] ?? DateTime.now().toIso8601String()),
+      id: _requireString(json, 'id'),
+      ticketId: _requireString(json, 'ticket_id'),
+      userId: _requireString(json, 'user_id'),
+      userName: _readNullableString(profile?['full_name']) ?? 'Unknown',
+      userRole: (profile?['role'] is int)
+          ? UserRole.fromInt(profile!['role']).name
+          : _readNullableString(profile?['role']) ?? 'user',
+      message: _requireString(json, 'message'),
+      createdAt: _readRequiredDateTime(json['created_at'], 'created_at'),
     );
   }
 
@@ -61,5 +68,34 @@ class CommentModel extends CommentEntity {
       message: message,
       createdAt: createdAt,
     );
+  }
+
+  static String _requireString(Map<String, dynamic> json, String key) {
+    final value = _readNullableString(json[key]);
+    if (value == null || value.isEmpty) {
+      throw FormatException('Missing required comment field: $key');
+    }
+    return value;
+  }
+
+  static String? _readNullableString(dynamic value) {
+    if (value == null) {
+      return null;
+    }
+    final normalized = value.toString().trim();
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  static DateTime _readRequiredDateTime(dynamic value, String key) {
+    if (value is DateTime) {
+      return value;
+    }
+    if (value is String) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) {
+        return parsed;
+      }
+    }
+    throw FormatException('Invalid required comment field: $key');
   }
 }

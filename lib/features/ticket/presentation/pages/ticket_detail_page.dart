@@ -490,7 +490,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                               ),
                             ),
                             Text(
-                              DateFormat('dd MMM, HH:mm').format(item.occurredAt),
+                              DateFormat('dd MMM, HH:mm')
+                                  .format(item.occurredAt),
                               style: TextStyle(
                                 fontSize: 11,
                                 color: isDark ? Colors.white38 : Colors.black38,

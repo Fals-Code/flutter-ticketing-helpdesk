@@ -242,7 +242,8 @@ class TicketLifecycleStepTile extends StatelessWidget {
                   if (milestone.timestamp != null) ...[
                     const SizedBox(height: 4),
                     Text(
-                      DateFormat('dd MMM yyyy, HH:mm').format(milestone.timestamp!),
+                      DateFormat('dd MMM yyyy, HH:mm')
+                          .format(milestone.timestamp!),
                       style: TextStyle(
                         fontSize: 12,
                         color: isDark ? Colors.white38 : Colors.black38,
@@ -377,7 +378,7 @@ class TicketActivityTile extends StatelessWidget {
                 icon: Icons.schedule_rounded,
               ),
               if (item.newStatus != null && item.oldStatus != null)
-                 ActivityMetaChip(
+                ActivityMetaChip(
                   label: '${item.oldStatus} → ${item.newStatus}',
                   isDark: isDark,
                   icon: Icons.swap_horiz_rounded,

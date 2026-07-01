@@ -10,8 +10,11 @@ import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_b
 import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/tracking/ticket_tracking_state.dart';
 
-class MockGetTicketDetailUseCase extends Mock implements GetTicketDetailUseCase {}
-class MockGetTicketHistoryUseCase extends Mock implements GetTicketHistoryUseCase {}
+class MockGetTicketDetailUseCase extends Mock
+    implements GetTicketDetailUseCase {}
+
+class MockGetTicketHistoryUseCase extends Mock
+    implements GetTicketHistoryUseCase {}
 
 void main() {
   late TicketTrackingBloc bloc;
@@ -132,10 +135,14 @@ void main() {
       bloc.add(LoadTicketTrackingRequested(tTicketId));
     },
     expect: () => [
-      isA<TicketTrackingState>().having((s) => s.status, 'status', TicketTrackingStatus.loading),
-      isA<TicketTrackingState>().having((s) => s.status, 'status', TicketTrackingStatus.loaded),
-      isA<TicketTrackingState>().having((s) => s.status, 'status', TicketTrackingStatus.loading),
-      isA<TicketTrackingState>().having((s) => s.status, 'status', TicketTrackingStatus.loaded),
+      isA<TicketTrackingState>()
+          .having((s) => s.status, 'status', TicketTrackingStatus.loading),
+      isA<TicketTrackingState>()
+          .having((s) => s.status, 'status', TicketTrackingStatus.loaded),
+      isA<TicketTrackingState>()
+          .having((s) => s.status, 'status', TicketTrackingStatus.loading),
+      isA<TicketTrackingState>()
+          .having((s) => s.status, 'status', TicketTrackingStatus.loaded),
     ],
   );
 }

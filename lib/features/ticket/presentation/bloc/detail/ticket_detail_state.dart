@@ -2,6 +2,7 @@ import 'package:equatable/equatable.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_tracking_view_data.dart';
 
 enum TicketDetailStatus {
   initial,
@@ -18,6 +19,7 @@ class TicketDetailState extends Equatable {
   final TicketEntity? ticket;
   final List<CommentEntity> comments;
   final List<TicketHistoryEntity> history;
+  final TicketTrackingViewData? trackingViewData;
   final String? errorMessage;
   final String? successMessage;
   final bool isRatingSubmitting;
@@ -31,6 +33,7 @@ class TicketDetailState extends Equatable {
     this.ticket,
     this.comments = const [],
     this.history = const [],
+    this.trackingViewData,
     this.errorMessage,
     this.successMessage,
     this.isRatingSubmitting = false,
@@ -52,6 +55,7 @@ class TicketDetailState extends Equatable {
     TicketEntity? ticket,
     List<CommentEntity>? comments,
     List<TicketHistoryEntity>? history,
+    TicketTrackingViewData? trackingViewData,
     String? errorMessage,
     String? successMessage,
     bool clearErrorMessage = false,
@@ -69,6 +73,7 @@ class TicketDetailState extends Equatable {
       ticket: clearTicket ? null : (ticket ?? this.ticket),
       comments: comments ?? this.comments,
       history: history ?? this.history,
+      trackingViewData: trackingViewData ?? this.trackingViewData,
       errorMessage:
           clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
       successMessage:
@@ -89,6 +94,7 @@ class TicketDetailState extends Equatable {
         ticket,
         comments,
         history,
+        trackingViewData,
         errorMessage,
         successMessage,
         isRatingSubmitting,

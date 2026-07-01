@@ -28,6 +28,7 @@ import 'package:uts/shared/widgets/ticket_timeline_widget.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/features/ticket/presentation/widgets/rating_dialog.dart';
 import 'package:uts/features/ticket/presentation/widgets/ticket_delete_confirmation_dialog.dart';
+import 'package:uts/features/ticket/presentation/widgets/tracking/tracking_widgets.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -351,6 +352,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                               _buildStaffActions(
                                                   context, state, isDark),
 
+                                              // PERJALANAN TIKET (LIFECYCLE)
+                                              if (state.trackingViewData !=
+                                                  null) ...[
+                                                const SizedBox(height: 24),
+                                                _buildSectionLabel(
+                                                    'PERJALANAN TIKET', isDark),
+                                                const SizedBox(height: 16),
+                                                _buildCompactTrackingSection(
+                                                    context, state, isDark),
+                                              ],
+
                                               // TIMELINE
                                               Row(
                                                 children: [
@@ -418,6 +430,104 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                             ),
         );
       },
+    );
+  }
+
+  Widget _buildCompactTrackingSection(
+    BuildContext context,
+    detail_state.TicketDetailState state,
+    bool isDark,
+  ) {
+    final viewData = state.trackingViewData!;
+    final recentActivities = viewData.activityEvents.take(3).toList();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          TicketLifecycleProgress(
+            isDark: isDark,
+            milestones: viewData.lifecycleMilestones,
+          ),
+          if (recentActivities.isNotEmpty) ...[
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 12),
+              child: Divider(),
+            ),
+            Text(
+              'Aktivitas Terbaru',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: isDark ? Colors.white54 : Colors.black54,
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...recentActivities.map((item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ActivityIcon(type: item.type),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.title,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            Text(
+                              DateFormat('dd MMM, HH:mm').format(item.occurredAt),
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: isDark ? Colors.white38 : Colors.black38,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                )),
+          ],
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: () => context.push(
+                AppRoutes.ticketTracking.replaceAll(':id', state.ticket!.id),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.1),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+              child: const Text(
+                'Lihat perjalanan lengkap',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primary,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

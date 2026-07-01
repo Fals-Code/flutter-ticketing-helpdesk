@@ -38,7 +38,9 @@ void main() {
             .having(
                 (state) => state.status, 'status', TicketDetailStatus.loaded)
             .having((state) => state.ticket?.id, 'ticket id', 'ticket-1')
-            .having((state) => state.comments.length, 'comment count', 1),
+            .having((state) => state.comments.length, 'comment count', 1)
+            .having((state) => state.trackingViewData, 'trackingViewData',
+                isNotNull),
       ],
     );
 

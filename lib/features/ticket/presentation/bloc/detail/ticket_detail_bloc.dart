@@ -8,6 +8,7 @@ import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/services/comment_collection_utils.dart';
+import 'package:uts/features/ticket/domain/services/ticket_tracking_timeline_builder.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_admin_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 import 'package:uts/features/ticket/domain/usecases/watch_ticket_comments_usecase.dart';
@@ -30,6 +31,8 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   final TicketLocalDataSource localDataSource;
   final ConnectivityService? connectivityService;
   final Stream<ConnectionStatus>? connectivityOverride;
+  final TicketTrackingTimelineBuilder _trackingBuilder =
+      const TicketTrackingTimelineBuilder();
 
   StreamSubscription<TicketEntity?>? _detailSubscription;
   StreamSubscription<List<CommentEntity>>? _commentSubscription;
@@ -133,11 +136,22 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         }
         final comments = commentsResult.getOrElse(() => state.comments);
         await localDataSource.cacheTicketDetail(TicketModel.fromEntity(ticket));
+
+        final historyResult = await getTicketHistoryUseCase(event.ticketId);
+        final history = historyResult.getOrElse(() => []);
+
+        final trackingViewData = _trackingBuilder.build(
+          ticket: ticket,
+          history: history,
+        );
+
         emit(
           state.copyWith(
             status: TicketDetailStatus.loaded,
             ticket: ticket,
             comments: deduplicateAndSortComments(comments),
+            history: history,
+            trackingViewData: trackingViewData,
             isOffline: false,
             clearErrorMessage: true,
           ),
@@ -190,10 +204,16 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
       incoming: event.ticket!,
     );
 
+    final trackingViewData = _trackingBuilder.build(
+      ticket: mergedTicket,
+      history: state.history,
+    );
+
     emit(
       state.copyWith(
         status: TicketDetailStatus.loaded,
         ticket: mergedTicket,
+        trackingViewData: trackingViewData,
         clearErrorMessage: true,
       ),
     );
@@ -214,13 +234,24 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
           errorMessage: failure.message,
         ),
       ),
-      (ticket) => emit(
-        state.copyWith(
-          status: TicketDetailStatus.loaded,
-          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
-          successMessage: 'Status tiket diperbarui',
-        ),
-      ),
+      (ticket) {
+        final mergedTicket = _mergeTicketDetail(
+          previous: state.ticket,
+          incoming: ticket,
+        );
+        final trackingViewData = _trackingBuilder.build(
+          ticket: mergedTicket,
+          history: state.history,
+        );
+        emit(
+          state.copyWith(
+            status: TicketDetailStatus.loaded,
+            ticket: mergedTicket,
+            trackingViewData: trackingViewData,
+            successMessage: 'Status tiket diperbarui',
+          ),
+        );
+      },
     );
   }
 
@@ -242,13 +273,24 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
           errorMessage: failure.message,
         ),
       ),
-      (ticket) => emit(
-        state.copyWith(
-          status: TicketDetailStatus.loaded,
-          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
-          successMessage: 'Tiket berhasil didelegasikan',
-        ),
-      ),
+      (ticket) {
+        final mergedTicket = _mergeTicketDetail(
+          previous: state.ticket,
+          incoming: ticket,
+        );
+        final trackingViewData = _trackingBuilder.build(
+          ticket: mergedTicket,
+          history: state.history,
+        );
+        emit(
+          state.copyWith(
+            status: TicketDetailStatus.loaded,
+            ticket: mergedTicket,
+            trackingViewData: trackingViewData,
+            successMessage: 'Tiket berhasil didelegasikan',
+          ),
+        );
+      },
     );
   }
 
@@ -378,13 +420,24 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
           errorMessage: failure.message,
         ),
       ),
-      (ticket) => emit(
-        state.copyWith(
-          isRatingSubmitting: false,
-          ticket: _mergeTicketDetail(previous: state.ticket, incoming: ticket),
-          successMessage: 'Terima kasih atas penilaian Anda!',
-        ),
-      ),
+      (ticket) {
+        final mergedTicket = _mergeTicketDetail(
+          previous: state.ticket,
+          incoming: ticket,
+        );
+        final trackingViewData = _trackingBuilder.build(
+          ticket: mergedTicket,
+          history: state.history,
+        );
+        emit(
+          state.copyWith(
+            isRatingSubmitting: false,
+            ticket: mergedTicket,
+            trackingViewData: trackingViewData,
+            successMessage: 'Terima kasih atas penilaian Anda!',
+          ),
+        );
+      },
     );
   }
 
@@ -401,7 +454,20 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     }
     result.fold(
       (failure) => emit(state.copyWith(errorMessage: failure.message)),
-      (history) => emit(state.copyWith(history: history)),
+      (history) {
+        final trackingViewData = state.ticket != null
+            ? _trackingBuilder.build(
+                ticket: state.ticket!,
+                history: history,
+              )
+            : null;
+        emit(
+          state.copyWith(
+            history: history,
+            trackingViewData: trackingViewData,
+          ),
+        );
+      },
     );
   }
 

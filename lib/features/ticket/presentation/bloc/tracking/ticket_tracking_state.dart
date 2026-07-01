@@ -1,12 +1,11 @@
 import 'package:equatable/equatable.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_tracking_item.dart';
+import 'package:uts/features/ticket/domain/entities/ticket_tracking_view_data.dart';
 
 enum TicketTrackingStatus {
   initial,
   loading,
   loaded,
-  empty,
   notFound,
   unauthorized,
   failure,
@@ -15,28 +14,29 @@ enum TicketTrackingStatus {
 class TicketTrackingState extends Equatable {
   final TicketTrackingStatus status;
   final TicketEntity? ticket;
-  final List<TicketTrackingItem> items;
+  final TicketTrackingViewData? viewData;
   final String? errorMessage;
 
   const TicketTrackingState({
     this.status = TicketTrackingStatus.initial,
     this.ticket,
-    this.items = const [],
+    this.viewData,
     this.errorMessage,
   });
 
   TicketTrackingState copyWith({
     TicketTrackingStatus? status,
     TicketEntity? ticket,
-    List<TicketTrackingItem>? items,
+    TicketTrackingViewData? viewData,
     String? errorMessage,
     bool clearTicket = false,
     bool clearErrorMessage = false,
+    bool clearViewData = false,
   }) {
     return TicketTrackingState(
       status: status ?? this.status,
       ticket: clearTicket ? null : (ticket ?? this.ticket),
-      items: items ?? this.items,
+      viewData: clearViewData ? null : (viewData ?? this.viewData),
       errorMessage:
           clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
     );
@@ -46,7 +46,7 @@ class TicketTrackingState extends Equatable {
   List<Object?> get props => [
         status,
         ticket,
-        items,
+        viewData,
         errorMessage,
       ];
 }

@@ -1,8 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/error/failures.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
-import 'package:uts/features/ticket/domain/entities/ticket_tracking_item.dart';
+import 'package:uts/features/ticket/domain/services/ticket_tracking_timeline_builder.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 
 import 'ticket_tracking_event.dart';
@@ -12,6 +11,8 @@ class TicketTrackingBloc
     extends Bloc<TicketTrackingEvent, TicketTrackingState> {
   final GetTicketDetailUseCase getTicketDetailUseCase;
   final GetTicketHistoryUseCase getTicketHistoryUseCase;
+  final TicketTrackingTimelineBuilder _timelineBuilder =
+      TicketTrackingTimelineBuilder();
   int _loadGeneration = 0;
 
   TicketTrackingBloc({
@@ -47,7 +48,7 @@ class TicketTrackingBloc
             status: _statusFromFailure(failure),
             errorMessage: failure.message,
             clearTicket: true,
-            items: const [],
+            clearViewData: true,
           ),
         );
         return null;
@@ -58,30 +59,31 @@ class TicketTrackingBloc
     if (ticket == null) {
       return;
     }
-    emit(state.copyWith(ticket: ticket, clearErrorMessage: true));
 
     final historyResult = await getTicketHistoryUseCase(event.ticketId);
     if (generation != _loadGeneration || isClosed) {
       return;
     }
+
     historyResult.fold(
       (failure) => emit(
         state.copyWith(
           status: _statusFromFailure(failure),
           ticket: ticket,
           errorMessage: failure.message,
-          items: const [],
+          clearViewData: true,
         ),
       ),
       (history) {
-        final items = _mapTrackingItems(history);
+        final viewData = _timelineBuilder.build(
+          ticket: ticket,
+          history: history,
+        );
         emit(
           state.copyWith(
-            status: items.isEmpty
-                ? TicketTrackingStatus.empty
-                : TicketTrackingStatus.loaded,
+            status: TicketTrackingStatus.loaded,
             ticket: ticket,
-            items: items,
+            viewData: viewData,
             clearErrorMessage: true,
           ),
         );
@@ -95,35 +97,6 @@ class TicketTrackingBloc
   ) {
     _loadGeneration++;
     emit(const TicketTrackingState());
-  }
-
-  List<TicketTrackingItem> _mapTrackingItems(
-      List<TicketHistoryEntity> history) {
-    final sorted = [...history]..sort((left, right) {
-        final byTime = left.createdAt.compareTo(right.createdAt);
-        if (byTime != 0) {
-          return byTime;
-        }
-        return left.id.compareTo(right.id);
-      });
-
-    return List<TicketTrackingItem>.generate(sorted.length, (index) {
-      final mapped = TicketTrackingItem.fromHistory(sorted[index]);
-      final isCurrent = index == sorted.length - 1;
-      return TicketTrackingItem(
-        id: mapped.id,
-        ticketId: mapped.ticketId,
-        title: mapped.title,
-        description: mapped.description,
-        actorName: mapped.actorName,
-        occurredAt: mapped.occurredAt,
-        oldStatus: mapped.oldStatus,
-        newStatus: mapped.newStatus,
-        type: mapped.type,
-        isCompleted: true,
-        isCurrent: isCurrent,
-      );
-    });
   }
 
   TicketTrackingStatus _statusFromFailure(Failure failure) {

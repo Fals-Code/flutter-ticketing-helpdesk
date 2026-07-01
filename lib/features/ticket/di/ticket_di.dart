@@ -1,6 +1,7 @@
 import 'package:get_it/get_it.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_attachment_storage_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_remote_data_source.dart';
@@ -108,6 +109,12 @@ Future<void> initTicketDependencies(GetIt sl) async {
     sl.registerLazySingleton<SupabaseClient>(() => Supabase.instance.client);
   }
 
+  if (!sl.isRegistered<RealtimeSessionService>()) {
+    sl.registerLazySingleton<RealtimeSessionService>(
+      () => SupabaseRealtimeSessionService(sl<SupabaseClient>()),
+    );
+  }
+
   sl.registerLazySingleton<TicketLocalDataSource>(
     () => SharedPrefsTicketLocalDataSource(
       sl<SharedPreferences>(),
@@ -120,7 +127,10 @@ Future<void> initTicketDependencies(GetIt sl) async {
   );
 
   sl.registerLazySingleton<TicketRemoteDataSource>(
-    () => TypedSupabaseTicketRemoteDataSourceImpl(sl<SupabaseClient>()),
+    () => TypedSupabaseTicketRemoteDataSourceImpl(
+      sl<SupabaseClient>(),
+      realtimeSessionService: sl<RealtimeSessionService>(),
+    ),
   );
 
   sl.registerLazySingleton<TicketAttachmentStorageDataSource>(

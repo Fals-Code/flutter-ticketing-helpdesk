@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/core/services/local_notification_service.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/core/services/session_cleanup_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
@@ -27,6 +28,26 @@ void main() {
       expect(ticketLocalDataSource.clearCacheCallCount, 1);
     });
 
+    test('stops realtime channels during logout cleanup', () async {
+      final fcmService = _FakeFCMService();
+      final localNotifications = _FakeLocalNotificationService();
+      final ticketLocalDataSource = _FakeTicketLocalDataSource();
+      final realtimeSessionService = _FakeRealtimeSessionService();
+      final service = SessionCleanupService(
+        fcmService: fcmService,
+        localNotificationService: localNotifications,
+        ticketLocalDataSource: ticketLocalDataSource,
+        realtimeSessionService: realtimeSessionService,
+      );
+
+      await service.clearBeforeLogout();
+
+      expect(realtimeSessionService.stopCallCount, 1);
+      expect(realtimeSessionService.lastReason, 'logout');
+      expect(fcmService.unregisterCallCount, 1);
+      expect(ticketLocalDataSource.clearCacheCallCount, 1);
+    });
+
     test('propagates cache cleanup failure after cleanup steps run', () async {
       final fcmService = _FakeFCMService();
       final localNotifications = _FakeLocalNotificationService();
@@ -48,6 +69,23 @@ void main() {
       expect(ticketLocalDataSource.clearCacheCallCount, 1);
     });
   });
+}
+
+class _FakeRealtimeSessionService implements RealtimeSessionService {
+  int stopCallCount = 0;
+  String? lastReason;
+
+  @override
+  int get generation => stopCallCount;
+
+  @override
+  Future<void> ensureAuthenticated({required String channelName}) async {}
+
+  @override
+  Future<void> stopAll({required String reason}) async {
+    stopCallCount++;
+    lastReason = reason;
+  }
 }
 
 class _FakeFCMService implements FCMService {

@@ -21,6 +21,7 @@ class TicketDetailState extends Equatable {
   final List<TicketHistoryEntity> history;
   final TicketTrackingViewData? trackingViewData;
   final String? errorMessage;
+  final String? realtimeWarningMessage;
   final String? successMessage;
   final bool isRatingSubmitting;
   final bool isCommentSubmitting;
@@ -35,6 +36,7 @@ class TicketDetailState extends Equatable {
     this.history = const [],
     this.trackingViewData,
     this.errorMessage,
+    this.realtimeWarningMessage,
     this.successMessage,
     this.isRatingSubmitting = false,
     this.isCommentSubmitting = false,
@@ -57,8 +59,10 @@ class TicketDetailState extends Equatable {
     List<TicketHistoryEntity>? history,
     TicketTrackingViewData? trackingViewData,
     String? errorMessage,
+    String? realtimeWarningMessage,
     String? successMessage,
     bool clearErrorMessage = false,
+    bool clearRealtimeWarningMessage = false,
     bool clearSuccessMessage = false,
     bool? isRatingSubmitting,
     bool? isCommentSubmitting,
@@ -76,6 +80,9 @@ class TicketDetailState extends Equatable {
       trackingViewData: trackingViewData ?? this.trackingViewData,
       errorMessage:
           clearErrorMessage ? null : (errorMessage ?? this.errorMessage),
+      realtimeWarningMessage: clearRealtimeWarningMessage
+          ? null
+          : (realtimeWarningMessage ?? this.realtimeWarningMessage),
       successMessage:
           clearSuccessMessage ? null : (successMessage ?? this.successMessage),
       isRatingSubmitting: isRatingSubmitting ?? this.isRatingSubmitting,
@@ -96,6 +103,7 @@ class TicketDetailState extends Equatable {
         history,
         trackingViewData,
         errorMessage,
+        realtimeWarningMessage,
         successMessage,
         isRatingSubmitting,
         isCommentSubmitting,

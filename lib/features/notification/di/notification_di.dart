@@ -1,4 +1,5 @@
 import 'package:get_it/get_it.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/core/services/local_notification_service.dart';
 import 'package:uts/core/services/fcm_service.dart';
 import 'package:uts/core/services/session_cleanup_service.dart';
@@ -33,6 +34,9 @@ Future<void> initNotificationDependencies(GetIt sl) async {
       fcmService: sl(),
       localNotificationService: sl(),
       ticketLocalDataSource: sl(),
+      realtimeSessionService: sl.isRegistered<RealtimeSessionService>()
+          ? sl<RealtimeSessionService>()
+          : null,
     ),
   );
 

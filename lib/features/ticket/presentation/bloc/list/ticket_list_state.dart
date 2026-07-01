@@ -12,6 +12,7 @@ class TicketListState extends Equatable {
   final List<TicketEntity> allTickets;
   final String? errorMessage;
   final String? loadMoreErrorMessage;
+  final String? realtimeWarningMessage;
   final String? successMessage;
   final bool hasMore;
   final bool hasMoreAll;
@@ -29,6 +30,7 @@ class TicketListState extends Equatable {
     required this.allTickets,
     required this.errorMessage,
     required this.loadMoreErrorMessage,
+    required this.realtimeWarningMessage,
     required this.successMessage,
     required this.hasMore,
     required this.hasMoreAll,
@@ -48,6 +50,7 @@ class TicketListState extends Equatable {
       allTickets: const [],
       errorMessage: null,
       loadMoreErrorMessage: null,
+      realtimeWarningMessage: null,
       successMessage: null,
       hasMore: true,
       hasMoreAll: true,
@@ -76,9 +79,11 @@ class TicketListState extends Equatable {
     List<TicketEntity>? allTickets,
     String? errorMessage,
     String? loadMoreErrorMessage,
+    String? realtimeWarningMessage,
     String? successMessage,
     bool clearErrorMessage = false,
     bool clearLoadMoreErrorMessage = false,
+    bool clearRealtimeWarningMessage = false,
     bool clearSuccessMessage = false,
     bool? hasMore,
     bool? hasMoreAll,
@@ -99,6 +104,9 @@ class TicketListState extends Equatable {
       loadMoreErrorMessage: clearLoadMoreErrorMessage
           ? null
           : (loadMoreErrorMessage ?? this.loadMoreErrorMessage),
+      realtimeWarningMessage: clearRealtimeWarningMessage
+          ? null
+          : (realtimeWarningMessage ?? this.realtimeWarningMessage),
       successMessage:
           clearSuccessMessage ? null : (successMessage ?? this.successMessage),
       hasMore: hasMore ?? this.hasMore,
@@ -120,6 +128,7 @@ class TicketListState extends Equatable {
         allTickets,
         errorMessage,
         loadMoreErrorMessage,
+        realtimeWarningMessage,
         successMessage,
         hasMore,
         hasMoreAll,

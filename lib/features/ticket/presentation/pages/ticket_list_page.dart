@@ -174,6 +174,10 @@ class _TicketListPageState extends State<TicketListPage>
               ToastService().show(context,
                   message: state.errorMessage!, type: ToastType.error);
             }
+            if (state.realtimeWarningMessage != null) {
+              ToastService().show(context,
+                  message: state.realtimeWarningMessage!, type: ToastType.info);
+            }
           },
           builder: (context, listState) {
             final tickets = isStaff ? listState.allTickets : listState.tickets;

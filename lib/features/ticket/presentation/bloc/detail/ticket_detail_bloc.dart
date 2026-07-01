@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:uts/core/error/failures.dart';
 import 'package:uts/core/services/connectivity_service.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
@@ -38,11 +39,18 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   StreamSubscription<TicketEntity?>? _detailSubscription;
   StreamSubscription<List<CommentEntity>>? _commentSubscription;
   StreamSubscription<ConnectionStatus>? _connectivitySubscription;
+  Timer? _detailRetryTimer;
+  Timer? _commentRetryTimer;
   int _detailGeneration = 0;
   int _commentGeneration = 0;
   int _detailRequestGeneration = 0;
   int _historyRequestGeneration = 0;
   int _mutationGeneration = 0;
+  int _detailRetryCount = 0;
+  int _commentRetryCount = 0;
+
+  static const int _maxRealtimeRetryCount = 3;
+  static const Duration _baseRealtimeRetryDelay = Duration(milliseconds: 300);
 
   TicketDetailBloc({
     required this.getTicketDetailUseCase,
@@ -62,6 +70,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<FetchTicketDetailRequested>(_onFetchDetail);
     on<StartTicketDetailSubscription>(_onStartDetailSubscription);
     on<TicketDetailStreamUpdated>(_onTicketDetailStreamUpdated);
+    on<_TicketDetailStreamFailed>(_onTicketDetailStreamFailed);
     on<UpdateTicketStatusRequested>(_onUpdateStatus);
     on<AssignTicketRequested>(_onAssignTicket);
     on<AddCommentRequested>(_onAddComment);
@@ -70,6 +79,7 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     on<FetchTicketActivitiesRequested>(_onFetchActivities);
     on<StartTicketCommentsSubscription>(_onStartCommentSubscription);
     on<CommentStreamUpdated>(_onCommentStreamUpdated);
+    on<_CommentStreamFailed>(_onCommentStreamFailed);
     on<ResetTicketDetailState>(_onResetState);
 
     _connectivitySubscription = (connectivityOverride ??
@@ -179,7 +189,18 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     _detailSubscription = watchTicketDetailUseCase(event.ticketId).listen(
       (ticket) {
         if (!isClosed && generation == _detailGeneration) {
+          _detailRetryCount = 0;
+          _detailRetryTimer?.cancel();
+          _detailRetryTimer = null;
           add(TicketDetailStreamUpdated(ticket: ticket));
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!isClosed && generation == _detailGeneration) {
+          add(_TicketDetailStreamFailed(
+            ticketId: event.ticketId,
+            error: error,
+          ));
         }
       },
     );
@@ -216,6 +237,19 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
         ticket: mergedTicket,
         trackingViewData: trackingViewData,
         clearErrorMessage: true,
+        clearRealtimeWarningMessage: true,
+      ),
+    );
+  }
+
+  void _onTicketDetailStreamFailed(
+    _TicketDetailStreamFailed event,
+    Emitter<TicketDetailState> emit,
+  ) {
+    _scheduleDetailRetry(event.ticketId, event.error);
+    emit(
+      state.copyWith(
+        realtimeWarningMessage: _safeRealtimeMessage(event.error),
       ),
     );
   }
@@ -493,7 +527,18 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     _commentSubscription = watchTicketCommentsUseCase(event.ticketId).listen(
       (comments) {
         if (!isClosed && generation == _commentGeneration) {
+          _commentRetryCount = 0;
+          _commentRetryTimer?.cancel();
+          _commentRetryTimer = null;
           add(CommentStreamUpdated(comments));
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        if (!isClosed && generation == _commentGeneration) {
+          add(_CommentStreamFailed(
+            ticketId: event.ticketId,
+            error: error,
+          ));
         }
       },
     );
@@ -506,6 +551,19 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     emit(
       state.copyWith(
         comments: deduplicateAndSortComments(event.comments),
+        clearRealtimeWarningMessage: true,
+      ),
+    );
+  }
+
+  void _onCommentStreamFailed(
+    _CommentStreamFailed event,
+    Emitter<TicketDetailState> emit,
+  ) {
+    _scheduleCommentRetry(event.ticketId, event.error);
+    emit(
+      state.copyWith(
+        realtimeWarningMessage: _safeRealtimeMessage(event.error),
       ),
     );
   }
@@ -524,6 +582,12 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
   Future<void> _cancelTicketSubscriptions() async {
     _detailGeneration++;
     _commentGeneration++;
+    _detailRetryCount = 0;
+    _commentRetryCount = 0;
+    _detailRetryTimer?.cancel();
+    _commentRetryTimer?.cancel();
+    _detailRetryTimer = null;
+    _commentRetryTimer = null;
 
     final detailSubscription = _detailSubscription;
     final commentSubscription = _commentSubscription;
@@ -588,6 +652,47 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     );
   }
 
+  void _scheduleDetailRetry(String ticketId, Object error) {
+    if (_isAuthenticationFailure(error) ||
+        _detailRetryCount >= _maxRealtimeRetryCount) {
+      return;
+    }
+    _detailRetryTimer?.cancel();
+    _detailRetryCount++;
+    final delay = _baseRealtimeRetryDelay * _detailRetryCount;
+    _detailRetryTimer = Timer(delay, () {
+      if (!isClosed) {
+        add(StartTicketDetailSubscription(ticketId));
+      }
+    });
+  }
+
+  void _scheduleCommentRetry(String ticketId, Object error) {
+    if (_isAuthenticationFailure(error) ||
+        _commentRetryCount >= _maxRealtimeRetryCount) {
+      return;
+    }
+    _commentRetryTimer?.cancel();
+    _commentRetryCount++;
+    final delay = _baseRealtimeRetryDelay * _commentRetryCount;
+    _commentRetryTimer = Timer(delay, () {
+      if (!isClosed) {
+        add(StartTicketCommentsSubscription(ticketId));
+      }
+    });
+  }
+
+  bool _isAuthenticationFailure(Object error) {
+    return error is RealtimeSessionException && error.isAuthenticationFailure;
+  }
+
+  String _safeRealtimeMessage(Object error) {
+    if (_isAuthenticationFailure(error)) {
+      return 'Sesi Anda telah berakhir. Silakan masuk kembali.';
+    }
+    return 'Pembaruan langsung sedang terputus. Data tetap dapat dilihat dan akan disinkronkan kembali.';
+  }
+
   @override
   Future<void> close() async {
     await _cancelTicketSubscriptions();
@@ -597,4 +702,30 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
     await connectivitySubscription?.cancel();
     await super.close();
   }
+}
+
+class _TicketDetailStreamFailed extends TicketDetailEvent {
+  final String ticketId;
+  final Object error;
+
+  const _TicketDetailStreamFailed({
+    required this.ticketId,
+    required this.error,
+  });
+
+  @override
+  List<Object?> get props => [ticketId, error];
+}
+
+class _CommentStreamFailed extends TicketDetailEvent {
+  final String ticketId;
+  final Object error;
+
+  const _CommentStreamFailed({
+    required this.ticketId,
+    required this.error,
+  });
+
+  @override
+  List<Object?> get props => [ticketId, error];
 }

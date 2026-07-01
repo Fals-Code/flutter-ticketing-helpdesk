@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 
 import '../models/ticket_model.dart';
+import '../models/comment_model.dart';
 import 'ticket_remote_data_source.dart';
 
 /// Realtime ticket data source with an explicitly typed stream pipeline.
@@ -11,12 +13,36 @@ import 'ticket_remote_data_source.dart';
 /// `Stream<List<TicketModel>>` method boundary.
 class TypedSupabaseTicketRemoteDataSourceImpl
     extends SupabaseTicketRemoteDataSourceImpl {
+  final RealtimeSessionService realtimeSessionService;
   final Map<String, Map<String, dynamic>> _profileCache = {};
 
-  TypedSupabaseTicketRemoteDataSourceImpl(super.supabaseClient);
+  TypedSupabaseTicketRemoteDataSourceImpl(
+    super.supabaseClient, {
+    RealtimeSessionService? realtimeSessionService,
+  }) : realtimeSessionService = realtimeSessionService ??
+            SupabaseRealtimeSessionService(supabaseClient);
 
   @override
   Stream<List<TicketModel>> watchTickets({
+    String? userId,
+    String? assignedToId,
+  }) {
+    final channelName = _channelName(
+      'tickets:list',
+      userId: userId,
+      assignedToId: assignedToId,
+    );
+
+    return _authenticatedStream(
+      channelName: channelName,
+      create: () => _watchTicketsUnsafe(
+        userId: userId,
+        assignedToId: assignedToId,
+      ),
+    );
+  }
+
+  Stream<List<TicketModel>> _watchTicketsUnsafe({
     String? userId,
     String? assignedToId,
   }) {
@@ -43,6 +69,59 @@ class TypedSupabaseTicketRemoteDataSourceImpl
     }
 
     return _mapTicketStream(source);
+  }
+
+  @override
+  Stream<TicketModel?> watchTicketDetail(String ticketId) {
+    return _authenticatedStream(
+      channelName: _channelName('tickets:detail', ticketId: ticketId),
+      create: () => super.watchTicketDetail(ticketId),
+    );
+  }
+
+  @override
+  Stream<List<CommentModel>> watchTicketComments(String ticketId) {
+    return _authenticatedStream(
+      channelName: _channelName('comments:ticket', ticketId: ticketId),
+      create: () => super.watchTicketComments(ticketId),
+    );
+  }
+
+  Stream<T> _authenticatedStream<T>({
+    required String channelName,
+    required Stream<T> Function() create,
+  }) async* {
+    final generation = realtimeSessionService.generation;
+    await realtimeSessionService.ensureAuthenticated(channelName: channelName);
+    if (generation != realtimeSessionService.generation) {
+      debugPrint(
+        'Ticket realtime start ignored after cleanup channel=$channelName',
+      );
+      return;
+    }
+    yield* create();
+  }
+
+  String _channelName(
+    String base, {
+    String? userId,
+    String? assignedToId,
+    String? ticketId,
+  }) {
+    final parts = [
+      base,
+      if (userId != null && userId.isNotEmpty) 'user:${_shortId(userId)}',
+      if (assignedToId != null && assignedToId.isNotEmpty)
+        'assigned:${_shortId(assignedToId)}',
+      if (ticketId != null && ticketId.isNotEmpty)
+        'ticket:${_shortId(ticketId)}',
+    ];
+    return parts.join(':');
+  }
+
+  String _shortId(String value) {
+    if (value.length <= 8) return value;
+    return value.substring(0, 8);
   }
 
   Stream<List<TicketModel>> _mapTicketStream(

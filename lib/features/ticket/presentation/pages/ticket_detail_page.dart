@@ -159,6 +159,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         if (state.errorMessage != null) {
           _showToast(state.errorMessage!, isError: true);
         }
+        if (state.realtimeWarningMessage != null) {
+          _showToast(state.realtimeWarningMessage!);
+        }
         if (state.successMessage != null &&
             state.successMessage != 'Tanggapan berhasil dikirim') {
           _showToast(state.successMessage!);

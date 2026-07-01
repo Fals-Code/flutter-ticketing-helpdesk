@@ -92,6 +92,7 @@ void main() {
         allTickets: const [],
         errorMessage: null,
         loadMoreErrorMessage: null,
+        realtimeWarningMessage: null,
         successMessage: null,
         hasMore: false,
         hasMoreAll: false,

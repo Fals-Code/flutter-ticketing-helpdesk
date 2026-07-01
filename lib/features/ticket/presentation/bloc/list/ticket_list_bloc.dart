@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
@@ -30,6 +31,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
 
   StreamSubscription<List<TicketEntity>>? _ticketSubscription;
   StreamSubscription<ConnectionStatus>? _connectivitySubscription;
+  Timer? _realtimeRetryTimer;
 
   _TicketListMode? _activeMode;
   int _userGeneration = 0;
@@ -38,6 +40,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
   List<TicketEntity> _latestRealtimeSnapshot = const [];
   String? _subscriptionAssignedToId;
   bool _subscriptionIsStaff = false;
+  int _realtimeRetryCount = 0;
+
+  static const int _maxRealtimeRetryCount = 3;
+  static const Duration _baseRealtimeRetryDelay = Duration(milliseconds: 300);
 
   TicketListBloc({
     required this.getTicketsUseCase,
@@ -428,6 +434,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     ).listen(
       (tickets) {
         if (!isClosed && generation == _subscriptionGeneration) {
+          _realtimeRetryCount = 0;
+          _realtimeRetryTimer?.cancel();
+          _realtimeRetryTimer = null;
           add(_RealtimeTicketsUpdated(
             tickets: tickets,
             isStaff: event.isStaff,
@@ -437,7 +446,12 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
       },
       onError: (Object error, StackTrace stackTrace) {
         if (!isClosed && generation == _subscriptionGeneration) {
-          add(_RealtimeTicketsFailed(error.toString()));
+          add(_RealtimeTicketsFailed(
+            error: error,
+            isStaff: event.isStaff,
+            userId: event.userId,
+            assignedToId: event.assignedToId,
+          ));
         }
       },
     );
@@ -460,6 +474,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
             hasMore: state.hasMoreAll,
             assignedToId: event.assignedToId,
           ),
+          clearRealtimeWarningMessage: true,
         ),
       );
       return;
@@ -473,6 +488,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
           query: query,
           hasMore: state.hasMore,
         ),
+        clearRealtimeWarningMessage: true,
       ),
     );
   }
@@ -481,9 +497,10 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     _RealtimeTicketsFailed event,
     Emitter<TicketListState> emit,
   ) {
+    _scheduleRealtimeRetry(event);
     emit(
       state.copyWith(
-        errorMessage: 'Realtime tiket terputus: ${event.message}',
+        realtimeWarningMessage: _safeRealtimeMessage(event.error),
       ),
     );
   }
@@ -542,6 +559,9 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     _subscriptionAssignedToId = null;
     _subscriptionIsStaff = false;
     _activeMode = null;
+    _realtimeRetryCount = 0;
+    _realtimeRetryTimer?.cancel();
+    _realtimeRetryTimer = null;
 
     final previous = _ticketSubscription;
     _ticketSubscription = null;
@@ -608,11 +628,44 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     }
   }
 
+  void _scheduleRealtimeRetry(_RealtimeTicketsFailed event) {
+    if (_isAuthenticationFailure(event.error)) {
+      return;
+    }
+    if (_realtimeRetryCount >= _maxRealtimeRetryCount) {
+      return;
+    }
+    _realtimeRetryTimer?.cancel();
+    _realtimeRetryCount++;
+    final delay = _baseRealtimeRetryDelay * _realtimeRetryCount;
+    _realtimeRetryTimer = Timer(delay, () {
+      if (isClosed) return;
+      add(StartTicketListSubscription(
+        userId: event.userId,
+        assignedToId: event.assignedToId,
+        isStaff: event.isStaff,
+      ));
+    });
+  }
+
+  bool _isAuthenticationFailure(Object error) {
+    return error is RealtimeSessionException && error.isAuthenticationFailure;
+  }
+
+  String _safeRealtimeMessage(Object error) {
+    if (_isAuthenticationFailure(error)) {
+      return 'Sesi Anda telah berakhir. Silakan masuk kembali.';
+    }
+    return 'Pembaruan langsung sedang terputus. Data tetap dapat dilihat dan akan disinkronkan kembali.';
+  }
+
   @override
   Future<void> close() async {
     _subscriptionGeneration++;
+    _realtimeRetryTimer?.cancel();
     final ticketSubscription = _ticketSubscription;
     final connectivitySubscription = _connectivitySubscription;
+    _realtimeRetryTimer = null;
     _ticketSubscription = null;
     _connectivitySubscription = null;
 
@@ -638,10 +691,18 @@ class _RealtimeTicketsUpdated extends TicketListEvent {
 }
 
 class _RealtimeTicketsFailed extends TicketListEvent {
-  final String message;
+  final Object error;
+  final bool isStaff;
+  final String? userId;
+  final String? assignedToId;
 
-  const _RealtimeTicketsFailed(this.message);
+  const _RealtimeTicketsFailed({
+    required this.error,
+    required this.isStaff,
+    this.userId,
+    this.assignedToId,
+  });
 
   @override
-  List<Object?> get props => [message];
+  List<Object?> get props => [error, isStaff, userId, assignedToId];
 }

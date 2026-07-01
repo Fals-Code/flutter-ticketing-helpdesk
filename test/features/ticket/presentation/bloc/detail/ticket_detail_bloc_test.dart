@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/error/failures.dart';
 import 'package:uts/core/services/connectivity_service.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
@@ -135,6 +136,67 @@ void main() {
         expect(bloc.state, const TicketDetailState());
       },
     );
+
+    blocTest<TicketDetailBloc, TicketDetailState>(
+      'detail realtime error keeps loaded ticket and shows safe warning',
+      build: () => _buildBloc(_FakeDetailRepository()),
+      seed: () => TicketDetailState(
+        status: TicketDetailStatus.loaded,
+        ticket: _ticket(),
+      ),
+      act: (bloc) async {
+        bloc.add(const StartTicketDetailSubscription('ticket-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final repository =
+            bloc.watchTicketDetailUseCase.repository as _FakeDetailRepository;
+        repository.detailStreamController!.addError(Exception('channelError'));
+      },
+      wait: const Duration(milliseconds: 50),
+      expect: () => [
+        isA<TicketDetailState>()
+            .having((state) => state.ticket?.id, 'ticket id', 'ticket-1')
+            .having((state) => state.errorMessage, 'fatal error', isNull)
+            .having(
+              (state) => state.realtimeWarningMessage,
+              'realtime warning',
+              'Pembaruan langsung sedang terputus. Data tetap dapat dilihat dan akan disinkronkan kembali.',
+            ),
+      ],
+    );
+
+    blocTest<TicketDetailBloc, TicketDetailState>(
+      'comment realtime auth failure shows session message and does not retry',
+      build: () => _buildBloc(_FakeDetailRepository()),
+      seed: () => TicketDetailState(
+        status: TicketDetailStatus.loaded,
+        ticket: _ticket(),
+        comments: [
+          _comment('1', 'first', DateTime.parse('2026-06-30T10:01:00Z')),
+        ],
+      ),
+      act: (bloc) async {
+        bloc.add(const StartTicketCommentsSubscription('ticket-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final repository =
+            bloc.watchTicketCommentsUseCase.repository as _FakeDetailRepository;
+        repository.commentStreamController!.addError(
+          const RealtimeSessionException(
+            type: RealtimeSessionFailureType.authentication,
+            message: 'Sesi Anda telah berakhir. Silakan masuk kembali.',
+          ),
+        );
+      },
+      wait: const Duration(milliseconds: 380),
+      verify: (bloc) {
+        final repository =
+            bloc.watchTicketCommentsUseCase.repository as _FakeDetailRepository;
+        expect(repository.watchCommentsCallCount, 1);
+        expect(
+          bloc.state.realtimeWarningMessage,
+          'Sesi Anda telah berakhir. Silakan masuk kembali.',
+        );
+      },
+    );
   });
 }
 
@@ -184,7 +246,11 @@ class _FakeDetailRepository implements TicketRepository {
   final Failure? detailFailure;
   final Completer<void>? addCommentCompleter;
   final Completer<TicketEntity>? detailCompleter;
+  StreamController<TicketEntity?>? detailStreamController;
+  StreamController<List<CommentEntity>>? commentStreamController;
   int addCommentCallCount = 0;
+  int watchDetailCallCount = 0;
+  int watchCommentsCallCount = 0;
 
   _FakeDetailRepository({
     this.detailFailure,
@@ -226,12 +292,16 @@ class _FakeDetailRepository implements TicketRepository {
 
   @override
   Stream<TicketEntity?> watchTicketDetail(String ticketId) {
-    return Stream.value(_ticket());
+    watchDetailCallCount++;
+    detailStreamController = StreamController<TicketEntity?>();
+    return detailStreamController!.stream;
   }
 
   @override
   Stream<List<CommentEntity>> watchTicketComments(String ticketId) {
-    return const Stream<List<CommentEntity>>.empty();
+    watchCommentsCallCount++;
+    commentStreamController = StreamController<List<CommentEntity>>();
+    return commentStreamController!.stream;
   }
 
   @override

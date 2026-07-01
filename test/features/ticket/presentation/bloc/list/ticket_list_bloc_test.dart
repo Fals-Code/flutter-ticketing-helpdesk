@@ -6,6 +6,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/error/failures.dart';
 import 'package:uts/core/services/connectivity_service.dart';
+import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
@@ -192,6 +193,90 @@ void main() {
         expect(bloc.state, TicketListState.initial());
       },
     );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'realtime channel error keeps current data and shows safe warning',
+      build: () {
+        final repository = _FakeTicketRepository();
+        return _buildBloc(repository);
+      },
+      seed: () => TicketListState.initial().copyWith(
+        tickets: [_ticket('1')],
+      ),
+      act: (bloc) async {
+        bloc.add(const StartTicketListSubscription(userId: 'user-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final repository =
+            bloc.watchTicketsUseCase.repository as _FakeTicketRepository;
+        repository.activeWatchController!.addError(
+          Exception(
+            'RealtimeSubscribeException(status: RealtimeSubscribeStatus.channelError, details: null)',
+          ),
+        );
+      },
+      wait: const Duration(milliseconds: 50),
+      expect: () => [
+        isA<TicketListState>()
+            .having((state) => state.tickets.length, 'ticket count', 1)
+            .having((state) => state.errorMessage, 'fatal error', isNull)
+            .having(
+              (state) => state.realtimeWarningMessage,
+              'realtime warning',
+              'Pembaruan langsung sedang terputus. Data tetap dapat dilihat dan akan disinkronkan kembali.',
+            ),
+      ],
+    );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'realtime channel error retries subscription once with bounded delay',
+      build: () {
+        final repository = _FakeTicketRepository();
+        return _buildBloc(repository);
+      },
+      act: (bloc) async {
+        bloc.add(const StartTicketListSubscription(userId: 'user-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final repository =
+            bloc.watchTicketsUseCase.repository as _FakeTicketRepository;
+        repository.activeWatchController!.addError(Exception('channelError'));
+      },
+      wait: const Duration(milliseconds: 380),
+      verify: (bloc) {
+        final repository =
+            bloc.watchTicketsUseCase.repository as _FakeTicketRepository;
+        expect(repository.watchTicketsCallCount, 2);
+      },
+    );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'realtime authentication failure shows session message and does not retry',
+      build: () {
+        final repository = _FakeTicketRepository();
+        return _buildBloc(repository);
+      },
+      act: (bloc) async {
+        bloc.add(const StartTicketListSubscription(userId: 'user-1'));
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        final repository =
+            bloc.watchTicketsUseCase.repository as _FakeTicketRepository;
+        repository.activeWatchController!.addError(
+          const RealtimeSessionException(
+            type: RealtimeSessionFailureType.authentication,
+            message: 'Sesi Anda telah berakhir. Silakan masuk kembali.',
+          ),
+        );
+      },
+      wait: const Duration(milliseconds: 380),
+      verify: (bloc) {
+        final repository =
+            bloc.watchTicketsUseCase.repository as _FakeTicketRepository;
+        expect(repository.watchTicketsCallCount, 1);
+        expect(
+          bloc.state.realtimeWarningMessage,
+          'Sesi Anda telah berakhir. Silakan masuk kembali.',
+        );
+      },
+    );
   });
 }
 
@@ -225,8 +310,12 @@ TicketEntity _ticket(String id, {String title = 'Printer error'}) {
 class _FakeTicketRepository implements TicketRepository {
   final Future<PaginatedResult<TicketEntity>> Function(TicketQuery query)?
       userPageHandler;
+  StreamController<List<TicketEntity>>? activeWatchController;
+  int watchTicketsCallCount = 0;
 
-  _FakeTicketRepository({this.userPageHandler});
+  _FakeTicketRepository({
+    this.userPageHandler,
+  });
 
   @override
   Future<Either<Failure, PaginatedResult<TicketEntity>>> getTickets({
@@ -253,7 +342,9 @@ class _FakeTicketRepository implements TicketRepository {
   @override
   Stream<List<TicketEntity>> watchTickets(
       {String? userId, String? assignedToId}) {
-    return const Stream<List<TicketEntity>>.empty();
+    watchTicketsCallCount++;
+    activeWatchController = StreamController<List<TicketEntity>>();
+    return activeWatchController!.stream;
   }
 
   @override
@@ -265,6 +356,8 @@ class _FakeTicketRepository implements TicketRepository {
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+
+  Future<void> close() async => activeWatchController?.close();
 }
 
 class _FakeTicketLocalDataSource implements TicketLocalDataSource {

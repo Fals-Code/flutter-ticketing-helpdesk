@@ -5,6 +5,7 @@ import '../../../../core/constants/enums.dart';
 import '../../../auth/domain/entities/user_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/delete_ticket_result.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 import 'package:uts/features/ticket/domain/entities/create_ticket_params.dart';
 import '../value_objects/paginated_result.dart';
@@ -87,7 +88,7 @@ abstract class TicketRepository {
   });
 
   /// Menghapus tiket secara policy-safe lewat backend.
-  Future<Either<Failure, String>> deleteTicket({
+  Future<Either<Failure, DeleteTicketResult>> deleteTicket({
     required String ticketId,
     required String reason,
   });

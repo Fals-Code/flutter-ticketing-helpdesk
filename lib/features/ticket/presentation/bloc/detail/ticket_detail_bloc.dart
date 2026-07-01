@@ -6,6 +6,7 @@ import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/delete_ticket_result.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/services/comment_collection_utils.dart';
 import 'package:uts/features/ticket/domain/services/ticket_tracking_timeline_builder.dart';
@@ -380,14 +381,17 @@ class TicketDetailBloc extends Bloc<TicketDetailEvent, TicketDetailState> {
           ),
         );
       },
-      (ticketId) async {
+      (deleteResult) async {
         await _cancelTicketSubscriptions();
-        await localDataSource.removeCachedTicketDetail(ticketId);
+        await localDataSource.removeCachedTicketDetail(deleteResult.ticketId);
         emit(
           state.copyWith(
             isDeleting: false,
-            deletedTicketId: ticketId,
-            successMessage: 'Tiket berhasil dihapus.',
+            deletedTicketId: deleteResult.ticketId,
+            successMessage: deleteResult.cleanupStatus ==
+                    DeleteTicketCleanupStatus.deletedWithCleanupPending
+                ? 'Tiket berhasil dihapus. Cleanup lampiran akan diselesaikan.'
+                : 'Tiket berhasil dihapus.',
             clearErrorMessage: true,
           ),
         );

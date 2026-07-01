@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:dartz/dartz.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uts/core/error/failures.dart';
+import 'package:uts/features/ticket/domain/entities/delete_ticket_result.dart';
 import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
 import 'package:uts/features/ticket/domain/usecases/ticket_usecases.dart';
 
@@ -74,7 +75,7 @@ class _DeleteRepository implements TicketRepository {
   _DeleteRepository({this.completer});
 
   @override
-  Future<Either<Failure, String>> deleteTicket({
+  Future<Either<Failure, DeleteTicketResult>> deleteTicket({
     required String ticketId,
     required String reason,
   }) async {
@@ -83,7 +84,10 @@ class _DeleteRepository implements TicketRepository {
     if (completer != null) {
       await completer!.future;
     }
-    return const Right('ticket-1');
+    return const Right(DeleteTicketResult(
+      ticketId: 'ticket-1',
+      cleanupStatus: DeleteTicketCleanupStatus.deletedAndCleaned,
+    ));
   }
 
   @override

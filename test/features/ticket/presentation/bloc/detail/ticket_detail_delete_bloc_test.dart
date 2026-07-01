@@ -9,6 +9,7 @@ import 'package:uts/core/services/connectivity_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/models/ticket_model.dart';
 import 'package:uts/features/ticket/domain/entities/comment_entity.dart';
+import 'package:uts/features/ticket/domain/entities/delete_ticket_result.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 import 'package:uts/features/ticket/domain/repositories/ticket_repository.dart';
@@ -133,12 +134,14 @@ void main() {
     );
 
     blocTest<TicketDetailBloc, TicketDetailState>(
-      'attachment cleanup failure keeps detail state and surfaces typed error',
+      'cleanup pending still clears active detail state with safe message',
       build: () {
         final repository = _DeleteRepository(
-          deleteFailure: const TicketOperationFailure(
-            type: TicketFailureType.compensation,
-            message: 'Penghapusan tiket gagal menyelesaikan cleanup lampiran.',
+          deleteResult: const DeleteTicketResult(
+            ticketId: 'ticket-1',
+            cleanupStatus: DeleteTicketCleanupStatus.deletedWithCleanupPending,
+            storagePaths: ['ticket/user/file.pdf'],
+            failedPaths: ['ticket/user/file.pdf'],
           ),
         );
         return _buildBloc(repository, _TrackingLocalDataSource());
@@ -155,14 +158,19 @@ void main() {
         isA<TicketDetailState>(),
         isA<TicketDetailState>()
             .having((state) => state.isDeleting, 'isDeleting', isFalse)
-            .having((state) => state.deletedTicketId, 'deletedTicketId', isNull)
-            .having((state) => state.ticket?.id, 'ticket', 'ticket-1')
             .having(
-              (state) => state.errorMessage,
-              'error',
-              'Penghapusan tiket gagal menyelesaikan cleanup lampiran.',
+                (state) => state.deletedTicketId, 'deletedTicketId', 'ticket-1')
+            .having(
+              (state) => state.successMessage,
+              'success',
+              'Tiket berhasil dihapus. Cleanup lampiran akan diselesaikan.',
             ),
       ],
+      verify: (bloc) {
+        final localDataSource =
+            bloc.localDataSource as _TrackingLocalDataSource;
+        expect(localDataSource.removedTicketIds, ['ticket-1']);
+      },
     );
   });
 }
@@ -203,6 +211,7 @@ TicketEntity _ticket() {
 
 class _DeleteRepository implements TicketRepository {
   final Failure? deleteFailure;
+  final DeleteTicketResult deleteResult;
   final Completer<void>? deleteCompleter;
   final StreamController<TicketEntity?> detailController =
       StreamController<TicketEntity?>.broadcast();
@@ -214,11 +223,15 @@ class _DeleteRepository implements TicketRepository {
 
   _DeleteRepository({
     this.deleteFailure,
+    this.deleteResult = const DeleteTicketResult(
+      ticketId: 'ticket-1',
+      cleanupStatus: DeleteTicketCleanupStatus.deletedAndCleaned,
+    ),
     this.deleteCompleter,
   });
 
   @override
-  Future<Either<Failure, String>> deleteTicket({
+  Future<Either<Failure, DeleteTicketResult>> deleteTicket({
     required String ticketId,
     required String reason,
   }) async {
@@ -229,7 +242,7 @@ class _DeleteRepository implements TicketRepository {
     if (deleteFailure != null) {
       return Left(deleteFailure!);
     }
-    return const Right('ticket-1');
+    return Right(deleteResult);
   }
 
   @override

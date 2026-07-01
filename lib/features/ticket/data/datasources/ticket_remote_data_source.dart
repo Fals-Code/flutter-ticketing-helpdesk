@@ -10,6 +10,31 @@ import 'ticket_create_exceptions.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/error/failures.dart';
 
+class TicketDeleteRemoteResult {
+  final String ticketId;
+  final bool deleted;
+  final List<String> attachmentPaths;
+  final String cleanupStatus;
+
+  const TicketDeleteRemoteResult({
+    required this.ticketId,
+    required this.deleted,
+    required this.attachmentPaths,
+    required this.cleanupStatus,
+  });
+
+  factory TicketDeleteRemoteResult.fromJson(Map<String, dynamic> json) {
+    return TicketDeleteRemoteResult(
+      ticketId: json['ticket_id'] as String,
+      deleted: json['deleted'] == true,
+      attachmentPaths: (json['attachment_paths'] as List<dynamic>? ?? const [])
+          .whereType<String>()
+          .toList(growable: false),
+      cleanupStatus: json['cleanup_status'] as String? ?? 'deletedAndCleaned',
+    );
+  }
+}
+
 abstract class TicketRemoteDataSource {
   Future<PaginatedResult<TicketModel>> getTickets(
     TicketQuery query,
@@ -30,7 +55,7 @@ abstract class TicketRemoteDataSource {
   Future<TicketModel> getTicketDetail(String ticketId);
   Future<List<CommentModel>> getTicketComments(String ticketId);
   Future<CommentModel> addComment(CommentModel comment);
-  Future<void> deleteTicket({
+  Future<TicketDeleteRemoteResult> deleteTicket({
     required String ticketId,
     required String reason,
   });
@@ -295,14 +320,18 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   }
 
   @override
-  Future<void> deleteTicket({
+  Future<TicketDeleteRemoteResult> deleteTicket({
     required String ticketId,
     required String reason,
   }) async {
-    await supabaseClient.rpc('delete_ticket_with_attachments', params: {
+    final response =
+        await supabaseClient.rpc('delete_ticket_with_attachments', params: {
       'p_ticket_id': ticketId,
       'p_reason': reason,
     });
+    return TicketDeleteRemoteResult.fromJson(
+      Map<String, dynamic>.from(response as Map),
+    );
   }
 
   @override

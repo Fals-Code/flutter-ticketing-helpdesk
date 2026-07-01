@@ -4,6 +4,7 @@ import 'package:equatable/equatable.dart';
 import '../../../../core/error/failures.dart';
 import '../../../../core/usecases/usecase.dart';
 import '../entities/create_ticket_params.dart';
+import '../entities/delete_ticket_result.dart';
 import '../entities/ticket_entity.dart';
 import '../entities/comment_entity.dart';
 import '../entities/ticket_history_entity.dart';
@@ -151,14 +152,16 @@ class AddCommentUseCase
 }
 
 class DeleteTicketUseCase
-    implements UseCase<Either<Failure, String>, DeleteTicketParams> {
+    implements
+        UseCase<Either<Failure, DeleteTicketResult>, DeleteTicketParams> {
   final TicketRepository repository;
   bool _isRunning = false;
 
   DeleteTicketUseCase(this.repository);
 
   @override
-  Future<Either<Failure, String>> call(DeleteTicketParams params) async {
+  Future<Either<Failure, DeleteTicketResult>> call(
+      DeleteTicketParams params) async {
     if (_isRunning) {
       return const Left(TicketOperationFailure(
         type: TicketFailureType.duplicateSubmit,

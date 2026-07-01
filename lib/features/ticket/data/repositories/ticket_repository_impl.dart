@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import 'package:uuid/uuid.dart';
 import '../../../../core/error/failures.dart';
 import '../../domain/entities/create_ticket_params.dart';
+import '../../domain/entities/delete_ticket_result.dart';
 import '../../domain/entities/ticket_entity.dart';
 import '../../domain/entities/comment_entity.dart';
 import '../../domain/entities/ticket_history_entity.dart';
@@ -285,16 +286,41 @@ class TicketRepositoryImpl implements TicketRepository {
   }
 
   @override
-  Future<Either<Failure, String>> deleteTicket({
+  Future<Either<Failure, DeleteTicketResult>> deleteTicket({
     required String ticketId,
     required String reason,
   }) async {
     try {
-      await remoteDataSource.deleteTicket(
+      final deleteResult = await remoteDataSource.deleteTicket(
         ticketId: ticketId,
         reason: reason,
       );
-      return Right(ticketId);
+
+      if (!deleteResult.deleted) {
+        return const Left(TicketOperationFailure(
+          type: TicketFailureType.unknown,
+          message: 'Penghapusan tiket tidak berhasil.',
+        ));
+      }
+
+      final paths = deleteResult.attachmentPaths;
+      if (paths.isEmpty) {
+        return Right(DeleteTicketResult(
+          ticketId: deleteResult.ticketId,
+          cleanupStatus: DeleteTicketCleanupStatus.deletedAndCleaned,
+        ));
+      }
+
+      final failedPaths =
+          await attachmentStorageDataSource.deleteObjects(paths);
+      return Right(DeleteTicketResult(
+        ticketId: deleteResult.ticketId,
+        cleanupStatus: failedPaths.isEmpty
+            ? DeleteTicketCleanupStatus.deletedAndCleaned
+            : DeleteTicketCleanupStatus.deletedWithCleanupPending,
+        storagePaths: paths,
+        failedPaths: failedPaths,
+      ));
     } on sup.AuthException catch (e) {
       return Left(ServerFailure(message: e.message, code: 401));
     } on sup.PostgrestException catch (e) {

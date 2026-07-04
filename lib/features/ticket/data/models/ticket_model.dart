@@ -46,7 +46,6 @@ class TicketModel extends TicketEntity {
   }
 
   factory TicketModel.fromJson(Map<String, dynamic> json) {
-    // 1. Parse Creator/Reporter Profile (join via profiles:user_id)
     final profilesData = json['profiles'];
     Map<String, dynamic>? creatorProfile;
     if (profilesData is Map<String, dynamic>) {
@@ -59,7 +58,6 @@ class TicketModel extends TicketEntity {
         ) ??
         'Pengguna';
 
-    // 2. Parse Technician Profile (join via technician:assigned_to)
     final technicianData = json['technician'];
     Map<String, dynamic>? staffProfile;
     if (technicianData is Map<String, dynamic>) {
@@ -110,7 +108,7 @@ class TicketModel extends TicketEntity {
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toJson({bool includeAttachmentAccessUrls = true}) {
     return {
       'id': id,
       'title': title,
@@ -125,8 +123,10 @@ class TicketModel extends TicketEntity {
       'created_at': createdAt.toIso8601String(),
       if (attachments.isNotEmpty)
         'ticket_attachments': attachments
-            .map((attachment) =>
-                TicketAttachmentModel.fromEntity(attachment).toJson())
+            .map(
+              (attachment) => TicketAttachmentModel.fromEntity(attachment)
+                  .toJson(includeAccessUrl: includeAttachmentAccessUrls),
+            )
             .toList(growable: false),
       if (updatedAt != null) 'updated_at': updatedAt!.toIso8601String(),
       if (rating != null) 'rating': rating,

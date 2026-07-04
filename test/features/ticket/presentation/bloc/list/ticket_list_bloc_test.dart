@@ -171,6 +171,57 @@ void main() {
     );
 
     blocTest<TicketListBloc, TicketListState>(
+      'upserts created ticket once without resetting active query',
+      build: () => _buildBloc(_FakeTicketRepository()),
+      seed: () => TicketListState.initial().copyWith(
+        query: TicketQuery(search: 'printer', status: TicketStatus.open),
+        tickets: [_ticket('existing', title: 'Printer old')],
+      ),
+      act: (bloc) async {
+        final created = _ticket('created', title: 'Printer new');
+        bloc.add(TicketCreatedLocally(created));
+        await Future<void>.delayed(Duration.zero);
+        bloc.add(TicketCreatedLocally(created));
+      },
+      expect: () => [
+        isA<TicketListState>()
+            .having(
+              (state) => state.tickets.map((ticket) => ticket.id).toList(),
+              'ids',
+              ['existing', 'created'],
+            )
+            .having((state) => state.query.search, 'search', 'printer')
+            .having((state) => state.query.status, 'status', TicketStatus.open),
+      ],
+      verify: (bloc) {
+        expect(
+          bloc.state.tickets.where((ticket) => ticket.id == 'created').length,
+          1,
+        );
+      },
+    );
+
+    blocTest<TicketListBloc, TicketListState>(
+      'does not insert created ticket when active search filter excludes it',
+      build: () => _buildBloc(_FakeTicketRepository()),
+      seed: () => TicketListState.initial().copyWith(
+        query: TicketQuery(search: 'network'),
+        tickets: [_ticket('existing', title: 'Network old')],
+      ),
+      act: (bloc) => bloc.add(
+        TicketCreatedLocally(_ticket('created', title: 'Printer new')),
+      ),
+      expect: () => <TicketListState>[],
+      verify: (bloc) {
+        expect(
+          bloc.state.tickets.map((ticket) => ticket.id).toList(),
+          ['existing'],
+        );
+        expect(bloc.state.query.search, 'network');
+      },
+    );
+
+    blocTest<TicketListBloc, TicketListState>(
       'reset clears list state and ignores stale fetch result',
       build: () {
         pendingUserPageCompleter = Completer<PaginatedResult<TicketEntity>>();

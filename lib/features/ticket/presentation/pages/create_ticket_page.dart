@@ -12,6 +12,9 @@ import 'package:uts/shared/widgets/app_text_field.dart';
 import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_event.dart';
 import 'package:uts/features/ticket/presentation/bloc/create/ticket_create_state.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
+import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_event.dart'
+    as list_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.dart';
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
@@ -47,17 +50,23 @@ class _CreateTicketPageState extends State<CreateTicketPage>
 
   bool _showCategoryError = false;
 
-  static const _categories = [
-    {'value': 'hardware', 'label': 'Hardware', 'icon': '🔧'},
-    {'value': 'software', 'label': 'Software', 'icon': '💻'},
-    {'value': 'network', 'label': 'Jaringan', 'icon': '🌐'},
-    {'value': 'account', 'label': 'Akun & Akses', 'icon': '🔑'},
-    {'value': 'other', 'label': 'Lainnya', 'icon': '❓'},
+  static const List<Map<String, Object>> _categories = [
+    {'value': 'hardware', 'label': 'Hardware', 'icon': Icons.build_rounded},
+    {
+      'value': 'software',
+      'label': 'Software',
+      'icon': Icons.laptop_chromebook_rounded,
+    },
+    {'value': 'network', 'label': 'Jaringan', 'icon': Icons.language_rounded},
+    {'value': 'account', 'label': 'Akun & Akses', 'icon': Icons.key_rounded},
+    {'value': 'other', 'label': 'Lainnya', 'icon': Icons.help_rounded},
   ];
 
   @override
   void initState() {
     super.initState();
+    final createStatus = context.read<TicketCreateBloc>().state.status;
+    _isSuccess = createStatus == TicketCreateStatus.success;
     _subjectController.addListener(_updateProgress);
     _descController.addListener(_updateProgress);
 
@@ -65,6 +74,9 @@ class _CreateTicketPageState extends State<CreateTicketPage>
         vsync: this, duration: const Duration(milliseconds: 500));
     _scaleAnim = Tween<double>(begin: 0.0, end: 1.0).animate(CurvedAnimation(
         parent: _successAnimController, curve: Curves.elasticOut));
+    if (_isSuccess) {
+      _successAnimController.value = 1;
+    }
   }
 
   @override
@@ -316,6 +328,12 @@ class _CreateTicketPageState extends State<CreateTicketPage>
             _isSuccess = true;
           });
           _successAnimController.forward();
+          final createdTicket = state.ticket;
+          if (createdTicket != null) {
+            context
+                .read<TicketListBloc>()
+                .add(list_event.TicketCreatedLocally(createdTicket));
+          }
           context
               .read<TicketStatsBloc>()
               .add(stats_event.FetchTicketStatsRequested());
@@ -364,7 +382,12 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                   ),
                 ),
               ),
-        body: _isSuccess ? _buildSuccessState(isDark) : _buildFormState(isDark),
+        body: _isSuccess
+            ? _buildSuccessState(
+                context.watch<TicketCreateBloc>().state,
+                isDark,
+              )
+            : _buildFormState(isDark),
       ),
     );
   }
@@ -448,14 +471,16 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                         itemCount: _categories.length,
                         itemBuilder: (context, index) {
                           final cat = _categories[index];
-                          final isSelected = _selectedCategory == cat['value'];
+                          final categoryValue = cat['value']! as String;
+                          final categoryLabel = cat['label']! as String;
+                          final isSelected = _selectedCategory == categoryValue;
                           final hasError =
                               _showCategoryError && _selectedCategory.isEmpty;
 
                           return GestureDetector(
                             onTap: () {
                               setState(() {
-                                _selectedCategory = cat['value']!;
+                                _selectedCategory = categoryValue;
                                 _showCategoryError = false;
                               });
                               _updateProgress();
@@ -486,11 +511,18 @@ class _CreateTicketPageState extends State<CreateTicketPage>
                                   const EdgeInsets.symmetric(horizontal: 12),
                               child: Row(
                                 children: [
-                                  Text(cat['icon']!,
-                                      style: const TextStyle(fontSize: 18)),
+                                  Icon(
+                                    _iconForCategory(categoryValue),
+                                    size: 18,
+                                    color: isSelected
+                                        ? AppColors.primary
+                                        : (isDark
+                                            ? Colors.white70
+                                            : Colors.black54),
+                                  ),
                                   const SizedBox(width: 8),
                                   Expanded(
-                                      child: Text(cat['label']!,
+                                      child: Text(categoryLabel,
                                           style: TextStyle(
                                               fontSize: 13,
                                               fontWeight: isSelected
@@ -781,7 +813,19 @@ class _CreateTicketPageState extends State<CreateTicketPage>
     return '${mb.toStringAsFixed(1)} MB';
   }
 
-  Widget _buildSuccessState(bool isDark) {
+  IconData _iconForCategory(String value) {
+    return switch (value) {
+      'hardware' => Icons.build_rounded,
+      'software' => Icons.laptop_chromebook_rounded,
+      'network' => Icons.language_rounded,
+      'account' => Icons.key_rounded,
+      _ => Icons.help_rounded,
+    };
+  }
+
+  Widget _buildSuccessState(TicketCreateState state, bool isDark) {
+    final ticketId = state.ticket?.id.trim();
+
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32.0),
@@ -821,8 +865,12 @@ class _CreateTicketPageState extends State<CreateTicketPage>
               width: double.infinity,
               child: AppButton.primary(
                 label: 'Lihat Tiket',
-                onPressed: () => context.go(
-                    '/tickets'), // Adjust to actual detail route once ID is parsed well
+                onPressed: ticketId == null || ticketId.isEmpty
+                    ? null
+                    : () => context.pushReplacementNamed(
+                          'ticket-detail',
+                          pathParameters: {'id': ticketId},
+                        ),
               ),
             ),
             const SizedBox(height: 16),

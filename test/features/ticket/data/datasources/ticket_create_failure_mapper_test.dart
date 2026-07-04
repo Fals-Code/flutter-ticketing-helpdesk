@@ -65,6 +65,46 @@ void main() {
       );
     });
 
+    test(
+        'allows direct insert fallback only for missing RPC without attachment',
+        () {
+      final error = sup.PostgrestException(
+        message:
+            'Could not find the function public.create_ticket_with_attachments',
+        code: 'PGRST202',
+      );
+
+      expect(
+        TicketCreateFailureMapper.canUseDirectInsertFallback(
+          error: error,
+          attachmentCount: 0,
+        ),
+        isTrue,
+      );
+      expect(
+        TicketCreateFailureMapper.canUseDirectInsertFallback(
+          error: error,
+          attachmentCount: 1,
+        ),
+        isFalse,
+      );
+    });
+
+    test('does not fallback for unrelated missing RPC error', () {
+      final error = sup.PostgrestException(
+        message: 'Could not find the function public.get_ticket_stats',
+        code: 'PGRST202',
+      );
+
+      expect(
+        TicketCreateFailureMapper.canUseDirectInsertFallback(
+          error: error,
+          attachmentCount: 0,
+        ),
+        isFalse,
+      );
+    });
+
     test('keeps raw backend details out of user-facing unknown message', () {
       final error = sup.PostgrestException(
         message: 'database returned internal stack trace',

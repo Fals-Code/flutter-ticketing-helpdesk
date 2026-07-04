@@ -4,6 +4,8 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uts/core/services/realtime_session_service.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_local_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_attachment_storage_data_source.dart';
+import 'package:uts/features/ticket/data/datasources/ticket_attachment_viewer_data_source.dart';
+import 'package:uts/features/ticket/domain/services/ticket_attachment_viewer.dart';
 import 'package:uts/features/ticket/data/datasources/ticket_remote_data_source.dart';
 import 'package:uts/features/ticket/data/datasources/typed_ticket_remote_data_source.dart';
 import 'package:uts/features/ticket/data/repositories/ticket_repository_impl.dart';
@@ -126,10 +128,15 @@ Future<void> initTicketDependencies(GetIt sl) async {
     () => SupabaseTicketCacheSessionProvider(sl<SupabaseClient>()),
   );
 
+  sl.registerLazySingleton<TicketAttachmentViewerDataSource>(
+    () => SupabaseTicketAttachmentViewerDataSource(sl<SupabaseClient>()),
+  );
+
   sl.registerLazySingleton<TicketRemoteDataSource>(
     () => TypedSupabaseTicketRemoteDataSourceImpl(
       sl<SupabaseClient>(),
       realtimeSessionService: sl<RealtimeSessionService>(),
+      attachmentViewer: sl<TicketAttachmentViewerDataSource>(),
     ),
   );
 

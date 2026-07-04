@@ -1,5 +1,5 @@
-name: uts
-description: "TICKET-Q — aplikasi mobile E-Ticketing Helpdesk untuk pelaporan, monitoring, dan penyelesaian tiket layanan."
+﻿name: uts
+description: "TICKET-Q - aplikasi mobile E-Ticketing Helpdesk untuk pelaporan, monitoring, dan penyelesaian tiket layanan."
 publish_to: 'none'
 
 version: 2.0.0+1
@@ -44,6 +44,7 @@ dependencies:
   infinite_scroll_pagination: ^5.1.1
   uuid: ^4.5.3
   path_provider: ^2.1.5
+  open_filex: ^4.7.0
   intl: ^0.20.2
   flutter_dotenv: ^5.2.1
   flutter_local_notifications: ^21.0.0

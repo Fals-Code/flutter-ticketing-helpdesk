@@ -36,6 +36,19 @@ abstract final class TicketCreateFailureMapper {
     };
   }
 
+  static bool isMissingCreateTicketRpc(sup.PostgrestException error) {
+    final message = error.message.toLowerCase();
+    return (error.code == 'PGRST202' || error.code == '42883') &&
+        message.contains('create_ticket_with_attachments');
+  }
+
+  static bool canUseDirectInsertFallback({
+    required sup.PostgrestException error,
+    required int attachmentCount,
+  }) {
+    return attachmentCount == 0 && isMissingCreateTicketRpc(error);
+  }
+
   static int? numericCode(sup.PostgrestException error) {
     final code = error.code;
     return code == null ? null : int.tryParse(code);

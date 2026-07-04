@@ -132,42 +132,38 @@ final GoRouter appRouter = GoRouter(
         child: TicketListPage(),
         transitionsBuilder: _slideTransition,
       ),
-      routes: [
-        GoRoute(
-          path: 'create',
-          name: 'create-ticket',
-          pageBuilder: (context, state) => const CustomTransitionPage(
-            child: CreateTicketPage(),
-            transitionsBuilder: _slideUpTransition,
+    ),
+    GoRoute(
+      path: AppRoutes.createTicket,
+      name: 'create-ticket',
+      pageBuilder: (context, state) => const CustomTransitionPage(
+        child: CreateTicketPage(),
+        transitionsBuilder: _slideUpTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ticketTracking,
+      name: 'ticket-tracking',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        child: BlocProvider(
+          create: (_) => sl<TicketTrackingBloc>()
+            ..add(LoadTicketTrackingRequested(
+              state.pathParameters['id']!,
+            )),
+          child: TicketTrackingPage(
+            ticketId: state.pathParameters['id']!,
           ),
         ),
-        GoRoute(
-          path: ':id',
-          name: 'ticket-detail',
-          pageBuilder: (context, state) => CustomTransitionPage(
-            child: TicketDetailPage(ticketId: state.pathParameters['id']!),
-            transitionsBuilder: _slideTransition,
-          ),
-          routes: [
-            GoRoute(
-              path: 'tracking',
-              name: 'ticket-tracking',
-              pageBuilder: (context, state) => CustomTransitionPage(
-                child: BlocProvider(
-                  create: (_) => sl<TicketTrackingBloc>()
-                    ..add(LoadTicketTrackingRequested(
-                      state.pathParameters['id']!,
-                    )),
-                  child: TicketTrackingPage(
-                    ticketId: state.pathParameters['id']!,
-                  ),
-                ),
-                transitionsBuilder: _slideTransition,
-              ),
-            ),
-          ],
-        ),
-      ],
+        transitionsBuilder: _slideTransition,
+      ),
+    ),
+    GoRoute(
+      path: AppRoutes.ticketDetail,
+      name: 'ticket-detail',
+      pageBuilder: (context, state) => CustomTransitionPage(
+        child: TicketDetailPage(ticketId: state.pathParameters['id']!),
+        transitionsBuilder: _slideTransition,
+      ),
     ),
     GoRoute(
       path: AppRoutes.history,

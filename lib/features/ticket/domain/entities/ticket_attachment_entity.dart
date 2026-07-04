@@ -13,7 +13,11 @@ enum TicketAttachmentKind {
     if (normalized.startsWith('image/')) {
       return TicketAttachmentKind.image;
     }
-    if (normalized == 'application/pdf') {
+    if (normalized == 'application/pdf' ||
+        normalized == 'text/plain' ||
+        normalized == 'application/msword' ||
+        normalized ==
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       return TicketAttachmentKind.document;
     }
     return TicketAttachmentKind.unknown;
@@ -51,6 +55,43 @@ class TicketAttachmentEntity extends Equatable {
 
   bool get hasPersistedStoragePath =>
       storagePath != null && storagePath!.trim().isNotEmpty;
+
+  bool get hasAccessUrl => accessUrl != null && accessUrl!.trim().isNotEmpty;
+
+  bool get isImageLike {
+    final normalizedMime = mimeType.trim().toLowerCase();
+    if (normalizedMime.startsWith('image/')) {
+      return true;
+    }
+
+    return switch (extension.trim().toLowerCase()) {
+      'jpg' || 'jpeg' || 'png' || 'webp' || 'gif' || 'heic' || 'heif' => true,
+      _ => false,
+    };
+  }
+
+  bool get isDocumentLike {
+    if (isImageLike) {
+      return false;
+    }
+
+    final normalizedMime = mimeType.trim().toLowerCase();
+    if (switch (normalizedMime) {
+      'application/pdf' ||
+      'text/plain' ||
+      'application/msword' ||
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document' =>
+        true,
+      _ => false,
+    }) {
+      return true;
+    }
+
+    return switch (extension.trim().toLowerCase()) {
+      'pdf' || 'txt' || 'doc' || 'docx' => true,
+      _ => false,
+    };
+  }
 
   TicketAttachmentEntity copyWith({
     String? id,

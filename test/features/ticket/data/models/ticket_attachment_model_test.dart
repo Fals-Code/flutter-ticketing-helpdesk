@@ -21,6 +21,22 @@ void main() {
       expect(model.storagePath, 'ticket-1/user-1/file.pdf');
     });
 
+    test('fromJson maps signed_url to accessUrl', () {
+      final model = TicketAttachmentModel.fromJson({
+        'id': 'att-2',
+        'ticket_id': 'ticket-1',
+        'storage_path': 'ticket-1/user-1/image.jpg',
+        'file_name': 'image.jpg',
+        'mime_type': 'image/jpeg',
+        'size_bytes': 2048,
+        'uploaded_by': 'user-1',
+        'created_at': '2026-06-01T10:00:00.000Z',
+        'signed_url': 'https://signed.test/image.jpg',
+      });
+
+      expect(model.accessUrl, 'https://signed.test/image.jpg');
+    });
+
     test('toEntity preserves optional accessUrl and legacy flag', () {
       final model = TicketAttachmentModel(
         id: 'att-1',

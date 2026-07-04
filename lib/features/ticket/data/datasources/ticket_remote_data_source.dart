@@ -6,6 +6,7 @@ import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
 import '../models/ticket_history_model.dart';
 import 'ticket_attachment_storage_data_source.dart';
+import 'package:uts/features/ticket/domain/services/ticket_attachment_viewer.dart';
 import 'ticket_create_exceptions.dart';
 import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/error/failures.dart';
@@ -82,11 +83,15 @@ abstract class TicketRemoteDataSource {
 
 class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
   final sup.SupabaseClient supabaseClient;
+  final TicketAttachmentViewerDataSource? attachmentViewer;
   static const String _ticketSelect =
       '*, profiles:user_id(*), technician:assigned_to(*), ticket_attachments(*)';
   final Map<String, Map<String, dynamic>> _profileCache = {};
 
-  SupabaseTicketRemoteDataSourceImpl(this.supabaseClient);
+  SupabaseTicketRemoteDataSourceImpl(
+    this.supabaseClient, {
+    this.attachmentViewer,
+  });
 
   @override
   Future<Map<String, int>> getTicketStats({
@@ -292,6 +297,18 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
       final debugMessage =
           TicketCreateFailureMapper.debugSummaryFromPostgrest(error);
       _debugCreateTicketFailure(debugMessage, stackTrace);
+      if (TicketCreateFailureMapper.canUseDirectInsertFallback(
+        error: error,
+        attachmentCount: attachments.length,
+      )) {
+        return _createTicketWithDirectInsertFallback(
+          ticketId: ticketId,
+          title: title,
+          description: description,
+          category: category,
+          debugReason: debugMessage,
+        );
+      }
       throw TicketCreateException(
         type: TicketCreateFailureMapper.typeFromPostgrest(error),
         message: TicketCreateFailureMapper.safeMessageFromPostgrest(error),
@@ -325,6 +342,88 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
     }
   }
 
+  Future<TicketModel> _createTicketWithDirectInsertFallback({
+    required String ticketId,
+    required String title,
+    required String description,
+    required String category,
+    required String debugReason,
+  }) async {
+    final actorId = getAuthenticatedUserId();
+    if (actorId == null || actorId.isEmpty) {
+      throw TicketCreateException(
+        type: TicketFailureType.authentication,
+        message: 'Sesi telah berakhir. Silakan login kembali.',
+        code: 401,
+        debugMessage: 'direct fallback blocked: missing authenticated user',
+      );
+    }
+
+    try {
+      if (kDebugMode) {
+        debugPrint(
+          'Ticket create direct fallback start '
+          'ticket=${_shortDebugId(ticketId)} '
+          'actor=${_shortDebugId(actorId)} '
+          'category=$category reason={$debugReason}',
+        );
+      }
+      await supabaseClient.from('tickets').insert({
+        'id': ticketId,
+        'title': title,
+        'description': description,
+        'category': category,
+        'status': TicketStatus.open.dbValue,
+        'user_id': actorId,
+        'assigned_to': null,
+        'images': const <String>[],
+      });
+    } on sup.PostgrestException catch (error, stackTrace) {
+      final debugMessage =
+          TicketCreateFailureMapper.debugSummaryFromPostgrest(error);
+      _debugCreateTicketFailure(
+        'directFallback $debugMessage',
+        stackTrace,
+      );
+      throw TicketCreateException(
+        type: TicketCreateFailureMapper.typeFromPostgrest(error),
+        message: TicketCreateFailureMapper.safeMessageFromPostgrest(error),
+        code: TicketCreateFailureMapper.numericCode(error),
+        debugMessage: debugMessage,
+      );
+    } on Object catch (error, stackTrace) {
+      final debugMessage = 'directFallback type=${error.runtimeType} '
+          'message=${_sanitizeDebugValue(error)}';
+      _debugCreateTicketFailure(debugMessage, stackTrace);
+      throw TicketCreateException(
+        type: TicketFailureType.databaseCreate,
+        message: 'Tiket belum dapat disimpan. Coba lagi beberapa saat.',
+        debugMessage: debugMessage,
+      );
+    }
+
+    try {
+      return await getTicketDetail(ticketId);
+    } catch (error, stackTrace) {
+      if (kDebugMode) {
+        debugPrint(
+          'Ticket create direct fallback detail read failed '
+          'ticket=${_shortDebugId(ticketId)} type=${error.runtimeType}',
+        );
+        debugPrintStack(stackTrace: stackTrace);
+      }
+      return TicketModel(
+        id: ticketId,
+        title: title,
+        description: description,
+        status: TicketStatus.open,
+        category: category,
+        createdAt: DateTime.now(),
+        userId: actorId,
+      );
+    }
+  }
+
   @override
   Future<TicketModel> getTicketDetail(String ticketId) async {
     final response = await supabaseClient
@@ -334,7 +433,34 @@ class SupabaseTicketRemoteDataSourceImpl implements TicketRemoteDataSource {
         .eq('id', ticketId)
         .single();
 
-    return TicketModel.fromJson(response);
+    final hydratedResponse = await _hydrateTicketDetailAttachments(response);
+    return TicketModel.fromJson(hydratedResponse);
+  }
+
+  Future<Map<String, dynamic>> _hydrateTicketDetailAttachments(
+    Map<String, dynamic> response,
+  ) async {
+    final rawAttachments = response['ticket_attachments'];
+    if (attachmentViewer == null || rawAttachments is! List) {
+      return response;
+    }
+
+    final attachmentMaps = rawAttachments
+        .whereType<Map>()
+        .map((item) => Map<String, dynamic>.from(item))
+        .toList(growable: false);
+
+    if (attachmentMaps.isEmpty) {
+      return response;
+    }
+
+    final hydratedAttachments =
+        await attachmentViewer!.hydrateAttachmentPayloads(attachmentMaps);
+
+    return {
+      ...response,
+      'ticket_attachments': hydratedAttachments,
+    };
   }
 
   @override

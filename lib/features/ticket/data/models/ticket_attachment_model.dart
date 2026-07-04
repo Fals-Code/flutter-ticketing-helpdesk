@@ -97,7 +97,7 @@ class TicketAttachmentModel extends TicketAttachmentEntity {
     );
   }
 
-  Map<String, dynamic> toJson() {
+  Map<String, dynamic> toJson({bool includeAccessUrl = true}) {
     return {
       'id': id,
       'ticket_id': ticketId,
@@ -108,7 +108,7 @@ class TicketAttachmentModel extends TicketAttachmentEntity {
       'uploaded_by': uploadedBy,
       'created_at': createdAt.toIso8601String(),
       if (extension.isNotEmpty) 'extension': extension,
-      if (accessUrl != null) 'access_url': accessUrl,
+      if (includeAccessUrl && accessUrl != null) 'access_url': accessUrl,
     };
   }
 

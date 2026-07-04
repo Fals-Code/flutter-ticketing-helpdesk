@@ -29,6 +29,39 @@ void main() {
       expect(preferences.containsKey('cached_tickets'), isFalse);
     });
 
+    test('cache serialization strips accessUrl from attachment payloads',
+        () async {
+      final ticket = TicketModel.fromJson({
+        'id': 'ticket-1',
+        'title': 'Printer error',
+        'description': 'Printer lantai 2 tidak dapat mencetak.',
+        'status': 'open',
+        'category': 'hardware',
+        'user_id': 'user-a',
+        'created_at': '2026-06-30T10:00:00Z',
+        'ticket_attachments': [
+          {
+            'id': 'att-1',
+            'ticket_id': 'ticket-1',
+            'storage_path': 'ticket-1/user-a/file.pdf',
+            'file_name': 'file.pdf',
+            'mime_type': 'application/pdf',
+            'size_bytes': 1024,
+            'uploaded_by': 'user-a',
+            'created_at': '2026-06-30T10:00:00Z',
+            'signed_url': 'https://signed.example/file.pdf',
+          }
+        ],
+      });
+
+      await dataSource.cacheTicketDetail(ticket);
+
+      final stored = preferences.getString('ticket_detail::user-a::ticket-1');
+      expect(stored, isNotNull);
+      expect(stored, isNot(contains('signed_url')));
+      expect(stored, isNot(contains('access_url')));
+    });
+
     test('user B does not read list cache of user A', () async {
       await dataSource.cacheTickets([_ticket('ticket-1')]);
 

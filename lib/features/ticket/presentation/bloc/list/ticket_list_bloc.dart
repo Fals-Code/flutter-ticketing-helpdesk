@@ -62,6 +62,7 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
     on<FilterDateRangeChanged>(_onFilterDateRangeChanged);
     on<StartTicketListSubscription>(_onStartSubscription);
     on<CreateTicketRequested>(_onCreateTicket);
+    on<TicketCreatedLocally>(_onTicketCreatedLocally);
     on<TicketDeletedLocally>(_onTicketDeletedLocally);
     on<ResetTicketListState>(_onResetState);
     on<_RealtimeTicketsUpdated>(_onRealtimeTicketsUpdated);
@@ -581,6 +582,38 @@ class TicketListBloc extends Bloc<TicketListEvent, TicketListState> {
         allTickets: state.allTickets
             .where((ticket) => ticket.id != event.ticketId)
             .toList(growable: false),
+        clearErrorMessage: true,
+        clearLoadMoreErrorMessage: true,
+      ),
+    );
+  }
+
+  void _onTicketCreatedLocally(
+    TicketCreatedLocally event,
+    Emitter<TicketListState> emit,
+  ) {
+    final query = state.query;
+    final shouldShowInUserList = matchesTicketQuery(event.ticket, query);
+    final shouldShowInStaffList = matchesTicketQuery(
+      event.ticket,
+      query,
+      assignedToId: state.assignedToId,
+    );
+
+    emit(
+      state.copyWith(
+        tickets: shouldShowInUserList
+            ? upsertRealtimeTicket(
+                existing: state.tickets,
+                incoming: event.ticket,
+              )
+            : state.tickets,
+        allTickets: shouldShowInStaffList
+            ? upsertRealtimeTicket(
+                existing: state.allTickets,
+                incoming: event.ticket,
+              )
+            : state.allTickets,
         clearErrorMessage: true,
         clearLoadMoreErrorMessage: true,
       ),

@@ -1,8 +1,11 @@
+// ignore_for_file: use_super_parameters
 import 'package:flutter/foundation.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' as sup;
 import 'package:uts/core/services/realtime_session_service.dart';
 
 import '../models/ticket_model.dart';
 import '../models/comment_model.dart';
+import 'package:uts/features/ticket/domain/services/ticket_attachment_viewer.dart';
 import 'ticket_remote_data_source.dart';
 
 /// Realtime ticket data source with an explicitly typed stream pipeline.
@@ -17,10 +20,12 @@ class TypedSupabaseTicketRemoteDataSourceImpl
   final Map<String, Map<String, dynamic>> _profileCache = {};
 
   TypedSupabaseTicketRemoteDataSourceImpl(
-    super.supabaseClient, {
+    sup.SupabaseClient supabaseClient, {
     RealtimeSessionService? realtimeSessionService,
-  }) : realtimeSessionService = realtimeSessionService ??
-            SupabaseRealtimeSessionService(supabaseClient);
+    TicketAttachmentViewerDataSource? attachmentViewer,
+  })  : realtimeSessionService = realtimeSessionService ??
+            SupabaseRealtimeSessionService(supabaseClient),
+        super(supabaseClient, attachmentViewer: attachmentViewer);
 
   @override
   Stream<List<TicketModel>> watchTickets({

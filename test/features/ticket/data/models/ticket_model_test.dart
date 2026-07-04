@@ -21,9 +21,37 @@ void main() {
       expect(model.attachments.first.isLegacyImage, isTrue);
     });
 
-    test('legacy image url does not remove attachment representation', () {
+    test('image attachment without signed URL still maps safely', () {
       final model = TicketModel.fromJson({
         'id': 'ticket-2',
+        'title': 'Aplikasi crash',
+        'description': 'Aplikasi crash saat login.',
+        'status': 'open',
+        'category': 'software',
+        'user_id': 'user-2',
+        'created_at': '2026-06-01T10:00:00.000Z',
+        'ticket_attachments': [
+          {
+            'id': 'att-1',
+            'ticket_id': 'ticket-2',
+            'storage_path': 'ticket-2/user-2/photo.jpg',
+            'file_name': 'photo.jpg',
+            'mime_type': 'image/jpeg',
+            'size_bytes': 1024,
+            'uploaded_by': 'user-2',
+            'created_at': '2026-06-01T10:00:00.000Z',
+          }
+        ],
+      });
+
+      expect(model.attachments, hasLength(1));
+      expect(model.attachments.single.isImageLike, isTrue);
+      expect(model.attachments.single.accessUrl, isNull);
+    });
+
+    test('legacy image url does not remove attachment representation', () {
+      final model = TicketModel.fromJson({
+        'id': 'ticket-3',
         'title': 'Aplikasi crash',
         'description': 'Aplikasi crash saat login.',
         'status': 'open',
@@ -51,7 +79,7 @@ void main() {
 
     test('ticket without images and attachments stays valid', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-3',
+        'id': 'ticket-4',
         'title': 'VPN gagal',
         'description': 'VPN kantor gagal tersambung.',
         'status': 'open',
@@ -66,7 +94,7 @@ void main() {
 
     test('reporter mapping uses joined profile when available', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-4',
+        'id': 'ticket-5',
         'title': 'Email error',
         'description': 'Email tidak bisa dikirim.',
         'status': 'open',
@@ -81,7 +109,7 @@ void main() {
 
     test('helpdesk mapping remains optional', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-5',
+        'id': 'ticket-6',
         'title': 'Akses WiFi',
         'description': 'Tidak bisa akses WiFi tamu.',
         'status': 'open',
@@ -96,7 +124,7 @@ void main() {
 
     test('unknown status uses project fallback convention', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-6',
+        'id': 'ticket-7',
         'title': 'Keyboard rusak',
         'description': 'Keyboard tidak terdeteksi.',
         'status': 'unexpected_status',
@@ -110,7 +138,7 @@ void main() {
 
     test('priority stays optional when schema does not provide it', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-7',
+        'id': 'ticket-8',
         'title': 'Mouse rusak',
         'description': 'Mouse bergerak sendiri.',
         'status': 'open',
@@ -124,7 +152,7 @@ void main() {
 
     test('timestamp mapping preserves created and updated values', () {
       final model = TicketModel.fromJson({
-        'id': 'ticket-8',
+        'id': 'ticket-9',
         'title': 'Meeting room TV',
         'description': 'TV meeting room tidak menyala.',
         'status': 'resolved',

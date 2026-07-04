@@ -27,5 +27,20 @@ void main() {
       expect(source, contains('TicketCreateBloc'));
       expect(source, contains('SubmitTicketCreateRequested'));
     });
+
+    test('success action opens created ticket detail without context.go', () {
+      final lihatTiketIndex = source.indexOf("label: 'Lihat Tiket'");
+      expect(lihatTiketIndex, isNonNegative);
+
+      final successActionSource = source.substring(
+        lihatTiketIndex,
+        source.indexOf("label: 'Kembali ke Beranda'", lihatTiketIndex),
+      );
+
+      expect(source, contains('final ticketId = state.ticket?.id.trim();'));
+      expect(successActionSource, contains('pushReplacementNamed'));
+      expect(successActionSource, contains("'ticket-detail'"));
+      expect(successActionSource, isNot(contains('context.go')));
+    });
   });
 }

@@ -29,6 +29,7 @@ import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/features/ticket/presentation/widgets/rating_dialog.dart';
 import 'package:uts/features/ticket/presentation/widgets/ticket_delete_confirmation_dialog.dart';
 import 'package:uts/features/ticket/presentation/widgets/tracking/tracking_widgets.dart';
+import 'package:uts/features/ticket/presentation/widgets/ticket_attachments_section.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -346,8 +347,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                                                   ticket
                                                       .legacyCompatibleImageUrls
                                                       .isNotEmpty) ...[
-                                                _buildAttachments(
-                                                    context, ticket, isDark),
+                                                TicketAttachmentsSection(
+                                                  ticket: ticket,
+                                                  isDark: isDark,
+                                                  onMessage: _showToast,
+                                                ),
                                                 const SizedBox(height: 24),
                                               ],
 
@@ -535,7 +539,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── HEADER ─────────────────────────────────────────────────────────────────
+  // Header
 
   Widget _buildHeader(
       TicketEntity ticket, detail_state.TicketDetailState state, bool isDark) {
@@ -740,7 +744,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── DESCRIPTION ────────────────────────────────────────────────────────────
+  // Description
 
   Widget _buildDescription(TicketEntity ticket, bool isDark) {
     final lines = ticket.description.split('\n');
@@ -794,8 +798,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── IMAGES ─────────────────────────────────────────────────────────────────
+  // Images
 
+// ignore: unused_element
   Widget _buildAttachments(
       BuildContext context, TicketEntity ticket, bool isDark) {
     final imageAttachments = ticket.attachments
@@ -900,7 +905,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${attachment.mimeType} • ${_formatFileSize(attachment.sizeBytes)}',
+                          '${attachment.mimeType} | ${_formatFileSize(attachment.sizeBytes)}',
                           style: TextStyle(
                             fontSize: 11,
                             color: isDark ? Colors.white54 : Colors.black45,
@@ -928,7 +933,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         ));
   }
 
-  // ── STAFF ACTIONS ──────────────────────────────────────────────────────────
+  // Staff actions
 
   Widget _buildStaffActions(
       BuildContext context, detail_state.TicketDetailState state, bool isDark) {
@@ -1375,7 +1380,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── RATING ─────────────────────────────────────────────────────────────────
+  // Rating
 
   Widget _buildUserRatingSection(BuildContext context,
       detail_state.TicketDetailState state, TicketEntity ticket, bool isDark) {
@@ -1539,7 +1544,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── CHAT ───────────────────────────────────────────────────────────────────
+  // Chat
 
   Widget _buildCommentsList(
       BuildContext context, List<CommentEntity> comments, bool isDark) {
@@ -1696,7 +1701,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── CHAT INPUT ─────────────────────────────────────────────────────────────
+  // Chat input
 
   Widget _buildCommentInput(
       BuildContext context, detail_state.TicketDetailState state, bool isDark) {
@@ -1779,7 +1784,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  // ── HELPERS ────────────────────────────────────────────────────────────────
+  // Helpers
 
   Widget _buildSectionLabel(String label, bool isDark,
       {bool showLiveDot = false}) {
@@ -1969,7 +1974,7 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   }
 }
 
-// ── PRIVATE REUSABLE WIDGETS ─────────────────────────────────────────────────
+// Private reusable widgets
 
 class _SendButton extends StatefulWidget {
   final bool enabled;

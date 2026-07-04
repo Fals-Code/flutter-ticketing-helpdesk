@@ -63,7 +63,12 @@ class SharedPrefsTicketLocalDataSource implements TicketLocalDataSource {
   Future<void> cacheTickets(List<TicketModel> tickets) async {
     await clearLegacyCache();
     final userId = _requireActiveUserId();
-    final jsonList = tickets.map((t) => t.toJson()..['id'] = t.id).toList();
+    final jsonList = tickets
+        .map(
+          (ticket) => ticket.toJson(includeAttachmentAccessUrls: false)
+            ..['id'] = ticket.id,
+        )
+        .toList();
     await sharedPreferences.setString(
       _listCacheKey(userId),
       jsonEncode(jsonList),
@@ -90,7 +95,9 @@ class SharedPrefsTicketLocalDataSource implements TicketLocalDataSource {
     final userId = _requireActiveUserId();
     await sharedPreferences.setString(
       _detailCacheKey(userId, ticket.id),
-      jsonEncode(ticket.toJson()..['id'] = ticket.id),
+      jsonEncode(
+        ticket.toJson(includeAttachmentAccessUrls: false)..['id'] = ticket.id,
+      ),
     );
   }
 

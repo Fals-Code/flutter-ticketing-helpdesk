@@ -1,13 +1,13 @@
 # Production Readiness Board
 
-Last updated: 2026-07-04 (post-validation)
+Last updated: 2026-07-04 (post-commit)
 
 ## Baseline
 
 | Item | Value |
 | --- | --- |
-| Branch | `feat/phase-4-ticket-core` |
-| HEAD | `c1e2e11` |
+| Branch | `release/2.0.0-production-readiness` |
+| HEAD | `ca2a7e0` |
 | Current scope | Workstream 0 - stabilize Phase 4 ticket core |
 | Initial dirty tree | Present |
 | PDR document | Not found in tracked repo files during initial audit |
@@ -80,7 +80,7 @@ Last updated: 2026-07-04 (post-validation)
 
 | Workstream | Status | Notes |
 | --- | --- | --- |
-| 0. Save current source state | DOING | Local source stabilized; git hygiene and branch step still pending |
+| 0. Save current source state | PASS | App-source stabilization committed locally and release branch created |
 | 1. Brand and design system | TODO | Not started |
 | 2. Splash and app branding | TODO | Not started |
 | 3. Frontend modernization | TODO | Deferred until Workstream 0 stable |
@@ -94,8 +94,8 @@ Last updated: 2026-07-04 (post-validation)
 
 ## Current Focus
 
-- Keep `.agents/`, `AGENT_SKILLS_SETUP.md`, and `skills-lock.json` out of app-source commit scope.
-- Decide whether to create a local stabilization commit before creating `release/2.0.0-production-readiness`.
+- Keep `.agents/`, `AGENT_SKILLS_SETUP.md`, `skills-lock.json`, and `docs/codex_handoff.md.txt` outside app-source scope.
+- Start Workstream 1 on the release branch.
 - Leave production Supabase sync as manual gate.
 
 ## Validation Log
@@ -113,3 +113,13 @@ Last updated: 2026-07-04 (post-validation)
 - Revalidated current Phase 4 tree against full local test gate.
 - Normalized source corruption in `pubspec.yaml`, `ticket_remote_data_source.dart`, `create_ticket_page.dart`, and `ticket_detail_page.dart`.
 - Preserved `.agents` and `skills-lock.json` outside app-source decision scope.
+- Created local commit `ca2a7e0` and switched to `release/2.0.0-production-readiness`.
+
+## Remaining Dirty Tree
+
+- `?? .agents/`
+- `?? AGENT_SKILLS_SETUP.md`
+- `?? docs/codex_handoff.md.txt`
+- `?? skills-lock.json`
+
+These files are intentionally left outside the application-source stabilization commit.

@@ -1,44 +1,50 @@
 import 'package:flutter/material.dart';
 
-/// Palet warna utama aplikasi E-Ticketing Helpdesk.
-/// Menggunakan tema dark-first, clean, dan profesional.
-abstract class AppColors {
-  // ── Brand ──────────────────────────────────────────────────────────────────
-  static const Color primary = Color(0xFF6366F1); // Indigo vibrant
-  static const Color accent = Color(0xFF8B5CF6); // Purple
+abstract final class AppColors {
+  static const Color brandNavy = Color(0xFF10233F);
+  static const Color brandNavyDeep = Color(0xFF091426);
+  static const Color brandNavySoft = Color(0xFF17345C);
+  static const Color brandIndigo = Color(0xFF345CFF);
+  static const Color brandIndigoSoft = Color(0xFFE5EBFF);
+  static const Color brandCyan = Color(0xFF16B7D9);
+  static const Color brandCyanSoft = Color(0xFFDDF7FC);
 
-  // ── Status & Feedback ──────────────────────────────────────────────────────
-  static const Color success = Color(0xFF10B981);
-  static const Color warning = Color(0xFFF59E0B);
-  static const Color danger = Color(0xFFEF4444);
+  static const Color primary = brandIndigo;
+  static const Color accent = brandCyan;
 
-  // ── Aurora Palette (Redesign) ──────────────────────────────────────────────
-  static const Color auroraIndigo = Color(0xFF1E1B4B);
-  static const Color auroraPurple = Color(0xFF6366F1);
-  static const Color auroraCyan = Color(0xFF06B6D4);
-  static const Color auroraRose = Color(0xFFF43F5E);
+  static const Color success = Color(0xFF169B6B);
+  static const Color successSoft = Color(0xFFDBF5EA);
+  static const Color warning = Color(0xFFE59A1A);
+  static const Color warningSoft = Color(0xFFFFF1D9);
+  static const Color danger = Color(0xFFD84D3F);
+  static const Color dangerSoft = Color(0xFFFDE2DE);
+  static const Color info = Color(0xFF2A83F7);
+  static const Color infoSoft = Color(0xFFDDEBFF);
 
-  // ── Dark Theme Surfaces ────────────────────────────────────────────────────
-  static const Color backgroundDark = Color(0xFF0A0A0F); // Near black
-  static const Color surfaceDark = Color(0xFF111118); // Card bg
-  static const Color surfaceDark2 = Color(0xFF1A1A24); // Elevated
-  static const Color borderDark = Color(0xFF2A2A35);
-  static const Color textPrimaryDark = Color(0xFFF1F1F5);
-  static const Color textSecondaryDark = Color(0xFF71717A);
-
-  // ── Light Theme Surfaces ───────────────────────────────────────────────────
-  static const Color backgroundLight = Color(0xFFFAFAFA);
+  static const Color backgroundLight = Color(0xFFF4F7FB);
   static const Color surfaceLight = Color(0xFFFFFFFF);
-  static const Color borderLight = Color(0xFFE4E4E7);
-  static const Color textPrimaryLight = Color(0xFF09090B);
-  static const Color textSecondaryLight = Color(0xFF71717A);
+  static const Color surfaceLight2 = Color(0xFFEDF2F9);
+  static const Color borderLight = Color(0xFFD7E0EC);
+  static const Color textPrimaryLight = Color(0xFF10233F);
+  static const Color textSecondaryLight = Color(0xFF5E718D);
 
-  // ── Neutrals/Common ────────────────────────────────────────────────────────
+  static const Color backgroundDark = Color(0xFF081221);
+  static const Color surfaceDark = Color(0xFF0F1B30);
+  static const Color surfaceDark2 = Color(0xFF17263E);
+  static const Color borderDark = Color(0xFF283754);
+  static const Color textPrimaryDark = Color(0xFFF3F7FC);
+  static const Color textSecondaryDark = Color(0xFFA5B5CB);
+
   static const Color white = Color(0xFFFFFFFF);
   static const Color black = Color(0xFF000000);
 
-  // ── Legacy Compatibility / Ticket Status ───────────────────────────────────
-  static const Color statusOpen = primary;
+  // Compatibility aliases for legacy aurora/splash surfaces.
+  static const Color auroraIndigo = brandNavyDeep;
+  static const Color auroraPurple = brandIndigo;
+  static const Color auroraCyan = brandCyan;
+  static const Color auroraRose = Color(0xFF4E89F5);
+
+  static const Color statusOpen = info;
   static const Color statusInProgress = warning;
   static const Color statusResolved = success;
   static const Color priorityHigh = danger;

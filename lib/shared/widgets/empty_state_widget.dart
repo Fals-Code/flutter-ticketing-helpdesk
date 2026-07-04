@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_dimensions.dart';
 import 'app_button.dart';
@@ -8,13 +9,12 @@ enum EmptyStateType {
   notifications,
   search,
   history,
+  offline,
+  confirmation,
   error,
-  defaultState
+  defaultState,
 }
 
-/// Widget empty state yang modern dengan gaya desain Linear/Raycast.
-/// Menampilkan ilustrasi SVG/Icon dengan efek subtle glow/glassmorphism,
-/// judul, deskripsi, dan tombol aksi opsional.
 class EmptyStateWidget extends StatelessWidget {
   final EmptyStateType type;
   final String? title;
@@ -31,74 +31,109 @@ class EmptyStateWidget extends StatelessWidget {
     this.onAction,
   });
 
-  factory EmptyStateWidget.emptyTickets(
-      {String? title,
-      String? subtitle,
-      String? actionLabel,
-      VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyTickets({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return EmptyStateWidget(
       type: EmptyStateType.tickets,
-      title: title ?? 'Belum Ada Laporan',
-      subtitle: subtitle ??
-          'Buat tiket pertamamu untuk mendapat bantuan dari tim helpdesk kami.',
-      actionLabel: actionLabel ?? 'Buat Tiket Sekarang',
+      title: title ?? 'Belum ada tiket',
+      subtitle:
+          subtitle ?? 'Buat laporan pertama untuk mulai menghubungi helpdesk.',
+      actionLabel: actionLabel ?? 'Buat tiket',
       onAction: onAction,
     );
   }
 
-  factory EmptyStateWidget.emptyNotifications(
-      {String? title,
-      String? subtitle,
-      String? actionLabel,
-      VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyNotifications({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return EmptyStateWidget(
       type: EmptyStateType.notifications,
-      title: title ?? 'Semua Beres',
-      subtitle: subtitle ?? 'Anda tidak memiliki notifikasi baru.',
+      title: title ?? 'Tidak ada notifikasi baru',
+      subtitle: subtitle ?? 'Update terbaru akan muncul di sini.',
       actionLabel: actionLabel,
       onAction: onAction,
     );
   }
 
-  factory EmptyStateWidget.emptySearch(
-      {String? title,
-      String? subtitle,
-      String? actionLabel,
-      VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptySearch({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return EmptyStateWidget(
       type: EmptyStateType.search,
-      title: title ?? 'Tidak Ditemukan',
-      subtitle: subtitle ?? 'Coba kata kunci atau filter yang berbeda.',
-      actionLabel: actionLabel ?? 'Hapus Filter',
+      title: title ?? 'Hasil tidak ditemukan',
+      subtitle: subtitle ?? 'Ubah kata kunci atau reset filter aktif.',
+      actionLabel: actionLabel ?? 'Reset filter',
       onAction: onAction,
     );
   }
 
-  factory EmptyStateWidget.emptyHistory(
-      {String? title,
-      String? subtitle,
-      String? actionLabel,
-      VoidCallback? onAction}) {
+  factory EmptyStateWidget.emptyHistory({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return EmptyStateWidget(
       type: EmptyStateType.history,
-      title: title ?? 'Belum Ada Riwayat',
-      subtitle: subtitle ?? 'Riwayat aktivitas Anda masih kosong.',
+      title: title ?? 'Riwayat masih kosong',
+      subtitle: subtitle ?? 'Aktivitas ticketing akan muncul di halaman ini.',
       actionLabel: actionLabel,
       onAction: onAction,
     );
   }
 
-  factory EmptyStateWidget.error(
-      {String? title,
-      String? subtitle,
-      String? actionLabel,
-      VoidCallback? onAction}) {
+  factory EmptyStateWidget.offline({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    return EmptyStateWidget(
+      type: EmptyStateType.offline,
+      title: title ?? 'Anda sedang offline',
+      subtitle: subtitle ?? 'Periksa koneksi lalu coba lagi.',
+      actionLabel: actionLabel ?? 'Coba lagi',
+      onAction: onAction,
+    );
+  }
+
+  factory EmptyStateWidget.confirmation({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
+    return EmptyStateWidget(
+      type: EmptyStateType.confirmation,
+      title: title ?? 'Perubahan tersimpan',
+      subtitle: subtitle ?? 'Aksi Anda berhasil diproses.',
+      actionLabel: actionLabel,
+      onAction: onAction,
+    );
+  }
+
+  factory EmptyStateWidget.error({
+    String? title,
+    String? subtitle,
+    String? actionLabel,
+    VoidCallback? onAction,
+  }) {
     return EmptyStateWidget(
       type: EmptyStateType.error,
-      title: title ?? 'Terjadi Kesalahan',
-      subtitle:
-          subtitle ?? 'Gagal memuat data. Silakan coba beberapa saat lagi.',
-      actionLabel: actionLabel,
+      title: title ?? 'Terjadi kendala',
+      subtitle: subtitle ??
+          'Data belum berhasil dimuat. Silakan coba beberapa saat lagi.',
+      actionLabel: actionLabel ?? 'Muat ulang',
       onAction: onAction,
     );
   }
@@ -106,132 +141,128 @@ class EmptyStateWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryText =
+        isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight;
+    final secondaryText =
+        isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight;
 
     return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.space32, vertical: AppDimensions.space64),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            _buildIllustration(isDark),
-            const SizedBox(height: AppDimensions.space24),
-            Text(
-              title ?? 'Nothing to see here',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: isDark
-                    ? AppColors.textPrimaryDark
-                    : AppColors.textPrimaryLight,
-                letterSpacing: -0.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AppDimensions.space8),
-            Text(
-              subtitle ?? 'There is no data available to display at this time.',
-              style: TextStyle(
-                fontSize: 14,
-                color: isDark
-                    ? AppColors.textSecondaryDark
-                    : AppColors.textSecondaryLight,
-                height: 1.5,
-              ),
-              textAlign: TextAlign.center,
-            ),
-            if (actionLabel != null && onAction != null) ...[
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: AppDimensions.formMaxWidth),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppDimensions.space24,
+            vertical: AppDimensions.space48,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildIllustration(isDark),
               const SizedBox(height: AppDimensions.space24),
-              type == EmptyStateType.search
-                  ? AppButton.ghost(
-                      label: actionLabel!,
-                      onPressed: onAction,
-                      size: AppButtonSize.normal,
-                    )
-                  : AppButton.primary(
-                      label: actionLabel!,
-                      onPressed: onAction,
-                      size: AppButtonSize.normal,
-                    ),
-            ]
-          ],
+              Text(
+                title ?? 'Belum ada data',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: primaryText,
+                  letterSpacing: -0.3,
+                ),
+              ),
+              const SizedBox(height: AppDimensions.space8),
+              Text(
+                subtitle ?? 'Konten akan muncul ketika data sudah tersedia.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 14,
+                  height: 1.5,
+                  color: secondaryText,
+                ),
+              ),
+              if (actionLabel != null && onAction != null) ...[
+                const SizedBox(height: AppDimensions.space24),
+                type == EmptyStateType.search
+                    ? AppButton.secondary(
+                        label: actionLabel!,
+                        onPressed: onAction,
+                      )
+                    : AppButton.primary(
+                        label: actionLabel!,
+                        onPressed: onAction,
+                      ),
+              ],
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _buildIllustration(bool isDark) {
-    IconData fallbackIcon;
-
-    switch (type) {
-      case EmptyStateType.tickets:
-        fallbackIcon = Icons.inbox_outlined;
-        break;
-      case EmptyStateType.notifications:
-        fallbackIcon = Icons.notifications_off_outlined;
-        break;
-      case EmptyStateType.search:
-        fallbackIcon = Icons.manage_search_rounded;
-        break;
-      case EmptyStateType.history:
-        fallbackIcon = Icons.history_rounded;
-        break;
-      case EmptyStateType.error:
-        fallbackIcon = Icons.error_outline_rounded;
-        break;
-      case EmptyStateType.defaultState:
-        fallbackIcon = Icons.inbox_outlined;
-        break;
-    }
+    final config = switch (type) {
+      EmptyStateType.tickets => (
+          icon: Icons.confirmation_number_outlined,
+          tone: AppColors.brandIndigo
+        ),
+      EmptyStateType.notifications => (
+          icon: Icons.notifications_none_rounded,
+          tone: AppColors.brandCyan
+        ),
+      EmptyStateType.search => (
+          icon: Icons.manage_search_rounded,
+          tone: AppColors.info
+        ),
+      EmptyStateType.history => (
+          icon: Icons.timeline_rounded,
+          tone: AppColors.brandIndigo
+        ),
+      EmptyStateType.offline => (
+          icon: Icons.wifi_off_rounded,
+          tone: AppColors.warning
+        ),
+      EmptyStateType.confirmation => (
+          icon: Icons.check_circle_outline_rounded,
+          tone: AppColors.success
+        ),
+      EmptyStateType.error => (
+          icon: Icons.error_outline_rounded,
+          tone: AppColors.danger
+        ),
+      EmptyStateType.defaultState => (
+          icon: Icons.inbox_outlined,
+          tone: AppColors.brandIndigo
+        ),
+    };
 
     return Container(
-      width: 80,
-      height: 80,
+      width: 88,
+      height: 88,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: type == EmptyStateType.error
-              ? [
-                  Colors.red.withValues(alpha: 0.15),
-                  Colors.redAccent.withValues(alpha: 0.05)
-                ]
-              : [
-                  AppColors.primary.withValues(alpha: 0.15),
-                  AppColors.accent.withValues(alpha: 0.05)
-                ],
+          colors: [
+            config.tone.withValues(alpha: isDark ? 0.22 : 0.16),
+            AppColors.brandNavy.withValues(alpha: isDark ? 0.26 : 0.08),
+          ],
+        ),
+        border: Border.all(
+          color: config.tone.withValues(alpha: 0.22),
         ),
         boxShadow: [
           BoxShadow(
-            color: isDark
-                ? Colors.black.withValues(alpha: 0.3)
-                : AppColors.borderLight.withValues(alpha: 0.5),
+            color:
+                AppColors.brandNavyDeep.withValues(alpha: isDark ? 0.26 : 0.08),
             blurRadius: 24,
-            spreadRadius: 0,
-            offset: const Offset(0, 8),
+            offset: const Offset(0, 10),
           ),
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.05),
-            blurRadius: 32,
-            spreadRadius: 8,
-            offset: const Offset(0, 0),
-          )
         ],
-        border: Border.all(
-          color: AppColors.primary.withValues(alpha: 0.2),
-          width: 1,
-        ),
       ),
-      child: Center(
-        child: Icon(
-          fallbackIcon,
-          size: 36,
-          color: type == EmptyStateType.error
-              ? Colors.redAccent.withValues(alpha: 0.8)
-              : AppColors.primary.withValues(alpha: 0.8),
-        ),
+      child: Icon(
+        config.icon,
+        size: 36,
+        color: config.tone,
       ),
     );
   }

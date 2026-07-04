@@ -1,14 +1,14 @@
 # Production Readiness Board
 
-Last updated: 2026-07-04 (post-commit)
+Last updated: 2026-07-04 (workstream 1 passed)
 
 ## Baseline
 
 | Item | Value |
 | --- | --- |
 | Branch | `release/2.0.0-production-readiness` |
-| HEAD | `ca2a7e0` |
-| Current scope | Workstream 0 - stabilize Phase 4 ticket core |
+| HEAD | `6bd4ee7` |
+| Current scope | Workstream 2 - splash and app branding |
 | Initial dirty tree | Present |
 | PDR document | Not found in tracked repo files during initial audit |
 
@@ -75,14 +75,15 @@ Last updated: 2026-07-04 (post-commit)
 | Model/cache compatibility | PASS | ticket models, local datasource, entity helpers | model and local cache tests | No | None found locally | Preserve access URL stripping from user cache |
 | Production sync documentation | PASS | `docs/phase-4-production-backend-sync.md` | N/A | Human production approval required for actual sync | Production remains blocked until manual Supabase verification on device | Keep as docs-only handoff |
 | Agent Skills/tooling | TODO | `.agents/`, `AGENT_SKILLS_SETUP.md`, `skills-lock.json` | N/A | No | Must stay isolated from app source and commit scope | Exclude from source stabilization decisions |
+| Brand and design system foundation | PASS | `app_colors.dart`, `app_dimensions.dart`, `app_theme.dart`, shared design widgets, `docs/ui-design-system.md`, widget tests | targeted design-system widget tests, full analyze, full flutter test | No | Shared components still need wider adoption in later frontend workstream | Start splash and brand asset modernization |
 
 ## Workstreams
 
 | Workstream | Status | Notes |
 | --- | --- | --- |
 | 0. Save current source state | PASS | App-source stabilization committed locally and release branch created |
-| 1. Brand and design system | TODO | Not started |
-| 2. Splash and app branding | TODO | Not started |
+| 1. Brand and design system | PASS | Tokens, theme, shared states, docs, and widget coverage validated locally |
+| 2. Splash and app branding | DOING | Start native splash, in-app startup, and app identity audit |
 | 3. Frontend modernization | TODO | Deferred until Workstream 0 stable |
 | 4. Ticket workflow and admin | BLOCKED | Outside AGENTS Phase 4 boundary for current branch |
 | 5. Supabase and database | TODO | Read-only/local audit allowed; no production mutation |
@@ -95,7 +96,7 @@ Last updated: 2026-07-04 (post-commit)
 ## Current Focus
 
 - Keep `.agents/`, `AGENT_SKILLS_SETUP.md`, `skills-lock.json`, and `docs/codex_handoff.md.txt` outside app-source scope.
-- Start Workstream 1 on the release branch.
+- Start Workstream 2 implementation from the validated design-system baseline.
 - Leave production Supabase sync as manual gate.
 
 ## Validation Log
@@ -106,6 +107,11 @@ Last updated: 2026-07-04 (post-commit)
 | `flutter analyze --no-pub` | PASS |
 | `flutter test --no-pub --concurrency=1` | PASS |
 | `git diff --check` | PASS for whitespace/conflict markers; Git emitted LF->CRLF warnings only |
+| `flutter analyze --no-pub` (after Workstream 1 foundation) | PASS |
+| `flutter test --no-pub test/shared/widgets/app_button_test.dart test/shared/widgets/empty_state_widget_test.dart` | PASS |
+| `dart format test/shared/widgets/...` | Output shows files formatted, but command exits non-zero in sandbox because telemetry session file under AppData is not writable |
+| `dart format --output=none --set-exit-if-changed lib test` (Workstream 1 gate rerun) | PASS |
+| `flutter test --no-pub --concurrency=1` (Workstream 1 gate rerun) | PASS |
 
 ## Local Fixes Completed
 
@@ -114,6 +120,9 @@ Last updated: 2026-07-04 (post-commit)
 - Normalized source corruption in `pubspec.yaml`, `ticket_remote_data_source.dart`, `create_ticket_page.dart`, and `ticket_detail_page.dart`.
 - Preserved `.agents` and `skills-lock.json` outside app-source decision scope.
 - Created local commit `ca2a7e0` and switched to `release/2.0.0-production-readiness`.
+- Introduced navy/indigo/cyan design tokens and rebuilt Material 3 theme foundation.
+- Added reusable empty/offline/error state styling, shared status chip/card components, and design-system documentation.
+- Closed Workstream 1 gate with passing targeted widget tests, format check, analyze, full flutter test, and git diff check.
 
 ## Remaining Dirty Tree
 

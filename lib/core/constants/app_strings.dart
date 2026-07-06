@@ -1,11 +1,11 @@
 /// Konstanta string untuk seluruh aplikasi TICKET-Q.
 /// Memudahkan lokalisasi di masa depan.
 abstract class AppStrings {
-  // ── App Info ───────────────────────────────────────────────────────────────
+  // App info
   static const String appName = 'TICKET-Q';
-  static const String appTagline = 'Solusi Cepat, Laporan Tepat';
+  static const String appTagline = 'Laporkan. Pantau. Selesaikan.';
 
-  // ── Auth ───────────────────────────────────────────────────────────────────
+  // Auth
   static const String login = 'Masuk';
   static const String logout = 'Keluar';
   static const String email = 'Email';
@@ -24,13 +24,13 @@ abstract class AppStrings {
   static const String passwordRequired = 'Kata sandi tidak boleh kosong';
   static const String passwordMinLength = 'Minimal 6 karakter';
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
+  // Navigation
   static const String navDashboard = 'Beranda';
   static const String navTickets = 'Tiket';
   static const String navNotifications = 'Notifikasi';
   static const String navProfile = 'Profil';
 
-  // ── Dashboard ──────────────────────────────────────────────────────────────
+  // Dashboard
   static const String dashboardGreeting = 'Selamat datang';
   static const String dashboardSubtitle = 'Pantau dan kelola tiket Anda';
   static const String totalTickets = 'Total Tiket';
@@ -38,7 +38,7 @@ abstract class AppStrings {
   static const String resolvedTickets = 'Tiket Selesai';
   static const String inProgressTickets = 'Sedang Diproses';
 
-  // ── Tickets ────────────────────────────────────────────────────────────────
+  // Tickets
   static const String myTickets = 'Tiket Saya';
   static const String createTicket = 'Buat Tiket';
   static const String ticketSubject = 'Subjek';
@@ -47,30 +47,30 @@ abstract class AppStrings {
   static const String ticketPriority = 'Prioritas';
   static const String ticketStatus = 'Status';
 
-  // ── Status Labels ──────────────────────────────────────────────────────────
+  // Status labels
   static const String statusOpen = 'Terbuka';
   static const String statusInProgress = 'Diproses';
   static const String statusResolved = 'Selesai';
   static const String statusClosed = 'Ditutup';
 
-  // ── Priority Labels ────────────────────────────────────────────────────────
+  // Priority labels
   static const String priorityLow = 'Rendah';
   static const String priorityMedium = 'Sedang';
   static const String priorityHigh = 'Tinggi';
   static const String priorityCritical = 'Kritis';
 
-  // ── Error Messages ─────────────────────────────────────────────────────────
+  // Error messages
   static const String errorGeneral = 'Terjadi kesalahan. Coba lagi.';
   static const String errorNetwork = 'Periksa koneksi internet Anda.';
   static const String errorUnauthorized = 'Sesi berakhir. Silakan masuk ulang.';
   static const String errorNotFound = 'Data tidak ditemukan.';
 
-  // ── Success Messages ───────────────────────────────────────────────────────
+  // Success messages
   static const String successTicketCreated = 'Tiket berhasil dibuat!';
   static const String successLogin = 'Login berhasil!';
   static const String successLogout = 'Berhasil keluar.';
 
-  // ── Common ─────────────────────────────────────────────────────────────────
+  // Common
   static const String submit = 'Kirim';
   static const String cancel = 'Batal';
   static const String save = 'Simpan';

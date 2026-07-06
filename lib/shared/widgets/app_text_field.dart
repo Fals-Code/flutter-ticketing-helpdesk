@@ -23,6 +23,10 @@ class AppTextField extends StatefulWidget {
   final bool isSuccess;
   final int? maxLength;
   final int? minLines;
+  final Iterable<String>? autofillHints;
+  final bool autocorrect;
+  final bool enableSuggestions;
+  final String? semanticLabel;
 
   const AppTextField({
     super.key,
@@ -44,6 +48,10 @@ class AppTextField extends StatefulWidget {
     this.isSuccess = false,
     this.maxLength,
     this.minLines,
+    this.autofillHints,
+    this.autocorrect = false,
+    this.enableSuggestions = false,
+    this.semanticLabel,
   });
 
   @override
@@ -79,60 +87,73 @@ class _AppTextFieldState extends State<AppTextField> {
         const SizedBox(height: AppDimensions.space8),
 
         // Input field
-        Focus(
-          onFocusChange: (hasFocus) => setState(() => _isFocused = hasFocus),
-          child: TextFormField(
-            controller: widget.controller,
-            focusNode: widget.focusNode,
-            obscureText: widget.isPassword && _obscureText,
-            keyboardType: widget.keyboardType,
-            validator: widget.validator,
-            onChanged: widget.onChanged,
-            enabled: widget.enabled,
-            maxLines: widget.isPassword ? 1 : widget.maxLines,
-            minLines: widget.minLines,
-            maxLength: widget.maxLength,
-            textInputAction: widget.textInputAction,
-            onFieldSubmitted: widget.onSubmitted,
-            style: TextStyle(fontSize: 14, color: primaryTextColor),
-            decoration: InputDecoration(
-              hintText: widget.hint,
-              helperText: widget.helperText,
-              helperMaxLines: 2,
-              prefixIcon: widget.prefixIcon != null
-                  ? Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.space12),
-                      child: Icon(
-                        widget.prefixIcon,
-                        size: AppDimensions.iconMD,
-                        color:
-                            _isFocused ? AppColors.primary : secondaryTextColor,
-                      ),
-                    )
-                  : null,
-              prefixIconConstraints: const BoxConstraints(
-                minWidth: 48,
-                minHeight: 24,
+        Semantics(
+          label: widget.semanticLabel ?? widget.label,
+          textField: true,
+          enabled: widget.enabled,
+          child: Focus(
+            onFocusChange: (hasFocus) => setState(() => _isFocused = hasFocus),
+            child: TextFormField(
+              controller: widget.controller,
+              focusNode: widget.focusNode,
+              obscureText: widget.isPassword && _obscureText,
+              keyboardType: widget.keyboardType,
+              validator: widget.validator,
+              onChanged: widget.onChanged,
+              enabled: widget.enabled,
+              maxLines: widget.isPassword ? 1 : widget.maxLines,
+              minLines: widget.minLines,
+              maxLength: widget.maxLength,
+              textInputAction: widget.textInputAction,
+              onFieldSubmitted: widget.onSubmitted,
+              autofillHints: widget.autofillHints,
+              autocorrect: widget.autocorrect,
+              enableSuggestions: widget.enableSuggestions && !widget.isPassword,
+              style: TextStyle(fontSize: 14, color: primaryTextColor),
+              decoration: InputDecoration(
+                hintText: widget.hint,
+                helperText: widget.helperText,
+                helperMaxLines: 2,
+                prefixIcon: widget.prefixIcon != null
+                    ? Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.space12,
+                        ),
+                        child: Icon(
+                          widget.prefixIcon,
+                          size: AppDimensions.iconMD,
+                          color: _isFocused
+                              ? AppColors.primary
+                              : secondaryTextColor,
+                        ),
+                      )
+                    : null,
+                prefixIconConstraints: const BoxConstraints(
+                  minWidth: 48,
+                  minHeight: 24,
+                ),
+                suffixIcon: _buildSuffixIcon(isDark, secondaryTextColor),
+                enabledBorder: widget.isSuccess
+                    ? OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMD),
+                        borderSide: const BorderSide(
+                          color: AppColors.success,
+                          width: 1.5,
+                        ),
+                      )
+                    : null,
+                focusedBorder: widget.isSuccess
+                    ? OutlineInputBorder(
+                        borderRadius:
+                            BorderRadius.circular(AppDimensions.radiusMD),
+                        borderSide: const BorderSide(
+                          color: AppColors.success,
+                          width: 2,
+                        ),
+                      )
+                    : null,
               ),
-              suffixIcon: _buildSuffixIcon(isDark, secondaryTextColor),
-              // Success border adjustments
-              enabledBorder: widget.isSuccess
-                  ? OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide: const BorderSide(
-                          color: AppColors.success, width: 1.5),
-                    )
-                  : null,
-              focusedBorder: widget.isSuccess
-                  ? OutlineInputBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusMD),
-                      borderSide:
-                          const BorderSide(color: AppColors.success, width: 2),
-                    )
-                  : null,
             ),
           ),
         ),
@@ -143,6 +164,8 @@ class _AppTextFieldState extends State<AppTextField> {
   Widget? _buildSuffixIcon(bool isDark, Color secondaryColor) {
     if (widget.isPassword) {
       return IconButton(
+        tooltip:
+            _obscureText ? 'Tampilkan kata sandi' : 'Sembunyikan kata sandi',
         icon: Icon(
           _obscureText
               ? Icons.visibility_outlined

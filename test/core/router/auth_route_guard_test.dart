@@ -99,6 +99,46 @@ void main() {
   });
 
   group('AuthRouteGuard deep links', () {
+    test('authenticated user on splash is routed to role home', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.authenticated,
+          user: userWithRole(UserRole.user),
+          location: AuthRouteGuard.splash,
+        ),
+        AuthRouteGuard.dashboard,
+      );
+
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.authenticated,
+          user: userWithRole(UserRole.technician),
+          location: AuthRouteGuard.splash,
+        ),
+        AuthRouteGuard.staffDashboard,
+      );
+    });
+
+    test('unauthenticated and error splash states route safely to login', () {
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.unauthenticated,
+          user: AuthUser.empty,
+          location: AuthRouteGuard.splash,
+        ),
+        AuthRouteGuard.login,
+      );
+
+      expect(
+        AuthRouteGuard.redirect(
+          status: AuthStatus.error,
+          user: AuthUser.empty,
+          location: AuthRouteGuard.splash,
+        ),
+        AuthRouteGuard.login,
+      );
+    });
+
     test('unauthenticated route is preserved in encoded login redirect', () {
       expect(
         AuthRouteGuard.redirect(

@@ -3,6 +3,11 @@ import 'package:flutter/material.dart';
 /// Palet warna utama aplikasi E-Ticketing Helpdesk.
 /// Menggunakan tema dark-first, clean, dan profesional.
 abstract class AppColors {
+  // splash
+  static const Color brandNavy = Color(0xFF10233F);
+  static const Color brandNavyDeep = Color(0xFF091426);
+  static const Color brandIndigo = Color(0xFF345CFF);
+  static const Color brandCyan = Color(0xFF16B7D9);
   // ── Brand ──────────────────────────────────────────────────────────────────
   static const Color primary = Color(0xFF6366F1); // Indigo vibrant
   static const Color accent = Color(0xFF8B5CF6); // Purple

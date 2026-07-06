@@ -53,4 +53,7 @@ abstract class AppDimensions {
   static const double radiusS = radiusSM;
   static const double radiusM = radiusMD;
   static const double radiusL = radiusLG;
+
+  static const double formMaxWidth = 560.0;
+  static const int motionMediumMs = 220;
 }

@@ -34,18 +34,29 @@ jobs:
           git clone --depth 1 --branch stable https://github.com/flutter/flutter.git "$RUNNER_TEMP/flutter"
           echo "$RUNNER_TEMP/flutter/bin" >> "$GITHUB_PATH"
 
-      - name: Validate and normalize source icon
+      - name: Normalize source icon
         run: |
           test -f assets/icons/app_icon.png
-          file assets/icons/app_icon.png
-          identify assets/icons/app_icon.png
-          convert assets/icons/app_icon.png \
-            -resize 1024x1024! \
-            -background '#0B1220' \
-            -alpha remove \
-            -alpha off \
-            assets/icons/app_icon.png
-          test "$(identify -format '%wx%h' assets/icons/app_icon.png)" = "1024x1024"
+          python -m pip install --disable-pip-version-check pillow
+          python - <<'PY'
+          from pathlib import Path
+          from PIL import Image, ImageOps
+
+          path = Path('assets/icons/app_icon.png')
+          with Image.open(path) as source:
+              image = ImageOps.fit(
+                  source.convert('RGB'),
+                  (1024, 1024),
+                  method=Image.Resampling.LANCZOS,
+              )
+              image.save(path, format='PNG', optimize=True)
+
+          with Image.open(path) as verified:
+              assert verified.format == 'PNG', verified.format
+              assert verified.size == (1024, 1024), verified.size
+              assert verified.mode == 'RGB', verified.mode
+              print(f'Normalized launcher icon: {verified.format} {verified.size} {verified.mode}')
+          PY
 
       - name: Align launcher icon configuration
         run: |

@@ -231,8 +231,7 @@ class TicketTimelineWidget extends StatelessWidget {
     final bool sameActor = first.changedBy == second.changedBy;
     final bool sameOldStatus = first.oldStatus == second.oldStatus;
     final bool sameNewStatus = first.newStatus == second.newStatus;
-    final bool startsProgress =
-        first.newStatus.toLowerCase() == 'in_progress';
+    final bool startsProgress = first.newStatus.toLowerCase() == 'in_progress';
     final int timeDifference =
         first.createdAt.difference(second.createdAt).inSeconds.abs();
 

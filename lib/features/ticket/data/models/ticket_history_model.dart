@@ -4,6 +4,7 @@ class TicketHistoryModel extends TicketHistoryEntity {
   const TicketHistoryModel({
     required super.id,
     required super.ticketId,
+    super.eventType,
     super.oldStatus,
     required super.newStatus,
     required super.changedBy,
@@ -12,26 +13,28 @@ class TicketHistoryModel extends TicketHistoryEntity {
   });
 
   factory TicketHistoryModel.fromJson(Map<String, dynamic> json) {
-    // Handle join with profiles if available
-    final profile = json['profiles'];
-    final changedByName =
-        profile != null ? profile['full_name'] : json['changed_by_name'];
+    final dynamic profile = json['profiles'];
+    final String? changedByName = profile is Map<String, dynamic>
+        ? profile['full_name'] as String?
+        : json['changed_by_name'] as String?;
 
     return TicketHistoryModel(
-      id: json['id'] ?? '',
-      ticketId: json['ticket_id'] ?? '',
-      oldStatus: json['old_status'],
-      newStatus: json['new_status'] ?? '',
-      changedBy: json['changed_by'] ?? '',
+      id: json['id'] as String? ?? '',
+      ticketId: json['ticket_id'] as String? ?? '',
+      eventType: json['event_type'] as String? ?? 'status_changed',
+      oldStatus: json['old_status'] as String?,
+      newStatus: json['new_status'] as String? ?? '',
+      changedBy: json['changed_by'] as String? ?? '',
       changedByName: changedByName,
-      createdAt: DateTime.parse(
-          json['created_at'] ?? DateTime.now().toIso8601String()),
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    return <String, dynamic>{
       'ticket_id': ticketId,
+      'event_type': eventType,
       'old_status': oldStatus,
       'new_status': newStatus,
       'changed_by': changedBy,
@@ -43,6 +46,7 @@ class TicketHistoryModel extends TicketHistoryEntity {
     return TicketHistoryEntity(
       id: id,
       ticketId: ticketId,
+      eventType: eventType,
       oldStatus: oldStatus,
       newStatus: newStatus,
       changedBy: changedBy,

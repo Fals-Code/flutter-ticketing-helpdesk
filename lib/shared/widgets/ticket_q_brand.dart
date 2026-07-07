@@ -85,8 +85,9 @@ class TicketQBrand extends StatelessWidget {
       child: axis == Axis.vertical
           ? Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              crossAxisAlignment: centered
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               children: [
                 mark,
                 const SizedBox(height: AppDimensions.space16),
@@ -95,8 +96,8 @@ class TicketQBrand extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   textAlign: centered ? TextAlign.center : TextAlign.start,
-                  style: (wordmarkStyle ?? theme.textTheme.displayLarge)
-                      ?.copyWith(
+                  style:
+                      (wordmarkStyle ?? theme.textTheme.displayLarge)?.copyWith(
                     color: wordmarkColor ?? colorScheme.onSurface,
                     fontWeight: FontWeight.w800,
                     letterSpacing: 0,
@@ -110,13 +111,15 @@ class TicketQBrand extends StatelessWidget {
             )
           : Column(
               mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment:
-                  centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              crossAxisAlignment: centered
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               children: [
                 Row(
                   mainAxisSize: MainAxisSize.min,
-                  mainAxisAlignment:
-                      centered ? MainAxisAlignment.center : MainAxisAlignment.start,
+                  mainAxisAlignment: centered
+                      ? MainAxisAlignment.center
+                      : MainAxisAlignment.start,
                   children: [
                     mark,
                     const SizedBox(width: AppDimensions.space12),

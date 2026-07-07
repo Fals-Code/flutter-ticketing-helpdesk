@@ -207,8 +207,7 @@ String? resolveAppRedirect({
 }) {
   final isSplash = location == AppRoutes.splash;
   final isStartupPending = !startupGate.minimumRevealComplete;
-  final isResolvingAuth =
-      authState.status == AuthStatus.initial ||
+  final isResolvingAuth = authState.status == AuthStatus.initial ||
       authState.status == AuthStatus.loading;
 
   if (isSplash && (isResolvingAuth || isStartupPending)) {

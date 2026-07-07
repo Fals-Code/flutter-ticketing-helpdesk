@@ -3,6 +3,7 @@ import 'package:equatable/equatable.dart';
 class TicketHistoryEntity extends Equatable {
   final String id;
   final String ticketId;
+  final String eventType;
   final String? oldStatus;
   final String newStatus;
   final String changedBy;
@@ -12,6 +13,7 @@ class TicketHistoryEntity extends Equatable {
   const TicketHistoryEntity({
     required this.id,
     required this.ticketId,
+    this.eventType = 'status_changed',
     this.oldStatus,
     required this.newStatus,
     required this.changedBy,
@@ -20,6 +22,14 @@ class TicketHistoryEntity extends Equatable {
   });
 
   @override
-  List<Object?> get props =>
-      [id, ticketId, oldStatus, newStatus, changedBy, changedByName, createdAt];
+  List<Object?> get props => <Object?>[
+        id,
+        ticketId,
+        eventType,
+        oldStatus,
+        newStatus,
+        changedBy,
+        changedByName,
+        createdAt,
+      ];
 }

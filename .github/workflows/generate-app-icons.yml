@@ -8,6 +8,9 @@ on:
       - assets/icons/app_icon.png
       - pubspec.yaml
       - .github/workflows/generate-app-icons.yml
+  pull_request:
+    branches:
+      - main
   workflow_dispatch:
 
 permissions:

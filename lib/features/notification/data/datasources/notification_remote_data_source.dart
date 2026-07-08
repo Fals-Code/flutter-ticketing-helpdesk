@@ -41,20 +41,27 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> markAsRead(String notificationId) async {
     try {
+      final currentUserId = supabaseClient.auth.currentUser?.id;
+      if (currentUserId == null) {
+        throw Exception('User belum login.');
+      }
+
       final response = await supabaseClient
           .from('notifications')
           .update({'is_read': true})
           .eq('id', notificationId)
+          .eq('user_id', currentUserId)
           .select();
 
-      // If no rows were updated, it might be a permissions issue
       if ((response as List).isEmpty) {
         throw Exception(
-            'No rows updated. Check RLS policies for notifications table.');
+          'No rows updated. Check RLS policies for notifications table.',
+        );
       }
     } on PostgrestException catch (e) {
       throw Exception(
-          'Database error marking read: ${e.message} (code: ${e.code})');
+        'Database error marking read: ${e.message} (code: ${e.code})',
+      );
     } catch (e) {
       throw Exception('Failed to mark notification as read: $e');
     }
@@ -63,10 +70,15 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Stream<List<NotificationModel>> watchNotifications() {
     try {
+      final currentUserId = supabaseClient.auth.currentUser?.id;
+      if (currentUserId == null) {
+        return Stream.value([]);
+      }
+
       return supabaseClient
           .from('notifications')
           .stream(primaryKey: ['id'])
-          .eq('user_id', supabaseClient.auth.currentUser!.id)
+          .eq('user_id', currentUserId)
           .order('created_at', ascending: false)
           .map((data) => (data as List)
               .map((json) => NotificationModel.fromJson(json))
@@ -79,15 +91,22 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteNotification(String notificationId) async {
     try {
+      final currentUserId = supabaseClient.auth.currentUser?.id;
+      if (currentUserId == null) {
+        throw Exception('User belum login.');
+      }
+
       final response = await supabaseClient
           .from('notifications')
           .delete()
           .eq('id', notificationId)
+          .eq('user_id', currentUserId)
           .select();
 
       if ((response as List).isEmpty) {
         throw Exception(
-            'Notifikasi tidak ditemukan atau izin dihapus ditolak (RLS).');
+          'Notifikasi tidak ditemukan atau izin dihapus ditolak (RLS).',
+        );
       }
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message} (code: ${e.code})');
@@ -99,15 +118,22 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteNotifications(List<String> notificationIds) async {
     try {
+      final currentUserId = supabaseClient.auth.currentUser?.id;
+      if (currentUserId == null) {
+        throw Exception('User belum login.');
+      }
+
       final response = await supabaseClient
           .from('notifications')
           .delete()
           .inFilter('id', notificationIds)
+          .eq('user_id', currentUserId)
           .select();
 
       if ((response as List).isEmpty) {
         throw Exception(
-            'Tidak ada notifikasi yang berhasil dihapus. Cek izin RLS.');
+          'Tidak ada notifikasi yang berhasil dihapus. Cek izin RLS.',
+        );
       }
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message} (code: ${e.code})');
@@ -119,17 +145,15 @@ class SupabaseNotificationRemoteDataSourceImpl
   @override
   Future<void> deleteAllNotifications() async {
     try {
-      final response = await supabaseClient
+      final currentUserId = supabaseClient.auth.currentUser?.id;
+      if (currentUserId == null) {
+        throw Exception('User belum login.');
+      }
+
+      await supabaseClient
           .from('notifications')
           .delete()
-          .eq('user_id', supabaseClient.auth.currentUser!.id)
-          .select();
-
-      if ((response as List).isEmpty) {
-        // Only throw if there were actually notifications to delete
-        // We can't easily check that without another query, but usually
-        // if user clicks "Hapus Semua" there are notifications.
-      }
+          .eq('user_id', currentUserId);
     } on PostgrestException catch (e) {
       throw Exception('Database error: ${e.message} (code: ${e.code})');
     } catch (e) {

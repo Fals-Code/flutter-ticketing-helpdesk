@@ -115,9 +115,10 @@ class LocalNotificationService {
       'Ketuk untuk melihat detail tiket.',
     ]);
     final String? payload = payloadFromData(message.data);
+    final int notificationId = _stableNotificationId(message, payload);
 
     await plugin.show(
-      message.messageId.hashCode,
+      notificationId,
       title,
       body,
       _platformNotificationDetails,
@@ -231,6 +232,17 @@ class LocalNotificationService {
         AppRoutes.ticketDetail.replaceAll(':id', payload),
       );
     }
+  }
+
+  static int _stableNotificationId(RemoteMessage message, String? payload) {
+    final source = _firstNonEmpty([
+      message.messageId,
+      message.data['notificationId']?.toString(),
+      message.data['notification_id']?.toString(),
+      payload,
+      DateTime.now().microsecondsSinceEpoch.toString(),
+    ]);
+    return source.hashCode;
   }
 
   static String _firstNonEmpty(List<String?> values) {

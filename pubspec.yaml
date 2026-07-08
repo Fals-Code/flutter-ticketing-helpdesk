@@ -2,7 +2,7 @@ name: uts
 description: "TICKET-Q ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â aplikasi mobile E-Ticketing Helpdesk untuk pelaporan, monitoring, dan penyelesaian tiket layanan."
 publish_to: 'none'
 
-version: 2.0.0+1
+version: 2.0.0+2
 
 environment:
   sdk: ^3.5.0

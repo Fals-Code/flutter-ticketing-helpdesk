@@ -6,16 +6,22 @@ import 'package:uts/features/ticket/domain/entities/ticket_history_entity.dart';
 class TicketTimelineWidget extends StatelessWidget {
   final List<TicketHistoryEntity> activities;
   final bool isDark;
+  final bool showOperationalEvents;
 
   const TicketTimelineWidget({
     super.key,
     required this.activities,
     required this.isDark,
+    this.showOperationalEvents = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    if (activities.isEmpty) {
+    final List<TicketHistoryEntity> visibleActivities = _prepareActivities(
+      _filterActivities(activities),
+    );
+
+    if (visibleActivities.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 32),
@@ -28,7 +34,9 @@ class TicketTimelineWidget extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               Text(
-                'Belum ada riwayat aktivitas.',
+                showOperationalEvents
+                    ? 'Belum ada riwayat aktivitas.'
+                    : 'Belum ada riwayat tracking tiket.',
                 style: TextStyle(
                   fontSize: 13,
                   color: isDark ? Colors.white54 : Colors.black45,
@@ -39,9 +47,6 @@ class TicketTimelineWidget extends StatelessWidget {
         ),
       );
     }
-
-    final List<TicketHistoryEntity> visibleActivities =
-        _prepareActivities(activities);
 
     return ListView.builder(
       shrinkWrap: true,
@@ -162,6 +167,32 @@ class TicketTimelineWidget extends StatelessWidget {
         );
       },
     );
+  }
+
+  List<TicketHistoryEntity> _filterActivities(
+    List<TicketHistoryEntity> source,
+  ) {
+    if (showOperationalEvents) {
+      return source;
+    }
+
+    return source.where(_isTrackingActivity).toList(growable: false);
+  }
+
+  bool _isTrackingActivity(TicketHistoryEntity activity) {
+    switch (activity.eventType.toLowerCase()) {
+      case 'ticket_created':
+      case 'assignment_started':
+      case 'assigned':
+      case 'unassigned':
+      case 'status_changed':
+      case 'admin_override':
+      case 'ticket_deleted':
+      case 'ticket_restored':
+        return true;
+      default:
+        return false;
+    }
   }
 
   List<TicketHistoryEntity> _prepareActivities(

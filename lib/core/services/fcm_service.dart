@@ -3,8 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uuid/uuid.dart';
-import 'package:uts/core/router/app_router.dart';
 import 'package:uts/core/di/injection_container.dart';
+import 'package:uts/core/router/app_router.dart';
 import 'package:uts/features/notification/domain/usecases/notification_usecases.dart';
 import 'local_notification_service.dart';
 
@@ -29,10 +29,7 @@ class FCMService {
       debugPrint('Notification permission granted');
     }
 
-    final userId = _supabase.auth.currentUser?.id;
-    if (userId != null) {
-      await syncTokenToSupabase(userId);
-    }
+    await syncCurrentUserToken();
 
     _fcm.onTokenRefresh.listen((newToken) async {
       final currentUserId = _supabase.auth.currentUser?.id;
@@ -42,13 +39,17 @@ class FCMService {
     });
 
     FirebaseMessaging.onMessage.listen((message) {
-      final ticketId = message.data['ticketId']?.toString() ?? '';
-      final notificationId = message.data['notificationId']?.toString() ?? '';
+      final payload = LocalNotificationService.payloadFromData(message.data);
       _localNotifications.showNotification(
         id: message.hashCode,
-        title: message.notification?.title ?? 'Pembaruan Tiket',
-        body: message.notification?.body ?? 'Ketuk untuk melihat detail',
-        payload: '$notificationId|$ticketId',
+        title: message.notification?.title ??
+            message.data['title']?.toString() ??
+            'Pembaruan Tiket',
+        body: message.notification?.body ??
+            message.data['body']?.toString() ??
+            message.data['message']?.toString() ??
+            'Ketuk untuk melihat detail',
+        payload: payload,
       );
     });
 
@@ -60,6 +61,14 @@ class FCMService {
     if (initialMessage != null) {
       await _handleMessageTap(initialMessage);
     }
+  }
+
+  Future<void> syncCurrentUserToken() async {
+    final userId = _supabase.auth.currentUser?.id;
+    if (userId == null) {
+      return;
+    }
+    await syncTokenToSupabase(userId);
   }
 
   Future<void> syncTokenToSupabase(String userId, [String? token]) async {
@@ -102,8 +111,9 @@ class FCMService {
   }
 
   Future<void> _handleMessageTap(RemoteMessage message) async {
-    final ticketId = message.data['ticketId']?.toString();
-    final notificationId = message.data['notificationId']?.toString();
+    final ticketId = LocalNotificationService.ticketIdFromData(message.data);
+    final notificationId =
+        LocalNotificationService.notificationIdFromData(message.data);
 
     if (notificationId != null && notificationId.isNotEmpty) {
       final result = await sl<MarkNotificationAsRead>().call(notificationId);

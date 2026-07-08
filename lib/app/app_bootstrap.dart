@@ -140,7 +140,10 @@ class ETicketingApp extends StatelessWidget {
 
   void _handleAuthenticationState(BuildContext context, AuthState state) {
     if (state.status == AuthStatus.authenticated) {
-      unawaited(sl<FCMService>().syncCurrentUserToken());
+      final fcmService = sl<FCMService>();
+      unawaited(fcmService.syncCurrentUserToken());
+      unawaited(fcmService.consumePendingInitialMessage());
+      unawaited(sl<LocalNotificationService>().consumePendingLaunchPayload());
       context
           .read<TicketListBloc>()
           .add(const list_event.StartTicketListSubscription());

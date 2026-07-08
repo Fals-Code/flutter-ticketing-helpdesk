@@ -38,18 +38,13 @@ import 'package:uts/shared/widgets/global_error_boundary.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  if (message.notification != null) {
-    debugPrint(
-      'Skipping local background notification for system-handled FCM: '
-      '${message.messageId}',
-    );
-    return;
-  }
-
-  await Firebase.initializeApp();
-  await LocalNotificationService.showBackgroundRemoteMessage(message);
-
-  debugPrint('Handling data-only background FCM message: ${message.messageId}');
+  // Background/terminated user-visible alerts are owned by Android's FCM
+  // notification payload. Showing a local notification from this isolate can
+  // resurrect an alert after the user taps Clear all, especially for mixed
+  // notification+data messages. Keep this handler side-effect free.
+  debugPrint(
+    'Skipping local background FCM mirror: ${message.messageId}',
+  );
 }
 
 Future<void> bootstrapApplication() async {

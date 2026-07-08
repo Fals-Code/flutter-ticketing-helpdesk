@@ -67,7 +67,7 @@ class LocalNotificationService {
     tz.initializeTimeZones();
 
     await _notificationsPlugin.initialize(
-      _initializationSettings,
+      settings: _initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
         await _handlePayloadTap(response.payload);
       },
@@ -99,7 +99,7 @@ class LocalNotificationService {
     final FlutterLocalNotificationsPlugin plugin =
         FlutterLocalNotificationsPlugin();
 
-    await plugin.initialize(_initializationSettings);
+    await plugin.initialize(settings: _initializationSettings);
     await _ensureAndroidChannel(plugin);
 
     final String title = _firstNonEmpty([
@@ -118,10 +118,10 @@ class LocalNotificationService {
     final int notificationId = _stableNotificationId(message, payload);
 
     await plugin.show(
-      notificationId,
-      title,
-      body,
-      _platformNotificationDetails,
+      id: notificationId,
+      title: title,
+      body: body,
+      notificationDetails: _platformNotificationDetails,
       payload: payload,
     );
   }
@@ -167,10 +167,10 @@ class LocalNotificationService {
     String? payload,
   }) async {
     await _notificationsPlugin.show(
-      id,
-      title,
-      body,
-      _platformNotificationDetails,
+      id: id,
+      title: title,
+      body: body,
+      notificationDetails: _platformNotificationDetails,
       payload: payload,
     );
   }

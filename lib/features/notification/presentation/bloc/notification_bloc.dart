@@ -99,7 +99,8 @@ class NotificationState extends Equatable {
       isLoading: isLoading ?? this.isLoading,
       notifications: notifications ?? this.notifications,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
-      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage:
+          clearSuccess ? null : (successMessage ?? this.successMessage),
       selectionMode: selectionMode ?? this.selectionMode,
       selectedIds: selectedIds ?? this.selectedIds,
     );
@@ -286,7 +287,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       return;
     }
 
-    final allIds = state.notifications.map((notification) => notification.id).toSet();
+    final allIds =
+        state.notifications.map((notification) => notification.id).toSet();
     emit(state.copyWith(selectedIds: allIds));
   }
 

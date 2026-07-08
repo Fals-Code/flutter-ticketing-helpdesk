@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:uts/core/constants/app_colors.dart';
 import 'package:uts/core/constants/app_strings.dart';
 import 'package:uts/core/router/app_router.dart';
-import 'package:go_router/go_router.dart';
-import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
-import 'package:uts/features/notification/domain/entities/notification_entity.dart';
+import 'package:uts/core/services/toast_service.dart';
 import 'package:uts/core/utils/date_helper.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
-import 'package:uts/core/services/toast_service.dart';
+import 'package:uts/features/notification/domain/entities/notification_entity.dart';
+import 'package:uts/features/notification/presentation/bloc/notification_bloc.dart';
 
 class NotificationTab extends StatelessWidget {
   const NotificationTab({super.key});
@@ -19,10 +19,24 @@ class NotificationTab extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return BlocConsumer<NotificationBloc, NotificationState>(
+      listenWhen: (previous, current) =>
+          previous.errorMessage != current.errorMessage ||
+          previous.successMessage != current.successMessage,
       listener: (context, state) {
         if (state.errorMessage != null) {
-          ToastService().show(context,
-              message: state.errorMessage!, type: ToastType.error);
+          ToastService().show(
+            context,
+            message: state.errorMessage!,
+            type: ToastType.error,
+          );
+        }
+
+        if (state.successMessage != null) {
+          ToastService().show(
+            context,
+            message: state.successMessage!,
+            type: ToastType.success,
+          );
         }
       },
       builder: (context, state) {
@@ -31,7 +45,7 @@ class NotificationTab extends StatelessWidget {
         return Scaffold(
           backgroundColor:
               isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-          appBar: _buildAppBar(context, state, unreadCount, isDark),
+          appBar: _buildAppBar(context, state, unreadCount),
           body: state.isLoading && state.notifications.isEmpty
               ? _buildSkeleton(isDark)
               : state.notifications.isEmpty
@@ -40,7 +54,7 @@ class NotificationTab extends StatelessWidget {
           floatingActionButton:
               state.selectionMode && state.selectedIds.isNotEmpty
                   ? FloatingActionButton.extended(
-                      onPressed: () => _handleBatchDelete(context, state),
+                      onPressed: () => _handleBatchDelete(context),
                       label: Text(
                         'Hapus ${state.selectedIds.length} Notifikasi',
                         style: GoogleFonts.inter(fontWeight: FontWeight.w700),
@@ -54,27 +68,26 @@ class NotificationTab extends StatelessWidget {
     );
   }
 
-  PreferredSizeWidget _buildAppBar(BuildContext context,
-      NotificationState state, int unreadCount, bool isDark) {
+  PreferredSizeWidget _buildAppBar(
+    BuildContext context,
+    NotificationState state,
+    int unreadCount,
+  ) {
     return AppBar(
       backgroundColor: Colors.transparent,
       elevation: 0,
       centerTitle: false,
-      leading: AnimatedSwitcher(
-        duration: const Duration(milliseconds: 300),
-        child: state.selectionMode
-            ? IconButton(
-                key: const ValueKey('close'),
-                icon: const Icon(Icons.close_rounded),
-                onPressed: () {
-                  HapticHelper.light();
-                  context
-                      .read<NotificationBloc>()
-                      .add(ToggleSelectionModeRequested());
-                },
-              )
-            : null,
-      ),
+      leading: state.selectionMode
+          ? IconButton(
+              icon: const Icon(Icons.close_rounded),
+              onPressed: () {
+                HapticHelper.light();
+                context
+                    .read<NotificationBloc>()
+                    .add(ToggleSelectionModeRequested());
+              },
+            )
+          : null,
       title: Row(
         children: [
           Text(
@@ -82,7 +95,9 @@ class NotificationTab extends StatelessWidget {
                 ? '${state.selectedIds.length} Terpilih'
                 : AppStrings.navNotifications,
             style: GoogleFonts.plusJakartaSans(
-                fontWeight: FontWeight.w800, fontSize: 18),
+              fontWeight: FontWeight.w800,
+              fontSize: 18,
+            ),
           ),
           if (!state.selectionMode && unreadCount > 0) ...[
             const SizedBox(width: 8),
@@ -95,9 +110,10 @@ class NotificationTab extends StatelessWidget {
               child: Text(
                 unreadCount.toString(),
                 style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold),
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ],
@@ -110,24 +126,23 @@ class NotificationTab extends StatelessWidget {
     );
   }
 
-  void _handleBatchDelete(BuildContext context, NotificationState state) {
+  void _handleBatchDelete(BuildContext context) {
     HapticHelper.heavy();
-    context
-        .read<NotificationBloc>()
-        .add(DeleteSelectedNotificationsRequested());
-    ToastService().show(context,
-        message: '${state.selectedIds.length} notifikasi dihapus',
-        type: ToastType.success);
+    context.read<NotificationBloc>().add(DeleteSelectedNotificationsRequested());
   }
 
   Widget _buildNotificationList(
-      BuildContext context, NotificationState state, bool isDark) {
+    BuildContext context,
+    NotificationState state,
+    bool isDark,
+  ) {
     return RefreshIndicator(
       onRefresh: () async =>
           context.read<NotificationBloc>().add(FetchNotificationsRequested()),
       child: ListView.builder(
         physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics()),
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
         padding: const EdgeInsets.fromLTRB(20, 8, 20, 100),
         itemCount: state.notifications.length,
         itemBuilder: (context, index) {
@@ -135,8 +150,18 @@ class NotificationTab extends StatelessWidget {
           final isSelected = state.selectedIds.contains(notification.id);
 
           return Dismissible(
-            key: Key('notif_${notification.id}'),
+            key: ValueKey<String>('notif_${notification.id}'),
             direction: DismissDirection.endToStart,
+            confirmDismiss: (_) async {
+              // Never let Dismissible remove the item before Supabase confirms
+              // deletion. If RLS rejects the request, the card stays in the
+              // tree and Flutter avoids the dismissed-widget crash.
+              HapticHelper.medium();
+              context
+                  .read<NotificationBloc>()
+                  .add(DeleteNotificationRequested(notification.id));
+              return false;
+            },
             background: Container(
               alignment: Alignment.centerRight,
               padding: const EdgeInsets.only(right: 20),
@@ -144,28 +169,11 @@ class NotificationTab extends StatelessWidget {
                 color: AppColors.danger,
                 borderRadius: BorderRadius.circular(20),
               ),
-              child:
-                  const Icon(Icons.delete_outline_rounded, color: Colors.white),
+              child: const Icon(
+                Icons.delete_outline_rounded,
+                color: Colors.white,
+              ),
             ),
-            onDismissed: (direction) {
-              HapticHelper.medium();
-              context
-                  .read<NotificationBloc>()
-                  .add(DeleteNotificationRequested(notification.id));
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Notifikasi dihapus'),
-                  duration: const Duration(seconds: 5),
-                  action: SnackBarAction(
-                    label: 'Urungkan',
-                    textColor: Colors.white,
-                    onPressed: () {
-                      // Logic untuk undo bisa ditambahkan di BLoC jika didukung
-                    },
-                  ),
-                ),
-              );
-            },
             child: _NotificationCard(
               notification: notification,
               isDark: isDark,
@@ -189,8 +197,11 @@ class NotificationTab extends StatelessWidget {
               color: AppColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.notifications_none_rounded,
-                size: 80, color: AppColors.primary.withValues(alpha: 0.4)),
+            child: Icon(
+              Icons.notifications_none_rounded,
+              size: 80,
+              color: AppColors.primary.withValues(alpha: 0.4),
+            ),
           ),
           const SizedBox(height: 24),
           Text(
@@ -198,9 +209,8 @@ class NotificationTab extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: isDark
-                  ? AppColors.textPrimaryDark
-                  : AppColors.textPrimaryLight,
+              color:
+                  isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 8),
@@ -241,41 +251,46 @@ class NotificationTab extends StatelessWidget {
     return PopupMenuButton<String>(
       icon: const Icon(Icons.more_vert_rounded),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      onSelected: (val) => _handleMenuAction(context, val, state),
+      onSelected: (value) => _handleMenuAction(context, value, state),
       itemBuilder: (context) {
         final hasUnread = state.notifications.any((n) => !n.isRead);
-        final isAllSelected =
-            state.selectedIds.length == state.notifications.length;
+        final isAllSelected = state.selectedIds.length == state.notifications.length;
         return [
           if (!state.selectionMode) ...[
             PopupMenuItem(
               value: 'read_all',
               enabled: hasUnread,
               child: const _PopupItem(
-                  icon: Icons.done_all_rounded, label: 'Baca Semua'),
+                icon: Icons.done_all_rounded,
+                label: 'Baca Semua',
+              ),
             ),
             const PopupMenuItem(
               value: 'pilih',
-              child: _PopupItem(icon: Icons.checklist_rounded, label: 'Pilih'),
+              child: _PopupItem(
+                icon: Icons.checklist_rounded,
+                label: 'Pilih',
+              ),
             ),
           ],
-          if (state.selectionMode) ...[
+          if (state.selectionMode)
             PopupMenuItem(
               value: 'select_all',
               child: _PopupItem(
-                  icon: isAllSelected
-                      ? Icons.deselect_rounded
-                      : Icons.select_all_rounded,
-                  label: isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua'),
+                icon: isAllSelected
+                    ? Icons.deselect_rounded
+                    : Icons.select_all_rounded,
+                label: isAllSelected ? 'Batal Pilih Semua' : 'Pilih Semua',
+              ),
             ),
-          ],
           const PopupMenuDivider(),
           const PopupMenuItem(
             value: 'delete_all',
             child: _PopupItem(
-                icon: Icons.delete_forever_rounded,
-                label: 'Hapus Semua',
-                isDestructive: true),
+              icon: Icons.delete_forever_rounded,
+              label: 'Hapus Semua',
+              isDestructive: true,
+            ),
           ),
         ];
       },
@@ -283,14 +298,16 @@ class NotificationTab extends StatelessWidget {
   }
 
   void _handleMenuAction(
-      BuildContext context, String value, NotificationState state) {
+    BuildContext context,
+    String value,
+    NotificationState state,
+  ) {
     final bloc = context.read<NotificationBloc>();
     HapticHelper.light();
+
     switch (value) {
       case 'read_all':
         bloc.add(MarkAllReadRequested());
-        ToastService().show(context,
-            message: 'Semua notifikasi dibaca', type: ToastType.success);
         break;
       case 'pilih':
         bloc.add(ToggleSelectionModeRequested());
@@ -301,8 +318,6 @@ class NotificationTab extends StatelessWidget {
       case 'delete_all':
         HapticHelper.heavy();
         bloc.add(DeleteAllNotificationsRequested());
-        ToastService().show(context,
-            message: 'Semua notifikasi dihapus', type: ToastType.success);
         break;
     }
   }
@@ -341,14 +356,13 @@ class _NotificationCard extends StatelessWidget {
           context
               .read<NotificationBloc>()
               .add(ToggleNotificationSelectionRequested(notification.id));
-        } else {
-          context
-              .read<NotificationBloc>()
-              .add(MarkReadRequested(notification.id));
-          if (notification.ticketId != null) {
-            context.push(AppRoutes.ticketDetail
-                .replaceAll(':id', notification.ticketId!));
-          }
+          return;
+        }
+
+        context.read<NotificationBloc>().add(MarkReadRequested(notification.id));
+        final ticketId = notification.ticketId;
+        if (ticketId != null) {
+          context.push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));
         }
       },
       child: Stack(
@@ -374,9 +388,10 @@ class _NotificationCard extends StatelessWidget {
               boxShadow: isSelected
                   ? [
                       BoxShadow(
-                          color: AppColors.primary.withValues(alpha: 0.1),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4))
+                        color: AppColors.primary.withValues(alpha: 0.1),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
                     ]
                   : [],
             ),
@@ -402,11 +417,14 @@ class _NotificationCard extends StatelessWidget {
                             onChanged: (_) {
                               HapticHelper.selection();
                               context.read<NotificationBloc>().add(
-                                  ToggleNotificationSelectionRequested(
-                                      notification.id));
+                                    ToggleNotificationSelectionRequested(
+                                      notification.id,
+                                    ),
+                                  );
                             },
                             shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6)),
+                              borderRadius: BorderRadius.circular(6),
+                            ),
                             activeColor: AppColors.primary,
                           )
                         : const SizedBox.shrink(),
@@ -490,8 +508,12 @@ class _PopupItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool isDestructive;
-  const _PopupItem(
-      {required this.icon, required this.label, this.isDestructive = false});
+
+  const _PopupItem({
+    required this.icon,
+    required this.label,
+    this.isDestructive = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -499,9 +521,13 @@ class _PopupItem extends StatelessWidget {
       children: [
         Icon(icon, size: 20, color: isDestructive ? AppColors.danger : null),
         const SizedBox(width: 12),
-        Text(label,
-            style: GoogleFonts.inter(
-                fontSize: 14, color: isDestructive ? AppColors.danger : null)),
+        Text(
+          label,
+          style: GoogleFonts.inter(
+            fontSize: 14,
+            color: isDestructive ? AppColors.danger : null,
+          ),
+        ),
       ],
     );
   }

@@ -12,6 +12,7 @@ import 'package:uts/features/notification/domain/usecases/notification_usecases.
 class LocalNotificationService {
   final FlutterLocalNotificationsPlugin _notificationsPlugin =
       FlutterLocalNotificationsPlugin();
+  String? _pendingLaunchPayload;
 
   static const String channelId = 'ticketq_ticket_updates';
   static const String channelName = 'Pembaruan Tiket';
@@ -72,6 +73,12 @@ class LocalNotificationService {
       },
     );
 
+    final launchDetails =
+        await _notificationsPlugin.getNotificationAppLaunchDetails();
+    if (launchDetails?.didNotificationLaunchApp ?? false) {
+      _pendingLaunchPayload = launchDetails?.notificationResponse?.payload;
+    }
+
     await _ensureAndroidChannel(_notificationsPlugin);
 
     if (!kIsWeb && Platform.isAndroid) {
@@ -80,6 +87,12 @@ class LocalNotificationService {
               AndroidFlutterLocalNotificationsPlugin>();
       await androidPlatform?.requestNotificationsPermission();
     }
+  }
+
+  Future<void> consumePendingLaunchPayload() async {
+    final payload = _pendingLaunchPayload;
+    _pendingLaunchPayload = null;
+    await _handlePayloadTap(payload);
   }
 
   static Future<void> showBackgroundRemoteMessage(RemoteMessage message) async {

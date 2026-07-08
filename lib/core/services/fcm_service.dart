@@ -15,6 +15,7 @@ class FCMService {
   final LocalNotificationService _localNotifications;
   final SharedPreferences _preferences;
   final SupabaseClient _supabase = sl<SupabaseClient>();
+  RemoteMessage? _pendingInitialMessage;
 
   FCMService(this._localNotifications, this._preferences);
 
@@ -57,10 +58,7 @@ class FCMService {
       _handleMessageTap(message);
     });
 
-    final initialMessage = await _fcm.getInitialMessage();
-    if (initialMessage != null) {
-      await _handleMessageTap(initialMessage);
-    }
+    _pendingInitialMessage = await _fcm.getInitialMessage();
   }
 
   Future<void> syncCurrentUserToken() async {
@@ -69,6 +67,14 @@ class FCMService {
       return;
     }
     await syncTokenToSupabase(userId);
+  }
+
+  Future<void> consumePendingInitialMessage() async {
+    final message = _pendingInitialMessage;
+    _pendingInitialMessage = null;
+    if (message != null) {
+      await _handleMessageTap(message);
+    }
   }
 
   Future<void> syncTokenToSupabase(String userId, [String? token]) async {

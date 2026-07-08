@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -37,6 +39,7 @@ import 'package:uts/shared/widgets/global_error_boundary.dart';
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
+  await LocalNotificationService.showBackgroundRemoteMessage(message);
   debugPrint('Handling background FCM message: ${message.messageId}');
 }
 
@@ -137,6 +140,7 @@ class ETicketingApp extends StatelessWidget {
 
   void _handleAuthenticationState(BuildContext context, AuthState state) {
     if (state.status == AuthStatus.authenticated) {
+      unawaited(sl<FCMService>().syncCurrentUserToken());
       context
           .read<TicketListBloc>()
           .add(const list_event.StartTicketListSubscription());

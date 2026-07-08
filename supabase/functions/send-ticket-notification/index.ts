@@ -30,7 +30,7 @@ Deno.serve(async (request) => {
   }
 
   const configuredSecret = Deno.env.get('WEBHOOK_SECRET')?.trim() ?? '';
-  if (configuredSecret.isNotEmpty) {
+  if (configuredSecret.length > 0) {
     const incomingSecret = request.headers.get('x-ticketq-webhook-secret') ?? '';
     if (incomingSecret !== configuredSecret) {
       return jsonResponse({ error: 'unauthorized_webhook' }, 401);
@@ -299,7 +299,7 @@ function readEnv(name: string): string {
 
 function readPrivateKey(): string {
   const base64Value = Deno.env.get('FIREBASE_PRIVATE_KEY_BASE64')?.trim();
-  if (base64Value != null && base64Value.isNotEmpty) {
+  if (base64Value != null && base64Value.length > 0) {
     return atob(base64Value);
   }
 
@@ -316,15 +316,3 @@ function jsonResponse(body: Record<string, unknown>, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
-
-declare global {
-  interface String {
-    readonly isNotEmpty: boolean;
-  }
-}
-
-Object.defineProperty(String.prototype, 'isNotEmpty', {
-  get() {
-    return this.length > 0;
-  },
-});

@@ -60,6 +60,11 @@
 	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>fetch</string>
+		<string>remote-notification</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -71,11 +76,11 @@
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-	<string>Aplikasi membutuhkan akses kamera untuk mengambil foto profil.</string>
+	<string>Aplikasi membutuhkan akses kamera untuk mengambil foto profil dan bukti lampiran tiket.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Aplikasi membutuhkan akses galeri untuk memilih foto profil.</string>
+	<string>Aplikasi membutuhkan akses galeri untuk memilih foto profil dan bukti lampiran tiket.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Aplikasi membutuhkan akses mikrofon jika Anda merekam video.</string>
+	<string>Aplikasi membutuhkan akses mikrofon jika Anda merekam video sebagai lampiran tiket.</string>
 	<key>UISupportedInterfaceOrientations~ipad</key>
 	<array>
 		<string>UIInterfaceOrientationPortrait</string>

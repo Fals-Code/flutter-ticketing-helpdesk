@@ -74,6 +74,7 @@ Future<void> _handleLogout(
 ) async {
   emit(bloc.state.copyWith(status: AuthStatus.loading));
   bloc._signOutInProgress = true;
+  await _unregisterDeviceTokenIfReady();
   final result = await bloc.logoutUseCase(const NoParams());
   bloc._signOutInProgress = false;
   result.fold(
@@ -91,6 +92,7 @@ Future<void> _handleSessionExpired(
   Emitter<AuthState> emit,
 ) async {
   bloc._signOutInProgress = true;
+  await _unregisterDeviceTokenIfReady();
   await bloc.logoutUseCase(const NoParams());
   bloc._signOutInProgress = false;
   emit(const AuthState(
@@ -107,4 +109,15 @@ void _handleClearStatus(AuthBloc bloc, Emitter<AuthState> emit) {
     clearSuccess: true,
     clearError: true,
   ));
+}
+
+Future<void> _unregisterDeviceTokenIfReady() async {
+  try {
+    if (sl.isRegistered<FCMService>()) {
+      await sl<FCMService>().unregisterCurrentDeviceToken();
+    }
+  } catch (_) {
+    // Token cleanup must not block logout. The next login will re-register
+    // the active device token with the correct user.
+  }
 }

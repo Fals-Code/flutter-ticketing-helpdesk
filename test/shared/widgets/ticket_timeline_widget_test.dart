@@ -85,4 +85,76 @@ void main() {
       expect(find.text('Ditugaskan & Mulai Dikerjakan'), findsNothing);
     },
   );
+
+  testWidgets(
+    'menyaring komentar dari tampilan tracking ringkas',
+    (WidgetTester tester) async {
+      final List<TicketHistoryEntity> activities = <TicketHistoryEntity>[
+        TicketHistoryEntity(
+          id: 'comment-event',
+          ticketId: 'ticket-1',
+          eventType: 'comment_added',
+          newStatus: '',
+          changedBy: 'user-1',
+          changedByName: 'Azzam',
+          createdAt: DateTime.utc(2026, 7, 7, 4, 3),
+        ),
+        TicketHistoryEntity(
+          id: 'status-event',
+          ticketId: 'ticket-1',
+          eventType: 'status_changed',
+          oldStatus: 'open',
+          newStatus: 'in_progress',
+          changedBy: 'helpdesk-1',
+          changedByName: 'Helpdesk',
+          createdAt: DateTime.utc(2026, 7, 7, 4, 2),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TicketTimelineWidget(
+              activities: activities,
+              isDark: false,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Komentar Ditambahkan'), findsNothing);
+      expect(find.text('Mulai Dikerjakan'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'dapat menampilkan komentar saat mode audit operasional diaktifkan',
+    (WidgetTester tester) async {
+      final List<TicketHistoryEntity> activities = <TicketHistoryEntity>[
+        TicketHistoryEntity(
+          id: 'comment-event',
+          ticketId: 'ticket-1',
+          eventType: 'comment_added',
+          newStatus: '',
+          changedBy: 'user-1',
+          changedByName: 'Azzam',
+          createdAt: DateTime.utc(2026, 7, 7, 4, 3),
+        ),
+      ];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: TicketTimelineWidget(
+              activities: activities,
+              isDark: false,
+              showOperationalEvents: true,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Komentar Ditambahkan'), findsOneWidget);
+    },
+  );
 }

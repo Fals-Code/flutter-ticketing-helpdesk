@@ -38,3 +38,6 @@ jwt_expiry = 3600
 enable_signup = true
 enable_anonymous_sign_ins = false
 minimum_password_length = 8
+
+[functions.send-ticket-notification]
+verify_jwt = false

@@ -128,7 +128,9 @@ class NotificationTab extends StatelessWidget {
 
   void _handleBatchDelete(BuildContext context) {
     HapticHelper.heavy();
-    context.read<NotificationBloc>().add(DeleteSelectedNotificationsRequested());
+    context
+        .read<NotificationBloc>()
+        .add(DeleteSelectedNotificationsRequested());
   }
 
   Widget _buildNotificationList(
@@ -209,8 +211,9 @@ class NotificationTab extends StatelessWidget {
             style: GoogleFonts.plusJakartaSans(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color:
-                  isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+              color: isDark
+                  ? AppColors.textPrimaryDark
+                  : AppColors.textPrimaryLight,
             ),
           ),
           const SizedBox(height: 8),
@@ -254,7 +257,8 @@ class NotificationTab extends StatelessWidget {
       onSelected: (value) => _handleMenuAction(context, value, state),
       itemBuilder: (context) {
         final hasUnread = state.notifications.any((n) => !n.isRead);
-        final isAllSelected = state.selectedIds.length == state.notifications.length;
+        final isAllSelected =
+            state.selectedIds.length == state.notifications.length;
         return [
           if (!state.selectionMode) ...[
             PopupMenuItem(
@@ -359,7 +363,9 @@ class _NotificationCard extends StatelessWidget {
           return;
         }
 
-        context.read<NotificationBloc>().add(MarkReadRequested(notification.id));
+        context
+            .read<NotificationBloc>()
+            .add(MarkReadRequested(notification.id));
         final ticketId = notification.ticketId;
         if (ticketId != null) {
           context.push(AppRoutes.ticketDetail.replaceAll(':id', ticketId));

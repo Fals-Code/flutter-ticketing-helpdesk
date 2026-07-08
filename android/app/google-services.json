@@ -1,13 +1,32 @@
 {
   "project_info": {
-    "project_number": "000000000000",
-    "project_id": "ticket-q-local",
-    "storage_bucket": "ticket-q-local.appspot.com"
+    "project_number": "730013036543",
+    "project_id": "e-ticketing-app-73274",
+    "storage_bucket": "e-ticketing-app-73274.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:000000000000:android:0000000000000000000000",
+        "mobilesdk_app_id": "1:730013036543:android:099daccda622697d5e01ca",
+        "android_client_info": {
+          "package_name": "com.example.uts"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA8JbdspS_L-zKm4RZwJC3udtBLLEoo-hM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:730013036543:android:549bff0e1a4777995e01ca",
         "android_client_info": {
           "package_name": "com.falscode.ticketq"
         }
@@ -15,7 +34,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "NOT_A_REAL_FIREBASE_API_KEY"
+          "current_key": "AIzaSyA8JbdspS_L-zKm4RZwJC3udtBLLEoo-hM"
         }
       ],
       "services": {

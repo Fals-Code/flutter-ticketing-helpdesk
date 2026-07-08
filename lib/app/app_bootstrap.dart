@@ -38,9 +38,18 @@ import 'package:uts/shared/widgets/global_error_boundary.dart';
 
 @pragma('vm:entry-point')
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  if (message.notification != null) {
+    debugPrint(
+      'Skipping local background notification for system-handled FCM: '
+      '${message.messageId}',
+    );
+    return;
+  }
+
   await Firebase.initializeApp();
   await LocalNotificationService.showBackgroundRemoteMessage(message);
-  debugPrint('Handling background FCM message: ${message.messageId}');
+
+  debugPrint('Handling data-only background FCM message: ${message.messageId}');
 }
 
 Future<void> bootstrapApplication() async {

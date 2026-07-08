@@ -119,6 +119,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final DeleteAllNotifications deleteAllNotifications;
   final LocalNotificationService localNotificationService;
   StreamSubscription? _notificationSubscription;
+  final Set<String> _seenNotificationIds = <String>{};
+  bool _hasHydratedInitialNotifications = false;
 
   NotificationBloc({
     required this.getNotifications,
@@ -150,15 +152,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) {
     _notificationSubscription?.cancel();
+    _resetRealtimeNotificationMirror();
     _notificationSubscription = watchNotifications().listen(
       (notifications) => add(NotificationStreamUpdated(notifications)),
     );
   }
 
-  void _onStreamUpdated(
+  Future<void> _onStreamUpdated(
     NotificationStreamUpdated event,
     Emitter<NotificationState> emit,
-  ) {
+  ) async {
+    await _showLocalNotificationsForNewRows(event.notifications);
     emit(state.copyWith(
       notifications: event.notifications,
       clearError: true,
@@ -181,8 +185,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     result.fold(
       (failure) => emit(state.copyWith(
           isLoading: false, errorMessage: 'Gagal mengambil notifikasi')),
-      (notifications) =>
-          emit(state.copyWith(isLoading: false, notifications: notifications)),
+      (notifications) {
+        _seenNotificationIds.addAll(notifications.map((n) => n.id));
+        emit(state.copyWith(isLoading: false, notifications: notifications));
+      },
     );
   }
 
@@ -328,6 +334,40 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     _notificationSubscription?.cancel();
+    _resetRealtimeNotificationMirror();
     emit(const NotificationState());
+  }
+
+  Future<void> _showLocalNotificationsForNewRows(
+    List<NotificationEntity> notifications,
+  ) async {
+    if (!_hasHydratedInitialNotifications) {
+      _seenNotificationIds.addAll(notifications.map((n) => n.id));
+      _hasHydratedInitialNotifications = true;
+      return;
+    }
+
+    final newUnreadNotifications = notifications
+        .where((notification) =>
+            !notification.isRead &&
+            !_seenNotificationIds.contains(notification.id))
+        .toList()
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
+    _seenNotificationIds.addAll(notifications.map((n) => n.id));
+
+    for (final notification in newUnreadNotifications) {
+      await localNotificationService.showNotification(
+        id: notification.id.hashCode,
+        title: notification.title,
+        body: notification.message,
+        payload: '${notification.id}|${notification.ticketId ?? ''}',
+      );
+    }
+  }
+
+  void _resetRealtimeNotificationMirror() {
+    _seenNotificationIds.clear();
+    _hasHydratedInitialNotifications = false;
   }
 }

@@ -9,6 +9,9 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/core/router/app_router.dart';
 import 'package:uts/core/utils/haptic_helper.dart';
 import 'package:uts/shared/widgets/empty_state_widget.dart';
+import 'package:uts/shared/theme/extensions/app_motion.dart';
+import 'package:uts/shared/theme/extensions/app_radius.dart';
+import 'package:uts/shared/theme/extensions/app_spacing.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_bloc.dart';
 import 'package:uts/features/auth/presentation/bloc/auth_state.dart';
 import 'package:uts/features/ticket/presentation/bloc/list/ticket_list_bloc.dart';
@@ -22,6 +25,7 @@ import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_bloc.da
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_event.dart'
     as stats_event;
 import 'package:uts/features/ticket/presentation/bloc/stats/ticket_stats_state.dart';
+import 'package:uts/features/ticket/presentation/widgets/ticket_list_filter_header.dart';
 import 'package:uts/features/ticket/domain/entities/ticket_entity.dart';
 import 'package:uts/features/auth/domain/entities/user_entity.dart';
 import 'package:uts/core/services/toast_service.dart';
@@ -170,6 +174,12 @@ class _TicketListPageState extends State<TicketListPage>
           },
           builder: (context, listState) {
             final tickets = isStaff ? listState.allTickets : listState.tickets;
+            final hasActiveAssignee =
+                isTechnician && listState.assignedToId != null;
+            final filterHeaderHeight = TicketListFilterHeader.preferredHeight(
+              context,
+              expanded: hasActiveAssignee,
+            );
 
             return Scaffold(
               backgroundColor:
@@ -208,11 +218,7 @@ class _TicketListPageState extends State<TicketListPage>
                         const SizedBox(width: 4),
                       ],
                       bottom: PreferredSize(
-                        preferredSize: Size.fromHeight(
-                          isTechnician && listState.assignedToId != null
-                              ? 144
-                              : 108,
-                        ),
+                        preferredSize: Size.fromHeight(filterHeaderHeight),
                         child: _buildFilterBar(context, listState, isDark,
                             isStaff, isAdmin, isTechnician),
                       ),
@@ -293,64 +299,52 @@ class _TicketListPageState extends State<TicketListPage>
     bool isAdmin,
     bool isTechnician,
   ) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      color: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: _SearchField(
-                  controller: _searchController,
-                  isDark: isDark,
-                  onChanged: (val) {
-                    context
-                        .read<TicketListBloc>()
-                        .add(list_event.SearchTicketsRequested(val));
-                    setState(() {});
-                  },
-                  onClear: () {
-                    _searchController.clear();
-                    context
-                        .read<TicketListBloc>()
-                        .add(const list_event.SearchTicketsRequested(''));
-                    setState(() {});
-                  },
-                ),
-              ),
-              const SizedBox(width: 8),
-              _FilterButton(
-                isDark: isDark,
-                hasActiveFilter:
-                    state.categoryFilter != null || state.startDate != null,
-                onTap: () => _showAdvancedFilterSheet(context, state, isDark),
-              ),
-              if (isStaff && isAdmin) ...[
-                const SizedBox(width: 8),
-                _AssigneeFilterButton(
-                  isDark: isDark,
-                  currentAssigneeId: _selectedAssigneeId,
-                  staffUsers: context.read<TicketStatsBloc>().state.staffUsers,
-                  onChanged: (assigneeId) {
-                    setState(() {
-                      _selectedAssigneeId = assigneeId;
-                    });
-                    context.read<TicketListBloc>().add(
-                          list_event.FetchAllTicketsRequested(
-                            page: 0,
-                            limit: _pageSize,
-                            assignedToId: assigneeId,
-                          ),
-                        );
-                  },
-                ),
-              ],
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (isTechnician && state.assignedToId != null)
-            _ActiveAssigneeChip(
+    return TicketListFilterHeader(
+      isDark: isDark,
+      searchField: _SearchField(
+        controller: _searchController,
+        isDark: isDark,
+        onChanged: (value) {
+          context
+              .read<TicketListBloc>()
+              .add(list_event.SearchTicketsRequested(value));
+          setState(() {});
+        },
+        onClear: () {
+          _searchController.clear();
+          context
+              .read<TicketListBloc>()
+              .add(const list_event.SearchTicketsRequested(''));
+          setState(() {});
+        },
+      ),
+      filterButton: _FilterButton(
+        isDark: isDark,
+        hasActiveFilter:
+            state.categoryFilter != null || state.startDate != null,
+        onTap: () => _showAdvancedFilterSheet(context, state, isDark),
+      ),
+      assigneeFilterButton: isStaff && isAdmin
+          ? _AssigneeFilterButton(
+              isDark: isDark,
+              currentAssigneeId: _selectedAssigneeId,
+              staffUsers: context.read<TicketStatsBloc>().state.staffUsers,
+              onChanged: (assigneeId) {
+                setState(() {
+                  _selectedAssigneeId = assigneeId;
+                });
+                context.read<TicketListBloc>().add(
+                      list_event.FetchAllTicketsRequested(
+                        page: 0,
+                        limit: _pageSize,
+                        assignedToId: assigneeId,
+                      ),
+                    );
+              },
+            )
+          : null,
+      activeAssigneeChip: isTechnician && state.assignedToId != null
+          ? _ActiveAssigneeChip(
               isDark: isDark,
               onClear: () {
                 context.read<TicketListBloc>().add(
@@ -364,117 +358,99 @@ class _TicketListPageState extends State<TicketListPage>
                   _selectedAssigneeId = null;
                 });
               },
-            ),
-          SizedBox(
-            height: 36,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              clipBehavior: Clip.none,
-              children: [
-                _StatusChip(
-                  label: 'Semua',
-                  isSelected: state.statusFilter == TicketStatusFilter.all,
-                  color: isDark ? Colors.white70 : Colors.black87,
-                  isDark: isDark,
-                  onTap: () => context.read<TicketListBloc>().add(
-                        const list_event.FilterStatusChanged(
-                            TicketStatusFilter.all),
-                      ),
+            )
+          : null,
+      statusChips: [
+        _StatusChip(
+          label: 'Semua',
+          isSelected: state.statusFilter == TicketStatusFilter.all,
+          color: isDark ? Colors.white70 : Colors.black87,
+          isDark: isDark,
+          onTap: () => context.read<TicketListBloc>().add(
+                const list_event.FilterStatusChanged(TicketStatusFilter.all),
+              ),
+        ),
+        if (isStaff) ...[
+          _StatusChip(
+            label: 'Terbuka',
+            isSelected: state.statusFilter == TicketStatusFilter.open,
+            color: AppColors.statusOpen,
+            isDark: isDark,
+            badge: _countByStatus(state.allTickets, TicketStatusFilter.open),
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(TicketStatusFilter.open),
                 ),
-                // For staff, show more relevant statuses first
-                if (isStaff) ...[
-                  _StatusChip(
-                    label: 'Terbuka',
-                    isSelected: state.statusFilter == TicketStatusFilter.open,
-                    color: AppColors.statusOpen,
-                    isDark: isDark,
-                    badge: _countByStatus(
-                        state.allTickets, TicketStatusFilter.open),
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.open),
-                        ),
-                  ),
-                  _StatusChip(
-                    label: 'Diproses',
-                    isSelected:
-                        state.statusFilter == TicketStatusFilter.inProgress,
-                    color: AppColors.statusInProgress,
-                    isDark: isDark,
-                    badge: _countByStatus(
-                        state.allTickets, TicketStatusFilter.inProgress),
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.inProgress),
-                        ),
-                  ),
-                  _StatusChip(
-                    label: 'Tertunda',
-                    isSelected:
-                        state.statusFilter == TicketStatusFilter.pending,
-                    color: AppColors.warning,
-                    isDark: isDark,
-                    badge: _countByStatus(
-                        state.allTickets, TicketStatusFilter.pending),
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.pending),
-                        ),
-                  ),
-                  _StatusChip(
-                    label: 'Dibuka Kembali',
-                    isSelected:
-                        state.statusFilter == TicketStatusFilter.reopened,
-                    color: AppColors.danger,
-                    isDark: isDark,
-                    badge: _countByStatus(
-                        state.allTickets, TicketStatusFilter.reopened),
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.reopened),
-                        ),
-                  ),
-                  _StatusChip(
-                    label: 'Selesai',
-                    isSelected:
-                        state.statusFilter == TicketStatusFilter.resolved,
-                    color: AppColors.statusResolved,
-                    isDark: isDark,
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.resolved),
-                        ),
-                  ),
-                  _StatusChip(
-                    label: 'Ditutup',
-                    isSelected: state.statusFilter == TicketStatusFilter.closed,
-                    color: isDark ? Colors.white38 : Colors.black38,
-                    isDark: isDark,
-                    onTap: () => context.read<TicketListBloc>().add(
-                          const list_event.FilterStatusChanged(
-                              TicketStatusFilter.closed),
-                        ),
-                  ),
-                ] else
-                  ...TicketStatus.values.map((status) {
-                    final mappedFilter = TicketStatusFilter.values
-                        .firstWhere((e) => e.name == status.name);
-                    return _StatusChip(
-                      label: status.label,
-                      isSelected: state.statusFilter == mappedFilter,
-                      color: status.color,
-                      isDark: isDark,
-                      onTap: () => context.read<TicketListBloc>().add(
-                            list_event.FilterStatusChanged(mappedFilter),
-                          ),
-                    );
-                  }),
-              ],
-            ),
           ),
-          const SizedBox(height: 8),
-        ],
-      ),
+          _StatusChip(
+            label: 'Diproses',
+            isSelected: state.statusFilter == TicketStatusFilter.inProgress,
+            color: AppColors.statusInProgress,
+            isDark: isDark,
+            badge:
+                _countByStatus(state.allTickets, TicketStatusFilter.inProgress),
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(
+                      TicketStatusFilter.inProgress),
+                ),
+          ),
+          _StatusChip(
+            label: 'Tertunda',
+            isSelected: state.statusFilter == TicketStatusFilter.pending,
+            color: AppColors.warning,
+            isDark: isDark,
+            badge: _countByStatus(state.allTickets, TicketStatusFilter.pending),
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(
+                      TicketStatusFilter.pending),
+                ),
+          ),
+          _StatusChip(
+            label: 'Dibuka Kembali',
+            isSelected: state.statusFilter == TicketStatusFilter.reopened,
+            color: AppColors.danger,
+            isDark: isDark,
+            badge:
+                _countByStatus(state.allTickets, TicketStatusFilter.reopened),
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(
+                      TicketStatusFilter.reopened),
+                ),
+          ),
+          _StatusChip(
+            label: 'Selesai',
+            isSelected: state.statusFilter == TicketStatusFilter.resolved,
+            color: AppColors.statusResolved,
+            isDark: isDark,
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(
+                      TicketStatusFilter.resolved),
+                ),
+          ),
+          _StatusChip(
+            label: 'Ditutup',
+            isSelected: state.statusFilter == TicketStatusFilter.closed,
+            color: isDark ? Colors.white38 : Colors.black38,
+            isDark: isDark,
+            onTap: () => context.read<TicketListBloc>().add(
+                  const list_event.FilterStatusChanged(
+                      TicketStatusFilter.closed),
+                ),
+          ),
+        ] else
+          ...TicketStatus.values.map((status) {
+            final mappedFilter = TicketStatusFilter.values
+                .firstWhere((filter) => filter.name == status.name);
+            return _StatusChip(
+              label: status.label,
+              isSelected: state.statusFilter == mappedFilter,
+              color: status.color,
+              isDark: isDark,
+              onTap: () => context
+                  .read<TicketListBloc>()
+                  .add(list_event.FilterStatusChanged(mappedFilter)),
+            );
+          }),
+      ],
     );
   }
 
@@ -953,14 +929,14 @@ class _AssigneeFilterButton extends StatelessWidget {
     return GestureDetector(
       onTap: () => _showSheet(context),
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: context.motion.fast,
         width: 44,
         height: 44,
         decoration: BoxDecoration(
           color: hasFilter
               ? AppColors.primary.withValues(alpha: 0.1)
               : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.radius.button),
           border: Border.all(
               color: hasFilter
                   ? AppColors.primary
@@ -1061,14 +1037,14 @@ class _FilterButton extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
+        duration: context.motion.fast,
         width: 44,
         height: 44,
         decoration: BoxDecoration(
           color: hasActiveFilter
               ? AppColors.primary.withValues(alpha: 0.1)
               : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(context.radius.button),
           border: Border.all(
               color: hasActiveFilter
                   ? AppColors.primary
@@ -1517,7 +1493,7 @@ class _SearchField extends StatelessWidget {
       height: 44,
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(context.radius.field),
         border: Border.all(
             color: isDark ? AppColors.borderDark : AppColors.borderLight),
       ),
@@ -1540,7 +1516,7 @@ class _SearchField extends StatelessWidget {
                 )
               : null,
           border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+          contentPadding: EdgeInsets.symmetric(vertical: context.spacing.md),
         ),
       ),
     );
@@ -1558,15 +1534,20 @@ class _ActiveAssigneeChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
     return Padding(
-      padding: const EdgeInsets.only(bottom: 10, right: 8),
+      padding: EdgeInsets.only(bottom: spacing.md, right: spacing.sm),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            padding: EdgeInsets.symmetric(
+              horizontal: spacing.md,
+              vertical: spacing.xs,
+            ),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(context.radius.button),
               border:
                   Border.all(color: AppColors.primary.withValues(alpha: 0.3)),
             ),
@@ -1575,7 +1556,7 @@ class _ActiveAssigneeChip extends StatelessWidget {
               children: [
                 const Icon(Icons.person_outline_rounded,
                     size: 14, color: AppColors.primary),
-                const SizedBox(width: 8),
+                SizedBox(width: spacing.sm),
                 const Text(
                   'Ditugaskan ke Saya',
                   style: TextStyle(
@@ -1583,7 +1564,7 @@ class _ActiveAssigneeChip extends StatelessWidget {
                       fontSize: 12,
                       fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(width: 12),
+                SizedBox(width: spacing.md),
                 GestureDetector(
                   onTap: onClear,
                   child: const Icon(Icons.close_rounded,
@@ -1617,18 +1598,23 @@ class _StatusChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final spacing = context.spacing;
+
     return Padding(
-      padding: const EdgeInsets.only(right: 8),
+      padding: EdgeInsets.only(right: spacing.sm),
       child: GestureDetector(
         onTap: onTap,
         child: AnimatedContainer(
-          duration: const Duration(milliseconds: 180),
-          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          duration: context.motion.fast,
+          padding: EdgeInsets.symmetric(
+            horizontal: spacing.md,
+            vertical: spacing.xs,
+          ),
           decoration: BoxDecoration(
             color: isSelected
                 ? color.withValues(alpha: 0.15)
                 : (isDark ? AppColors.surfaceDark : AppColors.surfaceLight),
-            borderRadius: BorderRadius.circular(100),
+            borderRadius: BorderRadius.circular(context.radius.button),
             border: Border.all(
               color: isSelected
                   ? color
@@ -1651,13 +1637,13 @@ class _StatusChip extends StatelessWidget {
                 ),
               ),
               if (badge > 0) ...[
-                const SizedBox(width: 6),
+                SizedBox(width: spacing.xs),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                   decoration: BoxDecoration(
                     color: color,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(context.radius.button),
                   ),
                   child: Text(
                     '$badge',

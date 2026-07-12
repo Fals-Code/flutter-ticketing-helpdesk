@@ -22,6 +22,7 @@ import 'package:uts/core/constants/enums.dart';
 import 'package:uts/shared/widgets/ticket_timeline_widget.dart';
 import 'package:uts/shared/widgets/app_button.dart';
 import 'package:uts/features/ticket/presentation/widgets/rating_dialog.dart';
+import 'package:uts/features/ticket/presentation/widgets/ticket_detail_skeleton.dart';
 
 class TicketDetailPage extends StatefulWidget {
   final String ticketId;
@@ -1475,72 +1476,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   }
 
   Widget _buildSkeleton(bool isDark) {
-    final baseColor = isDark
-        ? Colors.white.withValues(alpha: 0.05)
-        : Colors.black.withValues(alpha: 0.05);
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              Container(
-                  width: 32,
-                  height: 32,
-                  decoration:
-                      BoxDecoration(color: baseColor, shape: BoxShape.circle)),
-              const Spacer()
-            ]),
-            const SizedBox(height: 24),
-            Container(width: 120, height: 12, color: baseColor),
-            const SizedBox(height: 16),
-            Container(width: double.infinity, height: 20, color: baseColor),
-            const SizedBox(height: 8),
-            Container(width: 200, height: 20, color: baseColor),
-            const SizedBox(height: 20),
-            Row(children: [
-              Container(width: 80, height: 16, color: baseColor),
-              const SizedBox(width: 12),
-              Container(width: 60, height: 16, color: baseColor)
-            ]),
-            const SizedBox(height: 20),
-            Row(children: [
-              Container(
-                  width: 28,
-                  height: 28,
-                  decoration:
-                      BoxDecoration(color: baseColor, shape: BoxShape.circle)),
-              const SizedBox(width: 12),
-              Container(width: 140, height: 14, color: baseColor)
-            ]),
-            const SizedBox(height: 32),
-            Container(
-                width: double.infinity,
-                height: 100,
-                decoration: BoxDecoration(
-                    color: baseColor, borderRadius: BorderRadius.circular(12))),
-            const SizedBox(height: 24),
-            Container(width: 80, height: 12, color: baseColor),
-            const SizedBox(height: 16),
-            ...List.generate(
-                3,
-                (_) => Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Row(children: [
-                      Container(
-                          width: 12,
-                          height: 12,
-                          decoration: BoxDecoration(
-                              color: baseColor, shape: BoxShape.circle)),
-                      const SizedBox(width: 14),
-                      Expanded(child: Container(height: 14, color: baseColor))
-                    ]))),
-          ],
-        ),
-      ),
-    );
+    return TicketDetailSkeleton(isDark: isDark);
   }
+
 }
 
 // ── PRIVATE REUSABLE WIDGETS ─────────────────────────────────────────────────

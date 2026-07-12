@@ -5,7 +5,8 @@ import 'package:uts/shared/theme/app_theme.dart';
 
 void main() {
   group('TicketListFilterHeader', () {
-    testWidgets('renders compact light header without overflow', (tester) async {
+    testWidgets('renders compact light header without overflow',
+        (tester) async {
       await tester.pumpWidget(
         _TestApp(
           theme: AppTheme.lightTheme,

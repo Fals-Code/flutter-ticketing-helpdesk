@@ -5,8 +5,9 @@ import 'package:uts/shared/theme/app_theme.dart';
 
 void main() {
   group('TicketDetailSkeleton', () {
-    testWidgets('does not overflow on a short viewport with keyboard inset',
-        (tester) async {
+    testWidgets('does not overflow on a short viewport with keyboard inset', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.lightTheme,
@@ -15,9 +16,7 @@ void main() {
               size: Size(411, 640),
               viewInsets: EdgeInsets.only(bottom: 280),
             ),
-            child: const Scaffold(
-              body: TicketDetailSkeleton(isDark: false),
-            ),
+            child: const Scaffold(body: TicketDetailSkeleton(isDark: false)),
           ),
         ),
       );
@@ -29,16 +28,15 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('remains scrollable on a compact dark viewport',
-        (tester) async {
+    testWidgets('remains scrollable on a compact dark viewport', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         MaterialApp(
           theme: AppTheme.darkTheme,
           home: const MediaQuery(
             data: MediaQueryData(size: Size(320, 480)),
-            child: Scaffold(
-              body: TicketDetailSkeleton(isDark: true),
-            ),
+            child: Scaffold(body: TicketDetailSkeleton(isDark: true)),
           ),
         ),
       );

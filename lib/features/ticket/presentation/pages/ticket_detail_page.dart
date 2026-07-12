@@ -50,20 +50,23 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
     _ticketDetailBloc = context.read<TicketDetailBloc>();
 
-    _ticketDetailBloc
-        .add(detail_event.FetchTicketDetailRequested(widget.ticketId));
-    _ticketDetailBloc
-        .add(detail_event.StartTicketCommentsSubscription(widget.ticketId));
-    _ticketDetailBloc
-        .add(detail_event.FetchTicketActivitiesRequested(widget.ticketId));
+    _ticketDetailBloc.add(
+      detail_event.FetchTicketDetailRequested(widget.ticketId),
+    );
+    _ticketDetailBloc.add(
+      detail_event.StartTicketCommentsSubscription(widget.ticketId),
+    );
+    _ticketDetailBloc.add(
+      detail_event.FetchTicketActivitiesRequested(widget.ticketId),
+    );
 
     final authState = context.read<AuthBloc>().state;
     if (authState.status == AuthStatus.authenticated &&
         (authState.user.role == UserRole.admin ||
             authState.user.role == UserRole.technician)) {
-      context
-          .read<TicketStatsBloc>()
-          .add(stats_event.FetchStaffUsersRequested());
+      context.read<TicketStatsBloc>().add(
+        stats_event.FetchStaffUsersRequested(),
+      );
     }
   }
 
@@ -113,156 +116,177 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         final authState = context.read<AuthBloc>().state;
         final currentUserRole = authState.user.role;
         final isUser = currentUserRole == UserRole.user;
-        final isStaff = currentUserRole == UserRole.admin ||
+        final isStaff =
+            currentUserRole == UserRole.admin ||
             currentUserRole == UserRole.technician;
 
         return Scaffold(
-          backgroundColor:
-              isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+          backgroundColor: isDark
+              ? AppColors.backgroundDark
+              : AppColors.backgroundLight,
           body: state.isLoading && ticket == null
               ? _buildSkeleton(isDark)
               : ticket == null
-                  ? _buildNotFound(context, isDark)
-                  : Column(
-                      children: [
-                        Expanded(
-                          child: CustomScrollView(
-                            controller: _scrollController,
-                            physics: const BouncingScrollPhysics(),
-                            slivers: [
-                              // APP BAR
-                              SliverAppBar(
-                                title: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(
-                                      '#${ticket.id.substring(0, 8).toUpperCase()}',
-                                      style: GoogleFonts.firaCode(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w600),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 8, vertical: 3),
-                                      decoration: BoxDecoration(
-                                        color: ticket.status.color
-                                            .withValues(alpha: 0.15),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        ticket.status.label,
-                                        style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: ticket.status.color),
-                                      ),
-                                    ),
-                                  ],
+              ? _buildNotFound(context, isDark)
+              : Column(
+                  children: [
+                    Expanded(
+                      child: CustomScrollView(
+                        controller: _scrollController,
+                        physics: const BouncingScrollPhysics(),
+                        slivers: [
+                          // APP BAR
+                          SliverAppBar(
+                            title: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  '#${ticket.id.substring(0, 8).toUpperCase()}',
+                                  style: GoogleFonts.firaCode(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w600,
+                                  ),
                                 ),
-                                backgroundColor: isDark
-                                    ? AppColors.backgroundDark
-                                    : AppColors.backgroundLight,
-                                surfaceTintColor: Colors.transparent,
-                                leading: IconButton(
-                                  icon: const Icon(
-                                      Icons.arrow_back_ios_new_rounded,
-                                      size: 20),
-                                  onPressed: () => context.pop(),
+                                const SizedBox(width: 10),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 3,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: ticket.status.color.withValues(
+                                      alpha: 0.15,
+                                    ),
+                                    borderRadius: BorderRadius.circular(6),
+                                  ),
+                                  child: Text(
+                                    ticket.status.label,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: ticket.status.color,
+                                    ),
+                                  ),
                                 ),
-                                actions: [
-                                  if (state.isOffline)
-                                    _OfflineBadge(isDark: isDark),
-                                  PopupMenuButton<String>(
-                                    icon: const Icon(Icons.more_vert_rounded),
-                                    onSelected: (val) {
-                                      if (val == 'copy') {
-                                        Clipboard.setData(
-                                            ClipboardData(text: ticket.id));
-                                        _showToast('ID tiket disalin');
-                                      }
-                                    },
-                                    itemBuilder: (context) => [
-                                      const PopupMenuItem(
-                                          value: 'copy',
-                                          child: Row(children: [
-                                            Icon(Icons.copy_rounded, size: 18),
-                                            SizedBox(width: 12),
-                                            Text('Salin ID')
-                                          ])),
-                                    ],
+                              ],
+                            ),
+                            backgroundColor: isDark
+                                ? AppColors.backgroundDark
+                                : AppColors.backgroundLight,
+                            surfaceTintColor: Colors.transparent,
+                            leading: IconButton(
+                              icon: const Icon(
+                                Icons.arrow_back_ios_new_rounded,
+                                size: 20,
+                              ),
+                              onPressed: () => context.pop(),
+                            ),
+                            actions: [
+                              if (state.isOffline)
+                                _OfflineBadge(isDark: isDark),
+                              PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert_rounded),
+                                onSelected: (val) {
+                                  if (val == 'copy') {
+                                    Clipboard.setData(
+                                      ClipboardData(text: ticket.id),
+                                    );
+                                    _showToast('ID tiket disalin');
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'copy',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.copy_rounded, size: 18),
+                                        SizedBox(width: 12),
+                                        Text('Salin ID'),
+                                      ],
+                                    ),
                                   ),
                                 ],
-                                pinned: true,
-                                floating: false,
-                              ),
-
-                              // CONTENT
-                              SliverToBoxAdapter(
-                                child: Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                      horizontal: 20),
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      // HEADER
-                                      _buildHeader(ticket, state, isDark),
-                                      const SizedBox(height: 24),
-
-                                      // DESCRIPTION
-                                      _buildDescription(ticket, isDark),
-                                      const SizedBox(height: 24),
-
-                                      // IMAGES
-                                      if (ticket.imageUrls.isNotEmpty) ...[
-                                        _buildImages(context, ticket, isDark),
-                                        const SizedBox(height: 24),
-                                      ],
-
-                                      // STAFF ACTIONS
-                                      _buildStaffActions(
-                                          context, state, isDark),
-
-                                      // TIMELINE
-                                      _buildSectionLabel('RIWAYAT', isDark),
-                                      const SizedBox(height: 14),
-                                      TicketTimelineWidget(
-                                          activities: state.history,
-                                          isDark: isDark),
-                                      const SizedBox(height: 24),
-
-                                      // RATING
-                                      if (isUser && _isChatDisabled(ticket))
-                                        _buildUserRatingSection(
-                                            context, state, ticket, isDark),
-                                      if (isStaff && _isChatDisabled(ticket))
-                                        _buildStaffRatingView(ticket, isDark),
-
-                                      // CHAT
-                                      if (!_isChatDisabled(ticket)) ...[
-                                        _buildSectionLabel(
-                                            'DISKUSI LANGSUNG', isDark,
-                                            showLiveDot: true),
-                                        const SizedBox(height: 14),
-                                        _buildCommentsList(
-                                            context, state.comments, isDark),
-                                      ],
-
-                                      const SizedBox(height: 100),
-                                    ],
-                                  ),
-                                ),
                               ),
                             ],
+                            pinned: true,
+                            floating: false,
                           ),
-                        ),
 
-                        // BOTTOM BAR
-                        if (!_isChatDisabled(ticket))
-                          _buildCommentInput(context, state, isDark),
-                      ],
+                          // CONTENT
+                          SliverToBoxAdapter(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 20,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  // HEADER
+                                  _buildHeader(ticket, state, isDark),
+                                  const SizedBox(height: 24),
+
+                                  // DESCRIPTION
+                                  _buildDescription(ticket, isDark),
+                                  const SizedBox(height: 24),
+
+                                  // IMAGES
+                                  if (ticket.imageUrls.isNotEmpty) ...[
+                                    _buildImages(context, ticket, isDark),
+                                    const SizedBox(height: 24),
+                                  ],
+
+                                  // STAFF ACTIONS
+                                  _buildStaffActions(context, state, isDark),
+
+                                  // TIMELINE
+                                  _buildSectionLabel('RIWAYAT', isDark),
+                                  const SizedBox(height: 14),
+                                  TicketTimelineWidget(
+                                    activities: state.history,
+                                    isDark: isDark,
+                                  ),
+                                  const SizedBox(height: 24),
+
+                                  // RATING
+                                  if (isUser && _isChatDisabled(ticket))
+                                    _buildUserRatingSection(
+                                      context,
+                                      state,
+                                      ticket,
+                                      isDark,
+                                    ),
+                                  if (isStaff && _isChatDisabled(ticket))
+                                    _buildStaffRatingView(ticket, isDark),
+
+                                  // CHAT
+                                  if (!_isChatDisabled(ticket)) ...[
+                                    _buildSectionLabel(
+                                      'DISKUSI LANGSUNG',
+                                      isDark,
+                                      showLiveDot: true,
+                                    ),
+                                    const SizedBox(height: 14),
+                                    _buildCommentsList(
+                                      context,
+                                      state.comments,
+                                      isDark,
+                                    ),
+                                  ],
+
+                                  const SizedBox(height: 100),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
+
+                    // BOTTOM BAR
+                    if (!_isChatDisabled(ticket))
+                      _buildCommentInput(context, state, isDark),
+                  ],
+                ),
         );
       },
     );
@@ -271,7 +295,10 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   // ── HEADER ─────────────────────────────────────────────────────────────────
 
   Widget _buildHeader(
-      TicketEntity ticket, detail_state.TicketDetailState state, bool isDark) {
+    TicketEntity ticket,
+    detail_state.TicketDetailState state,
+    bool isDark,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -285,16 +312,18 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 Text(
                   'Dibuat ${DateFormat('dd MMM yyyy, HH:mm', 'id').format(ticket.createdAt)}',
                   style: TextStyle(
-                      fontSize: 11,
-                      color: isDark ? Colors.white54 : Colors.black45),
+                    fontSize: 11,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                  ),
                 ),
                 if (ticket.updatedAt != null &&
                     ticket.updatedAt != ticket.createdAt)
                   Text(
                     'Diperbarui ${DateFormat('dd MMM yyyy, HH:mm', 'id').format(ticket.updatedAt!)}',
                     style: TextStyle(
-                        fontSize: 11,
-                        color: isDark ? Colors.white54 : Colors.black45),
+                      fontSize: 11,
+                      color: isDark ? Colors.white54 : Colors.black45,
+                    ),
                   ),
               ],
             ),
@@ -304,8 +333,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 color: ticket.status.color.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                    color: ticket.status.color.withValues(alpha: 0.5),
-                    width: 1),
+                  color: ticket.status.color.withValues(alpha: 0.5),
+                  width: 1,
+                ),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -314,16 +344,19 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                     width: 6,
                     height: 6,
                     decoration: BoxDecoration(
-                        color: ticket.status.color, shape: BoxShape.circle),
+                      color: ticket.status.color,
+                      shape: BoxShape.circle,
+                    ),
                   ),
                   const SizedBox(width: 6),
                   Text(
                     ticket.status.label.toUpperCase(),
                     style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        color: ticket.status.color,
-                        letterSpacing: 0.5),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w800,
+                      color: ticket.status.color,
+                      letterSpacing: 0.5,
+                    ),
                   ),
                 ],
               ),
@@ -335,10 +368,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         Text(
           ticket.title,
           style: const TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              letterSpacing: -0.5,
-              height: 1.3),
+            fontSize: 22,
+            fontWeight: FontWeight.w700,
+            letterSpacing: -0.5,
+            height: 1.3,
+          ),
           maxLines: 3,
         ),
         const SizedBox(height: 16),
@@ -369,7 +403,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight),
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
           ),
           child: Row(
             children: [
@@ -387,12 +422,16 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                       ? Text(
                           (ticket.assignedToName ?? 'T')[0].toUpperCase(),
                           style: const TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppColors.primary),
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: AppColors.primary,
+                          ),
                         )
-                      : const Icon(Icons.person_off_outlined,
-                          size: 18, color: Colors.orange),
+                      : const Icon(
+                          Icons.person_off_outlined,
+                          size: 18,
+                          color: Colors.orange,
+                        ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -400,12 +439,15 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('PENANGGUNG JAWAB',
-                        style: GoogleFonts.inter(
-                            fontSize: 9,
-                            fontWeight: FontWeight.w800,
-                            color: isDark ? Colors.white38 : Colors.black38,
-                            letterSpacing: 0.5)),
+                    Text(
+                      'PENANGGUNG JAWAB',
+                      style: GoogleFonts.inter(
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white38 : Colors.black38,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                     const SizedBox(height: 2),
                     Text(
                       ticket.assignedToName ?? 'Belum ditugaskan',
@@ -424,30 +466,37 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   (context.read<AuthBloc>().state.user.role == UserRole.admin))
                 TextButton(
                   onPressed: state.isOffline
-                      ? () => _showToast('Koneksi internet diperlukan',
-                          isError: true)
+                      ? () => _showToast(
+                          'Koneksi internet diperlukan',
+                          isError: true,
+                        )
                       : () => _showStaffBottomSheet(context, ticket),
-                  child: Text('Tugaskan',
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color:
-                            state.isOffline ? Colors.grey : AppColors.primary,
-                      )),
+                  child: Text(
+                    'Tugaskan',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: state.isOffline ? Colors.grey : AppColors.primary,
+                    ),
+                  ),
                 ),
             ],
           ),
         ),
         const SizedBox(height: 20),
         Divider(
-            color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            thickness: 1),
+          color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          thickness: 1,
+        ),
       ],
     );
   }
 
-  Widget _buildInfoChip(
-      {required IconData icon, required String label, required bool isDark}) {
+  Widget _buildInfoChip({
+    required IconData icon,
+    required String label,
+    required bool isDark,
+  }) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
@@ -464,9 +513,10 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           Text(
             label,
             style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.white70 : Colors.black87),
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white70 : Colors.black87,
+            ),
           ),
         ],
       ),
@@ -491,7 +541,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight),
+              color: isDark ? AppColors.borderDark : AppColors.borderLight,
+            ),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -499,12 +550,14 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               Text(
                 ticket.description,
                 style: TextStyle(
-                    fontSize: 14,
-                    height: 1.6,
-                    color: isDark ? Colors.white70 : Colors.black87),
+                  fontSize: 14,
+                  height: 1.6,
+                  color: isDark ? Colors.white70 : Colors.black87,
+                ),
                 maxLines: _isDescExpanded || !isLong ? null : 5,
-                overflow:
-                    _isDescExpanded || !isLong ? null : TextOverflow.ellipsis,
+                overflow: _isDescExpanded || !isLong
+                    ? null
+                    : TextOverflow.ellipsis,
               ),
               if (isLong) ...[
                 const SizedBox(height: 8),
@@ -514,9 +567,10 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   child: Text(
                     _isDescExpanded ? 'Tutup' : 'Lihat selengkapnya',
                     style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: AppColors.primary),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.primary,
+                    ),
                   ),
                 ),
               ],
@@ -554,12 +608,14 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(
-                        color: isDark
-                            ? AppColors.borderDark
-                            : AppColors.borderLight),
+                      color: isDark
+                          ? AppColors.borderDark
+                          : AppColors.borderLight,
+                    ),
                     image: DecorationImage(
-                        image: NetworkImage(ticket.imageUrls[index]),
-                        fit: BoxFit.cover),
+                      image: NetworkImage(ticket.imageUrls[index]),
+                      fit: BoxFit.cover,
+                    ),
                   ),
                 ),
               ),
@@ -572,18 +628,22 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   void _showImageGallery(BuildContext context, List<String> urls, int initial) {
     Navigator.push(
-        context,
-        PageRouteBuilder(
-          opaque: false,
-          pageBuilder: (_, __, ___) =>
-              _ImageGalleryOverlay(urls: urls, initialIndex: initial),
-        ));
+      context,
+      PageRouteBuilder(
+        opaque: false,
+        pageBuilder: (_, __, ___) =>
+            _ImageGalleryOverlay(urls: urls, initialIndex: initial),
+      ),
+    );
   }
 
   // ── STAFF ACTIONS ──────────────────────────────────────────────────────────
 
   Widget _buildStaffActions(
-      BuildContext context, detail_state.TicketDetailState state, bool isDark) {
+    BuildContext context,
+    detail_state.TicketDetailState state,
+    bool isDark,
+  ) {
     final ticket = state.ticket!;
     final authState = context.read<AuthBloc>().state;
     if (authState.user.isEmpty) return const SizedBox.shrink();
@@ -610,25 +670,28 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.06),
-              borderRadius:
-                  const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(16),
+              ),
             ),
             child: Row(
               children: [
                 Icon(
-                    isAdmin
-                        ? Icons.admin_panel_settings_rounded
-                        : Icons.engineering_rounded,
-                    size: 18,
-                    color: AppColors.primary),
+                  isAdmin
+                      ? Icons.admin_panel_settings_rounded
+                      : Icons.engineering_rounded,
+                  size: 18,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 10),
                 Text(
                   isAdmin ? 'KONTROL ADMINISTRATOR' : 'TUGAS & PENANGANAN',
                   style: GoogleFonts.inter(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.primary,
-                      letterSpacing: 0.8),
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.primary,
+                    letterSpacing: 0.8,
+                  ),
                 ),
               ],
             ),
@@ -647,9 +710,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   spacing: 12,
                   runSpacing: 12,
                   children: ticket.status.nextValidStates.map((nextStatus) {
-                    final isPositive = nextStatus == TicketStatus.resolved ||
+                    final isPositive =
+                        nextStatus == TicketStatus.resolved ||
                         nextStatus == TicketStatus.inProgress;
-                    final isNegative = nextStatus == TicketStatus.closed ||
+                    final isNegative =
+                        nextStatus == TicketStatus.closed ||
                         nextStatus == TicketStatus.pending;
                     final isReopen = nextStatus == TicketStatus.reopened;
 
@@ -678,20 +743,28 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                       color: AppColors.textSecondaryDark.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(12),
                       border: Border.all(
-                          color: AppColors.textSecondaryDark
-                              .withValues(alpha: 0.3)),
+                        color: AppColors.textSecondaryDark.withValues(
+                          alpha: 0.3,
+                        ),
+                      ),
                     ),
                     child: const Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.lock_outline_rounded,
-                            color: AppColors.textSecondaryDark, size: 18),
+                        Icon(
+                          Icons.lock_outline_rounded,
+                          color: AppColors.textSecondaryDark,
+                          size: 18,
+                        ),
                         SizedBox(width: 8),
-                        Text('Tiket Ditutup',
-                            style: TextStyle(
-                                color: AppColors.textSecondaryDark,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13)),
+                        Text(
+                          'Tiket Ditutup',
+                          style: TextStyle(
+                            color: AppColors.textSecondaryDark,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -700,33 +773,40 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 if (isAdmin) ...[
                   const SizedBox(height: 20),
                   Divider(
-                      color: isDark
-                          ? AppColors.borderDark
-                          : AppColors.borderLight),
+                    color: isDark
+                        ? AppColors.borderDark
+                        : AppColors.borderLight,
+                  ),
                   const SizedBox(height: 16),
-                  const Text('Delegasikan Ke Teknisi',
-                      style:
-                          TextStyle(fontSize: 13, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Delegasikan Ke Teknisi',
+                    style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 12),
                   GestureDetector(
                     onTap: state.isOffline
-                        ? () => _showToast('Koneksi internet diperlukan',
-                            isError: true)
+                        ? () => _showToast(
+                            'Koneksi internet diperlukan',
+                            isError: true,
+                          )
                         : () => _showStaffBottomSheet(context, ticket),
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 12),
+                        horizontal: 14,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: state.isOffline
                             ? (isDark ? Colors.white10 : Colors.grey.shade100)
                             : (isDark
-                                ? AppColors.backgroundDark
-                                : AppColors.backgroundLight),
+                                  ? AppColors.backgroundDark
+                                  : AppColors.backgroundLight),
                         borderRadius: BorderRadius.circular(12),
                         border: Border.all(
-                            color: isDark
-                                ? AppColors.borderDark
-                                : AppColors.borderLight),
+                          color: isDark
+                              ? AppColors.borderDark
+                              : AppColors.borderLight,
+                        ),
                       ),
                       child: Row(
                         children: [
@@ -735,35 +815,41 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                               width: 28,
                               height: 28,
                               decoration: BoxDecoration(
-                                  color:
-                                      AppColors.primary.withValues(alpha: 0.1),
-                                  shape: BoxShape.circle),
+                                color: AppColors.primary.withValues(alpha: 0.1),
+                                shape: BoxShape.circle,
+                              ),
                               child: Center(
-                                  child: Text(
-                                      (ticket.assignedToName ?? 'T')[0]
-                                          .toUpperCase(),
-                                      style: const TextStyle(
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppColors.primary))),
+                                child: Text(
+                                  (ticket.assignedToName ?? 'T')[0]
+                                      .toUpperCase(),
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 10),
                           ],
                           Expanded(
-                              child: Text(
-                                  ticket.assignedToName ?? 'Pilih Teknisi...',
-                                  style: TextStyle(
-                                      fontSize: 14,
-                                      color: ticket.assignedTo != null
-                                          ? (isDark
-                                              ? Colors.white
-                                              : Colors.black87)
-                                          : (isDark
-                                              ? Colors.white54
-                                              : Colors.black45)))),
-                          Icon(Icons.unfold_more_rounded,
-                              size: 20,
-                              color: isDark ? Colors.white54 : Colors.black45),
+                            child: Text(
+                              ticket.assignedToName ?? 'Pilih Teknisi...',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: ticket.assignedTo != null
+                                    ? (isDark ? Colors.white : Colors.black87)
+                                    : (isDark
+                                          ? Colors.white54
+                                          : Colors.black45),
+                              ),
+                            ),
+                          ),
+                          Icon(
+                            Icons.unfold_more_rounded,
+                            size: 20,
+                            color: isDark ? Colors.white54 : Colors.black45,
+                          ),
                         ],
                       ),
                     ),
@@ -820,14 +906,17 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         onPressed: () =>
             _showToast('Koneksi internet diperlukan', isError: true),
         icon: Icon(icon, size: 18),
-        label: Text(nextStatus.label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        label: Text(
+          nextStatus.label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        ),
         style: OutlinedButton.styleFrom(
           foregroundColor: Colors.grey,
           side: const BorderSide(color: Colors.grey),
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -835,18 +924,23 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     if (isPositive) {
       return ElevatedButton.icon(
         onPressed: () => context.read<TicketDetailBloc>().add(
-              detail_event.UpdateTicketStatusRequested(
-                  ticketId: ticket.id, status: nextStatus),
-            ),
+          detail_event.UpdateTicketStatusRequested(
+            ticketId: ticket.id,
+            status: nextStatus,
+          ),
+        ),
         icon: Icon(icon, size: 18),
-        label: Text(nextStatus.label,
-            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        label: Text(
+          nextStatus.label,
+          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+        ),
         style: ElevatedButton.styleFrom(
           backgroundColor: color,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           elevation: 0,
         ),
       );
@@ -854,12 +948,16 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
     return OutlinedButton.icon(
       onPressed: () => context.read<TicketDetailBloc>().add(
-            detail_event.UpdateTicketStatusRequested(
-                ticketId: ticket.id, status: nextStatus),
-          ),
+        detail_event.UpdateTicketStatusRequested(
+          ticketId: ticket.id,
+          status: nextStatus,
+        ),
+      ),
       icon: Icon(icon, size: 18),
-      label: Text(nextStatus.label,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+      label: Text(
+        nextStatus.label,
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+      ),
       style: OutlinedButton.styleFrom(
         foregroundColor: color,
         side: BorderSide(color: color.withValues(alpha: 0.5)),
@@ -910,19 +1008,25 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   color: isActive
                       ? stepColor
                       : (isDark
-                          ? Colors.white10
-                          : Colors.black.withValues(alpha: 0.05)),
+                            ? Colors.white10
+                            : Colors.black.withValues(alpha: 0.05)),
                   shape: BoxShape.circle,
                 ),
                 child: Center(
                   child: isActive
-                      ? const Icon(Icons.check_rounded,
-                          size: 14, color: Colors.white)
-                      : Text('${index + 1}',
+                      ? const Icon(
+                          Icons.check_rounded,
+                          size: 14,
+                          color: Colors.white,
+                        )
+                      : Text(
+                          '${index + 1}',
                           style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                              color: isDark ? Colors.white38 : Colors.black26)),
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white38 : Colors.black26,
+                          ),
+                        ),
                 ),
               ),
               const SizedBox(width: 6),
@@ -941,13 +1045,14 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ),
               if (!isLast)
                 Container(
-                    width: 16,
-                    height: 1,
-                    color: isActive
-                        ? stepColor.withValues(alpha: 0.5)
-                        : (isDark
+                  width: 16,
+                  height: 1,
+                  color: isActive
+                      ? stepColor.withValues(alpha: 0.5)
+                      : (isDark
                             ? Colors.white10
-                            : Colors.black.withValues(alpha: 0.05))),
+                            : Colors.black.withValues(alpha: 0.05)),
+                ),
             ],
           ),
         );
@@ -960,7 +1065,8 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
       backgroundColor: isDark ? AppColors.surfaceDark : Colors.white,
       builder: (ctx) {
         return BlocBuilder<TicketStatsBloc, stats_state.TicketStatsState>(
@@ -971,15 +1077,18 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 children: [
                   const SizedBox(height: 8),
                   Container(
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                          color: isDark ? Colors.white24 : Colors.black12,
-                          borderRadius: BorderRadius.circular(2))),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white24 : Colors.black12,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
                   const SizedBox(height: 16),
-                  const Text('Pilih Teknisi',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  const Text(
+                    'Pilih Teknisi',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 16),
                   ...statsState.staffUsers.map((user) {
                     final isSelected = user.id == ticket.assignedTo;
@@ -988,31 +1097,45 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         width: 36,
                         height: 36,
                         decoration: BoxDecoration(
-                            color: AppColors.primary.withValues(alpha: 0.1),
-                            shape: BoxShape.circle),
+                          color: AppColors.primary.withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
                         child: Center(
-                            child: Text(
-                                (user.fullName ?? user.email)[0].toUpperCase(),
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: AppColors.primary))),
+                          child: Text(
+                            (user.fullName ?? user.email)[0].toUpperCase(),
+                            style: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
                       ),
-                      title: Text(user.fullName ?? user.email,
-                          style: const TextStyle(fontWeight: FontWeight.w500)),
-                      subtitle: Text(user.role.name,
-                          style: TextStyle(
-                              fontSize: 11,
-                              color: isDark ? Colors.white54 : Colors.black45)),
+                      title: Text(
+                        user.fullName ?? user.email,
+                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      ),
+                      subtitle: Text(
+                        user.role.name,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: isDark ? Colors.white54 : Colors.black45,
+                        ),
+                      ),
                       trailing: isSelected
-                          ? const Icon(Icons.check_circle_rounded,
-                              color: AppColors.primary)
+                          ? const Icon(
+                              Icons.check_circle_rounded,
+                              color: AppColors.primary,
+                            )
                           : null,
                       onTap: () {
                         Navigator.pop(ctx);
                         if (user.id != ticket.assignedTo) {
                           context.read<TicketDetailBloc>().add(
-                              detail_event.AssignTicketRequested(
-                                  ticketId: ticket.id, technicianId: user.id));
+                            detail_event.AssignTicketRequested(
+                              ticketId: ticket.id,
+                              technicianId: user.id,
+                            ),
+                          );
                         }
                       },
                     );
@@ -1029,8 +1152,12 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   // ── RATING ─────────────────────────────────────────────────────────────────
 
-  Widget _buildUserRatingSection(BuildContext context,
-      detail_state.TicketDetailState state, TicketEntity ticket, bool isDark) {
+  Widget _buildUserRatingSection(
+    BuildContext context,
+    detail_state.TicketDetailState state,
+    TicketEntity ticket,
+    bool isDark,
+  ) {
     final hasRated = ticket.rating != null;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1038,8 +1165,11 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         _buildSectionLabel('PENILAIAN LAYANAN', isDark),
         const SizedBox(height: 14),
         if (hasRated)
-          _buildRatingDisplay(ticket, isDark,
-              label: 'Terima kasih atas penilaianmu!')
+          _buildRatingDisplay(
+            ticket,
+            isDark,
+            label: 'Terima kasih atas penilaianmu!',
+          )
         else
           Container(
             width: double.infinity,
@@ -1048,50 +1178,68 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               color: isDark ? AppColors.surfaceDark : Colors.white,
               borderRadius: BorderRadius.circular(16),
               border: Border.all(
-                  color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+                color: Colors.amber.withValues(alpha: 0.4),
+                width: 1.5,
+              ),
             ),
             child: Column(
               children: [
-                const Icon(Icons.star_outline_rounded,
-                    size: 48, color: Colors.amber),
+                const Icon(
+                  Icons.star_outline_rounded,
+                  size: 48,
+                  color: Colors.amber,
+                ),
                 const SizedBox(height: 12),
-                const Text('Tiket telah diselesaikan!',
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                const Text(
+                  'Tiket telah diselesaikan!',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
                 const SizedBox(height: 8),
                 Text(
-                    'Berikan penilaian untuk membantu kami meningkatkan layanan.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? AppColors.textSecondaryDark
-                            : AppColors.textSecondaryLight)),
+                  'Berikan penilaian untuk membantu kami meningkatkan layanan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark
+                        ? AppColors.textSecondaryDark
+                        : AppColors.textSecondaryLight,
+                  ),
+                ),
                 const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: state.isOffline
-                        ? () => _showToast('Koneksi internet diperlukan',
-                            isError: true)
-                        : () => RatingDialog.show(context,
-                                onSubmitted: (rating, feedback) {
+                        ? () => _showToast(
+                            'Koneksi internet diperlukan',
+                            isError: true,
+                          )
+                        : () => RatingDialog.show(
+                            context,
+                            onSubmitted: (rating, feedback) {
                               context.read<TicketDetailBloc>().add(
-                                  detail_event.SubmitRatingRequested(
-                                      ticketId: widget.ticketId,
-                                      rating: rating,
-                                      feedback: feedback));
-                            }),
+                                detail_event.SubmitRatingRequested(
+                                  ticketId: widget.ticketId,
+                                  rating: rating,
+                                  feedback: feedback,
+                                ),
+                              );
+                            },
+                          ),
                     icon: const Icon(Icons.star_rounded),
-                    label: const Text('Beri Penilaian Layanan',
-                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    label: const Text(
+                      'Beri Penilaian Layanan',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor:
-                          state.isOffline ? Colors.grey : Colors.amber,
+                      backgroundColor: state.isOffline
+                          ? Colors.grey
+                          : Colors.amber,
                       foregroundColor: Colors.black87,
                       padding: const EdgeInsets.symmetric(vertical: 14),
                       shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12)),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                   ),
                 ),
@@ -1119,17 +1267,24 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                  color: isDark ? AppColors.borderDark : AppColors.borderLight),
+                color: isDark ? AppColors.borderDark : AppColors.borderLight,
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.hourglass_empty_rounded,
-                    color: isDark ? Colors.white38 : Colors.black26, size: 18),
+                Icon(
+                  Icons.hourglass_empty_rounded,
+                  color: isDark ? Colors.white38 : Colors.black26,
+                  size: 18,
+                ),
                 const SizedBox(width: 12),
-                Text('Pengguna belum memberikan penilaian.',
-                    style: TextStyle(
-                        fontSize: 13,
-                        color: isDark ? Colors.white54 : Colors.black45)),
+                Text(
+                  'Pengguna belum memberikan penilaian.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: isDark ? Colors.white54 : Colors.black45,
+                  ),
+                ),
               ],
             ),
           ),
@@ -1138,16 +1293,21 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
     );
   }
 
-  Widget _buildRatingDisplay(TicketEntity ticket, bool isDark,
-      {String? label}) {
+  Widget _buildRatingDisplay(
+    TicketEntity ticket,
+    bool isDark, {
+    String? label,
+  }) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border:
-            Border.all(color: Colors.amber.withValues(alpha: 0.4), width: 1.5),
+        border: Border.all(
+          color: Colors.amber.withValues(alpha: 0.4),
+          width: 1.5,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1156,35 +1316,42 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             children: [
               const Icon(Icons.verified_rounded, color: Colors.amber, size: 18),
               const SizedBox(width: 8),
-              Text(label ?? 'Penilaian',
-                  style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black87)),
+              Text(
+                label ?? 'Penilaian',
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isDark ? Colors.white : Colors.black87,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: List.generate(5, (index) {
               return Icon(
-                  index < (ticket.rating ?? 0)
-                      ? Icons.star_rounded
-                      : Icons.star_outline_rounded,
-                  color: Colors.amber,
-                  size: 28);
+                index < (ticket.rating ?? 0)
+                    ? Icons.star_rounded
+                    : Icons.star_outline_rounded,
+                color: Colors.amber,
+                size: 28,
+              );
             }),
           ),
           if (ticket.ratingFeedback != null &&
               ticket.ratingFeedback!.isNotEmpty) ...[
             const SizedBox(height: 12),
-            Text('"${ticket.ratingFeedback}"',
-                style: TextStyle(
-                    fontSize: 13,
-                    fontStyle: FontStyle.italic,
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight,
-                    height: 1.4)),
+            Text(
+              '"${ticket.ratingFeedback}"',
+              style: TextStyle(
+                fontSize: 13,
+                fontStyle: FontStyle.italic,
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+                height: 1.4,
+              ),
+            ),
           ],
         ],
       ),
@@ -1194,25 +1361,37 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   // ── CHAT ───────────────────────────────────────────────────────────────────
 
   Widget _buildCommentsList(
-      BuildContext context, List<CommentEntity> comments, bool isDark) {
+    BuildContext context,
+    List<CommentEntity> comments,
+    bool isDark,
+  ) {
     if (comments.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.symmetric(vertical: 40),
           child: Column(
             children: [
-              Icon(Icons.chat_bubble_outline_rounded,
-                  size: 32, color: isDark ? Colors.white24 : Colors.black12),
+              Icon(
+                Icons.chat_bubble_outline_rounded,
+                size: 32,
+                color: isDark ? Colors.white24 : Colors.black12,
+              ),
               const SizedBox(height: 12),
-              Text('Belum ada pesan.',
-                  style: TextStyle(
-                      fontSize: 13,
-                      color: isDark ? Colors.white54 : Colors.black45)),
+              Text(
+                'Belum ada pesan.',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: isDark ? Colors.white54 : Colors.black45,
+                ),
+              ),
               const SizedBox(height: 4),
-              Text('Mulai diskusi di sini.',
-                  style: TextStyle(
-                      fontSize: 12,
-                      color: isDark ? Colors.white38 : Colors.black26)),
+              Text(
+                'Mulai diskusi di sini.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: isDark ? Colors.white38 : Colors.black26,
+                ),
+              ),
             ],
           ),
         ),
@@ -1236,8 +1415,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           padding: const EdgeInsets.only(bottom: 20),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisAlignment:
-                isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+            mainAxisAlignment: isMe
+                ? MainAxisAlignment.end
+                : MainAxisAlignment.start,
             children: [
               if (!isMe) ...[
                 _buildAvatar(comment, isStaffComment),
@@ -1245,8 +1425,9 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
               ],
               Flexible(
                 child: Column(
-                  crossAxisAlignment:
-                      isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                  crossAxisAlignment: isMe
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
                   children: [
                     if (!isMe)
                       Padding(
@@ -1254,24 +1435,27 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         child: Text(
                           comment.userName,
                           style: TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w600,
-                              color: isStaffComment
-                                  ? AppColors.primary
-                                  : (isDark ? Colors.white54 : Colors.black45)),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: isStaffComment
+                                ? AppColors.primary
+                                : (isDark ? Colors.white54 : Colors.black45),
+                          ),
                         ),
                       ),
                     Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 10),
+                        horizontal: 14,
+                        vertical: 10,
+                      ),
                       decoration: BoxDecoration(
                         color: isMe
                             ? AppColors.primary.withValues(alpha: 0.15)
                             : isStaffComment
-                                ? AppColors.primary.withValues(alpha: 0.05)
-                                : (isDark
-                                    ? AppColors.surfaceDark
-                                    : AppColors.surfaceLight),
+                            ? AppColors.primary.withValues(alpha: 0.05)
+                            : (isDark
+                                  ? AppColors.surfaceDark
+                                  : AppColors.surfaceLight),
                         borderRadius: BorderRadius.circular(16).copyWith(
                           bottomRight: isMe
                               ? const Radius.circular(4)
@@ -1283,9 +1467,12 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                         border: isStaffComment && !isMe
                             ? Border(
                                 left: BorderSide(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.5),
-                                    width: 3))
+                                  color: AppColors.primary.withValues(
+                                    alpha: 0.5,
+                                  ),
+                                  width: 3,
+                                ),
+                              )
                             : null,
                       ),
                       child: Text(
@@ -1302,10 +1489,13 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                     const SizedBox(height: 4),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: Text(DateFormat('HH:mm').format(comment.createdAt),
-                          style: TextStyle(
-                              fontSize: 10,
-                              color: isDark ? Colors.white38 : Colors.black26)),
+                      child: Text(
+                        DateFormat('HH:mm').format(comment.createdAt),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: isDark ? Colors.white38 : Colors.black26,
+                        ),
+                      ),
                     ),
                   ],
                 ),
@@ -1331,18 +1521,20 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
             : (Colors.grey.withValues(alpha: 0.1)),
         shape: BoxShape.circle,
         border: Border.all(
-            color: isStaff
-                ? AppColors.primary.withValues(alpha: 0.3)
-                : Colors.transparent,
-            width: 1.5),
+          color: isStaff
+              ? AppColors.primary.withValues(alpha: 0.3)
+              : Colors.transparent,
+          width: 1.5,
+        ),
       ),
       child: Center(
         child: Text(
           comment.userName.isNotEmpty ? comment.userName[0].toUpperCase() : '?',
           style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: isStaff ? AppColors.primary : Colors.grey),
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: isStaff ? AppColors.primary : Colors.grey,
+          ),
         ),
       ),
     );
@@ -1351,15 +1543,24 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   // ── CHAT INPUT ─────────────────────────────────────────────────────────────
 
   Widget _buildCommentInput(
-      BuildContext context, detail_state.TicketDetailState state, bool isDark) {
+    BuildContext context,
+    detail_state.TicketDetailState state,
+    bool isDark,
+  ) {
     return Container(
       padding: EdgeInsets.fromLTRB(
-          16, 12, 16, MediaQuery.of(context).padding.bottom + 12),
+        16,
+        12,
+        16,
+        MediaQuery.of(context).padding.bottom + 12,
+      ),
       decoration: BoxDecoration(
         color: isDark ? AppColors.surfaceDark : Colors.white,
         border: Border(
-            top: BorderSide(
-                color: isDark ? AppColors.borderDark : AppColors.borderLight)),
+          top: BorderSide(
+            color: isDark ? AppColors.borderDark : AppColors.borderLight,
+          ),
+        ),
       ),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -1367,12 +1568,15 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
           if (_charCount > 400)
             Padding(
               padding: const EdgeInsets.only(bottom: 6),
-              child: Text('$_charCount / 500',
-                  style: TextStyle(
-                      fontSize: 11,
-                      color: _charCount > 490
-                          ? AppColors.danger
-                          : (isDark ? Colors.white54 : Colors.black45))),
+              child: Text(
+                '$_charCount / 500',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: _charCount > 490
+                      ? AppColors.danger
+                      : (isDark ? Colors.white54 : Colors.black45),
+                ),
+              ),
             ),
           Row(
             children: [
@@ -1384,22 +1588,27 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                   decoration: InputDecoration(
                     hintText: 'Tulis pesan...',
                     hintStyle: TextStyle(
-                        fontSize: 14,
-                        color: isDark ? Colors.white38 : Colors.black38),
+                      fontSize: 14,
+                      color: isDark ? Colors.white38 : Colors.black38,
+                    ),
                     counterText: '',
                     contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 18, vertical: 10),
+                      horizontal: 18,
+                      vertical: 10,
+                    ),
                     fillColor: isDark
                         ? AppColors.backgroundDark
                         : AppColors.backgroundLight,
                     filled: true,
                     border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(24),
-                        borderSide: BorderSide.none),
+                      borderRadius: BorderRadius.circular(24),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
                   style: TextStyle(
-                      fontSize: 14,
-                      color: isDark ? Colors.white : Colors.black87),
+                    fontSize: 14,
+                    color: isDark ? Colors.white : Colors.black87,
+                  ),
                 ),
               ),
               const SizedBox(width: 10),
@@ -1408,15 +1617,18 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
                 onPressed: () {
                   if (_commentController.text.trim().isEmpty) return;
                   if (state.isOffline) {
-                    _showToast('Tidak dapat mengirim pesan saat offline',
-                        isError: true);
+                    _showToast(
+                      'Tidak dapat mengirim pesan saat offline',
+                      isError: true,
+                    );
                     return;
                   }
                   context.read<TicketDetailBloc>().add(
-                        detail_event.AddCommentRequested(
-                            ticketId: widget.ticketId,
-                            message: _commentController.text),
-                      );
+                    detail_event.AddCommentRequested(
+                      ticketId: widget.ticketId,
+                      message: _commentController.text,
+                    ),
+                  );
                 },
               ),
             ],
@@ -1428,22 +1640,23 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
 
   // ── HELPERS ────────────────────────────────────────────────────────────────
 
-  Widget _buildSectionLabel(String label, bool isDark,
-      {bool showLiveDot = false}) {
+  Widget _buildSectionLabel(
+    String label,
+    bool isDark, {
+    bool showLiveDot = false,
+  }) {
     return Row(
       children: [
         Text(
           label,
           style: TextStyle(
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white54 : Colors.black45,
-              letterSpacing: 1),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: isDark ? Colors.white54 : Colors.black45,
+            letterSpacing: 1,
+          ),
         ),
-        if (showLiveDot) ...[
-          const SizedBox(width: 8),
-          _PulsingDot(),
-        ],
+        if (showLiveDot) ...[const SizedBox(width: 8), _PulsingDot()],
       ],
     );
   }
@@ -1455,18 +1668,26 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.search_off_rounded,
-                size: 64, color: isDark ? Colors.white12 : Colors.black12),
+            Icon(
+              Icons.search_off_rounded,
+              size: 64,
+              color: isDark ? Colors.white12 : Colors.black12,
+            ),
             const SizedBox(height: 24),
-            const Text('Tiket Tidak Ditemukan',
-                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+            const Text(
+              'Tiket Tidak Ditemukan',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
-            Text('Tiket mungkin telah dihapus dari sistem.',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                    color: isDark
-                        ? AppColors.textSecondaryDark
-                        : AppColors.textSecondaryLight)),
+            Text(
+              'Tiket mungkin telah dihapus dari sistem.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: isDark
+                    ? AppColors.textSecondaryDark
+                    : AppColors.textSecondaryLight,
+              ),
+            ),
             const SizedBox(height: 32),
             AppButton.primary(label: 'Kembali', onPressed: () => context.pop()),
           ],
@@ -1478,7 +1699,6 @@ class _TicketDetailPageState extends State<TicketDetailPage> {
   Widget _buildSkeleton(bool isDark) {
     return TicketDetailSkeleton(isDark: isDark);
   }
-
 }
 
 // ── PRIVATE REUSABLE WIDGETS ─────────────────────────────────────────────────
@@ -1501,9 +1721,13 @@ class _SendButtonState extends State<_SendButton>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 100));
-    _scale = Tween<double>(begin: 1.0, end: 0.9)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 100),
+    );
+    _scale = Tween<double>(
+      begin: 1.0,
+      end: 0.9,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut));
   }
 
   @override
@@ -1533,12 +1757,15 @@ class _SendButtonState extends State<_SendButton>
             color: widget.enabled
                 ? AppColors.primary
                 : (Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white10
-                    : Colors.black.withValues(alpha: 0.05)),
+                      ? Colors.white10
+                      : Colors.black.withValues(alpha: 0.05)),
             shape: BoxShape.circle,
           ),
-          child: Icon(Icons.send_rounded,
-              size: 20, color: widget.enabled ? Colors.white : Colors.grey),
+          child: Icon(
+            Icons.send_rounded,
+            size: 20,
+            color: widget.enabled ? Colors.white : Colors.grey,
+          ),
         ),
       ),
     );
@@ -1567,8 +1794,11 @@ class _OfflineBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.cloud_off_rounded,
-              size: 14, color: AppColors.warning),
+          const Icon(
+            Icons.cloud_off_rounded,
+            size: 14,
+            color: AppColors.warning,
+          ),
           const SizedBox(width: 6),
           Text(
             'Offline',
@@ -1594,8 +1824,9 @@ class _PulsingDotState extends State<_PulsingDot>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 1200))
-      ..repeat(reverse: true);
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
   }
 
   @override
@@ -1609,10 +1840,13 @@ class _PulsingDotState extends State<_PulsingDot>
     return FadeTransition(
       opacity: Tween<double>(begin: 0.3, end: 1.0).animate(_ctrl),
       child: Container(
-          width: 6,
-          height: 6,
-          decoration: const BoxDecoration(
-              color: AppColors.success, shape: BoxShape.circle)),
+        width: 6,
+        height: 6,
+        decoration: const BoxDecoration(
+          color: AppColors.success,
+          shape: BoxShape.circle,
+        ),
+      ),
     );
   }
 }
@@ -1651,10 +1885,13 @@ class _ImageGalleryOverlayState extends State<_ImageGalleryOverlay> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-            icon: const Icon(Icons.close_rounded, color: Colors.white),
-            onPressed: () => Navigator.pop(context)),
-        title: Text('${_currentIndex + 1} / ${widget.urls.length}',
-            style: const TextStyle(color: Colors.white70, fontSize: 14)),
+          icon: const Icon(Icons.close_rounded, color: Colors.white),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          '${_currentIndex + 1} / ${widget.urls.length}',
+          style: const TextStyle(color: Colors.white70, fontSize: 14),
+        ),
         centerTitle: true,
       ),
       body: PageView.builder(
@@ -1675,7 +1912,8 @@ class _ImageGalleryOverlayState extends State<_ImageGalleryOverlay> {
                   loadingBuilder: (context, child, p) {
                     if (p == null) return child;
                     return const Center(
-                        child: CircularProgressIndicator(color: Colors.white));
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
                   },
                 ),
               ),
@@ -1706,9 +1944,13 @@ class _ToastWidgetState extends State<_ToastWidget>
   void initState() {
     super.initState();
     _ctrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 300));
-    _slide = Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero)
-        .animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+      vsync: this,
+      duration: const Duration(milliseconds: 300),
+    );
+    _slide = Tween<Offset>(
+      begin: const Offset(0, 1),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
     _opacity = Tween<double>(begin: 0, end: 1).animate(_ctrl);
     _ctrl.forward();
     Future.delayed(const Duration(milliseconds: 2400), () {
@@ -1741,26 +1983,32 @@ class _ToastWidgetState extends State<_ToastWidget>
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.2),
-                      blurRadius: 12,
-                      offset: const Offset(0, 4))
+                    color: Colors.black.withValues(alpha: 0.2),
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
               child: Row(
                 children: [
                   Icon(
-                      widget.isError
-                          ? Icons.error_rounded
-                          : Icons.check_circle_rounded,
-                      color: Colors.white,
-                      size: 20),
+                    widget.isError
+                        ? Icons.error_rounded
+                        : Icons.check_circle_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
-                      child: Text(widget.message,
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w500))),
+                    child: Text(
+                      widget.message,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),

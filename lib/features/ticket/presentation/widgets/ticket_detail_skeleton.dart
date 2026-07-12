@@ -7,10 +7,7 @@ import 'package:uts/shared/theme/extensions/app_spacing.dart';
 /// The content remains scrollable when the viewport is shortened by the
 /// keyboard, accessibility text scaling, split-screen mode, or a small device.
 class TicketDetailSkeleton extends StatelessWidget {
-  const TicketDetailSkeleton({
-    super.key,
-    required this.isDark,
-  });
+  const TicketDetailSkeleton({super.key, required this.isDark});
 
   final bool isDark;
 
@@ -41,7 +38,10 @@ class TicketDetailSkeleton extends StatelessWidget {
                 children: [
                   Row(
                     children: [
-                      _SkeletonBlock.circle(size: spacing.xxl, color: baseColor),
+                      _SkeletonBlock.circle(
+                        size: spacing.xxl,
+                        color: baseColor,
+                      ),
                       const Spacer(),
                     ],
                   ),
@@ -148,13 +148,11 @@ class _SkeletonBlock extends StatelessWidget {
     this.isCircle = false,
   });
 
-  const _SkeletonBlock.circle({
-    required double size,
-    required this.color,
-  })  : width = size,
-        height = size,
-        borderRadius = 0,
-        isCircle = true;
+  const _SkeletonBlock.circle({required double size, required this.color})
+    : width = size,
+      height = size,
+      borderRadius = 0,
+      isCircle = true;
 
   final double? width;
   final double height;
@@ -170,8 +168,7 @@ class _SkeletonBlock extends StatelessWidget {
       decoration: BoxDecoration(
         color: color,
         shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
-        borderRadius:
-            isCircle ? null : BorderRadius.circular(borderRadius),
+        borderRadius: isCircle ? null : BorderRadius.circular(borderRadius),
       ),
     );
   }
